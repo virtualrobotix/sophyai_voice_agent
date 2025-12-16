@@ -1,0 +1,92 @@
+"""
+Configuration Module
+Gestisce la configurazione dell'applicazione.
+"""
+
+import os
+from dataclasses import dataclass, field
+from typing import Optional
+from dotenv import load_dotenv
+
+
+# Carica variabili d'ambiente
+load_dotenv()
+
+
+@dataclass
+class LiveKitConfig:
+    """Configurazione LiveKit"""
+    url: str = field(default_factory=lambda: os.getenv("LIVEKIT_URL", "ws://localhost:7880"))
+    api_key: str = field(default_factory=lambda: os.getenv("LIVEKIT_API_KEY", "devkey"))
+    api_secret: str = field(default_factory=lambda: os.getenv("LIVEKIT_API_SECRET", "secret"))
+
+
+@dataclass
+class OllamaConfig:
+    """Configurazione Ollama"""
+    host: str = field(default_factory=lambda: os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "gpt-oss"))
+
+
+@dataclass
+class WhisperConfig:
+    """Configurazione Whisper STT"""
+    model: str = field(default_factory=lambda: os.getenv("WHISPER_MODEL", "base"))
+    language: str = field(default_factory=lambda: os.getenv("WHISPER_LANGUAGE", "it"))
+    device: str = field(default_factory=lambda: os.getenv("WHISPER_DEVICE", "cpu"))
+
+
+@dataclass
+class TTSConfig:
+    """Configurazione TTS"""
+    default_engine: str = field(default_factory=lambda: os.getenv("DEFAULT_TTS", "piper"))
+    
+    # Piper
+    piper_model: str = field(default_factory=lambda: os.getenv("PIPER_MODEL", "it_IT-riccardo-x_low"))
+    piper_speaker: int = field(default_factory=lambda: int(os.getenv("PIPER_SPEAKER", "0")))
+    
+    # Edge TTS
+    edge_voice: str = field(default_factory=lambda: os.getenv("EDGE_VOICE", "it-IT-DiegoNeural"))
+    
+    # Coqui TTS
+    coqui_model: str = field(default_factory=lambda: os.getenv("COQUI_MODEL", "tts_models/it/mai_female/vits"))
+    
+    # Kokoro TTS
+    kokoro_voice: str = field(default_factory=lambda: os.getenv("KOKORO_VOICE", "it_sara"))
+    
+    # VibeVoice TTS (Microsoft)
+    vibevoice_model: str = field(default_factory=lambda: os.getenv("VIBEVOICE_MODEL", "realtime"))
+    vibevoice_language: str = field(default_factory=lambda: os.getenv("VIBEVOICE_LANGUAGE", "it"))
+    vibevoice_speaker: str = field(default_factory=lambda: os.getenv("VIBEVOICE_SPEAKER", "speaker_1"))
+    vibevoice_speed: float = field(default_factory=lambda: float(os.getenv("VIBEVOICE_SPEED", "1.0")))
+
+
+@dataclass
+class ServerConfig:
+    """Configurazione Server"""
+    web_port: int = field(default_factory=lambda: int(os.getenv("WEB_PORT", "8080")))
+    log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
+
+
+@dataclass
+class AppConfig:
+    """Configurazione principale dell'applicazione"""
+    livekit: LiveKitConfig = field(default_factory=LiveKitConfig)
+    ollama: OllamaConfig = field(default_factory=OllamaConfig)
+    whisper: WhisperConfig = field(default_factory=WhisperConfig)
+    tts: TTSConfig = field(default_factory=TTSConfig)
+    server: ServerConfig = field(default_factory=ServerConfig)
+
+
+# Istanza globale della configurazione
+config = AppConfig()
+
+
+def reload_config() -> AppConfig:
+    """Ricarica la configurazione dall'ambiente"""
+    global config
+    load_dotenv()
+    config = AppConfig()
+    return config
+
+

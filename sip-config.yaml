@@ -1,0 +1,65 @@
+# LiveKit SIP Configuration
+# Configurazione per il bridge SIP-WebRTC
+
+# Configurazione server SIP
+sip:
+  # Porta UDP per SIP
+  port: 5060
+  # Porta TLS per SIP sicuro
+  port_tls: 5061
+  
+# Range porte RTP per il media
+rtp:
+  port_range_start: 10000
+  port_range_end: 10100
+
+# Configurazione LiveKit
+livekit:
+  url: ws://host.docker.internal:7880
+  api_key: devkey
+  api_secret: secret_dev_key_change_in_production
+
+# Trunk SIP (configurazione di esempio)
+# Decommentare e configurare secondo il proprio provider SIP
+# 
+# trunks:
+#   - name: "trunk-principale"
+#     # Provider SIP (es. Twilio, Vonage, VoIP.ms, ecc.)
+#     host: "sip.provider.com"
+#     port: 5060
+#     # Autenticazione (se richiesta)
+#     username: "your-username"
+#     password: "your-password"
+#     # Numeri di telefono associati
+#     numbers:
+#       - "+39XXXXXXXXXX"
+
+# Regole di dispatch per chiamate inbound
+# Quando arriva una chiamata, viene creata una room e dispatchato l'agent
+dispatch_rules:
+  # Regola per tutte le chiamate inbound
+  - name: "default-inbound"
+    # Room prefix per le chiamate
+    room_prefix: "sip-call-"
+    # Metadati da passare all'agent
+    metadata:
+      source: "sip"
+      type: "phone-call"
+    # Abilita registrazione
+    enable_recording: false
+
+# Configurazione audio
+audio:
+  # Codec preferiti
+  codecs:
+    - opus
+    - pcmu
+    - pcma
+  # Sample rate
+  sample_rate: 48000
+
+# Logging
+logging:
+  level: info
+
+

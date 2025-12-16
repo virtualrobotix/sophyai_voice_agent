@@ -1,0 +1,37 @@
+# LiveKit Agent SDK
+livekit>=1.0.20
+livekit-agents>=1.3.0
+livekit-plugins-silero>=1.3.0
+livekit-plugins-openai>=1.3.0
+
+# STT - Whisper
+faster-whisper>=1.0.0
+
+# LLM - Ollama
+ollama>=0.3.0
+
+# TTS - Edge TTS (Microsoft, funziona subito)
+edge-tts>=6.1.0
+soundfile>=0.12.0
+
+# TTS - VibeVoice (Microsoft, opzionale)
+# Per installare: git clone https://github.com/microsoft/VibeVoice.git && cd VibeVoice && pip install -e .
+# vibevoice  # decommentare dopo installazione
+huggingface_hub>=0.20.0  # Per download modelli VibeVoice
+
+# Audio processing
+numpy>=1.24.0
+
+# Async utilities
+aiohttp>=3.9.0
+aiofiles>=24.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+loguru>=0.7.0
+
+# Web server for frontend
+uvicorn>=0.30.0
+fastapi>=0.110.0
+websockets>=12.0

@@ -1,0 +1,44 @@
+# Ignora modelli pesanti (vengono montati come volume)
+models/
+*.pt
+*.bin
+*.onnx
+*.safetensors
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Temp
+tmp/
+temp/

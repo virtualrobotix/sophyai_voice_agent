@@ -1,0 +1,109 @@
+services:
+  # Redis per LiveKit (locale)
+  redis:
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - voiceagent
+
+  # Web Server (Frontend + API) con HTTPS
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-agent-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"     # HTTP
+      - "8443:8443"     # HTTPS
+    environment:
+      - LIVEKIT_URL=ws://localhost:7880
+      - LIVEKIT_INTERNAL_URL=ws://host.docker.internal:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=gpt-oss
+      - WHISPER_MODEL=small
+      - DEFAULT_TTS=edge
+      - WEB_PORT=8443
+      - LOG_LEVEL=INFO
+      - HF_HOME=/app/models/huggingface
+    volumes:
+      - ./models:/app/models
+      - ./certs:/app/certs:ro
+      - ./config:/app/config
+    networks:
+      - voiceagent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # LiveKit SIP Bridge - per chiamate telefoniche
+  sip:
+    image: livekit/sip:latest
+    container_name: livekit-sip
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"   # SIP UDP
+      - "5060:5060/tcp"   # SIP TCP
+      - "5061:5061/tcp"   # SIP TLS
+      - "10000-10100:10000-10100/udp"  # RTP media ports
+    environment:
+      - LIVEKIT_URL=ws://host.docker.internal:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
+      - SIP_PORT=5060
+      - SIP_PORT_TLS=5061
+      - RTP_PORT_LOW=10000
+      - RTP_PORT_HIGH=10100
+    volumes:
+      - ./sip-config.yaml:/etc/livekit-sip/config.yaml:ro
+    networks:
+      - voiceagent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Voice Agent - si connette a LiveKit locale
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: voice-agent-worker
+    restart: unless-stopped
+    environment:
+      - LIVEKIT_URL=ws://host.docker.internal:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=gpt-oss
+      - WHISPER_MODEL=small
+      - WHISPER_LANGUAGE=it
+      - WHISPER_SERVER_URL=http://host.docker.internal:8091
+      - TTS_SERVER_URL=http://host.docker.internal:8092
+      - DEFAULT_TTS=edge
+      - LOG_LEVEL=INFO
+      - HF_HOME=/app/models/huggingface
+      - XDG_CACHE_HOME=/app/models/cache
+    volumes:
+      - ./models:/app/models
+      - ./config:/app/config
+    networks:
+      - voiceagent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  voiceagent:
+    driver: bridge
+
+volumes:
+  redis_data:
