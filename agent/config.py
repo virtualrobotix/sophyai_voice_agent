@@ -59,6 +59,7 @@ class TTSConfig:
     vibevoice_language: str = field(default_factory=lambda: os.getenv("VIBEVOICE_LANGUAGE", "it"))
     vibevoice_speaker: str = field(default_factory=lambda: os.getenv("VIBEVOICE_SPEAKER", "speaker_1"))
     vibevoice_speed: float = field(default_factory=lambda: float(os.getenv("VIBEVOICE_SPEED", "1.0")))
+    vibevoice_gpu: bool = field(default_factory=lambda: os.getenv("VIBEVOICE_GPU", "true").lower() in ("true", "1", "yes"))
 
 
 @dataclass

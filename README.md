@@ -73,6 +73,31 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
+### 3b. Installazione su server con GPU NVIDIA (CUDA)
+
+Per sfruttare la GPU NVIDIA per VibeVoice e Whisper:
+
+```bash
+# Crea ambiente virtuale
+python3 -m venv venv
+source venv/bin/activate
+
+# Installa PyTorch con supporto CUDA 12.1
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Installa le altre dipendenze
+pip install -r requirements-cuda.txt
+
+# Installa VibeVoice
+git clone https://github.com/microsoft/VibeVoice.git
+cd VibeVoice && pip install -e . && cd ..
+
+# Verifica che CUDA sia disponibile
+python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+```
+
+**Nota**: Assicurati di avere i driver NVIDIA e CUDA Toolkit installati sul sistema.
+
 ### 4. Scarica modello Piper per italiano (opzionale)
 
 ```bash
