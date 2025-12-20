@@ -433,6 +433,50 @@
         .vibevoice-settings.hidden {
             display: none;
         }
+        
+        /* TTS Test Area */
+        .tts-test-area {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: 12px;
+        }
+        
+        .tts-test-area textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .tts-test-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        
+        .tts-test-status.success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+        
+        .tts-test-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+        
+        .tts-test-status.loading {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
 
         .settings-divider {
             height: 1px;
@@ -649,6 +693,12 @@
                         <div class="stat-unit">ms</div>
                         <div class="stat-details" id="stat-tts-detail">In attesa...</div>
                     </div>
+                    <div class="stat-box latency" style="border-left-color: #ef4444;">
+                        <div class="stat-label">⚡ Latenza (End-to-End)</div>
+                        <div class="stat-value" id="stat-latency" style="color: #ef4444;">--</div>
+                        <div class="stat-unit">ms</div>
+                        <div class="stat-details" id="stat-latency-detail">Domanda → Risposta</div>
+                    </div>
                 </div>
 
                 <div class="timing-chart" id="timing-chart">
@@ -783,6 +833,15 @@
                         </div>
                         <span class="tts-badge local">Self-Hosted</span>
                     </div>
+
+                    <div class="tts-option" data-engine="chatterbox" onclick="selectTTS('chatterbox')">
+                        <span class="tts-option-icon">🎭</span>
+                        <div class="tts-option-info">
+                            <div class="tts-option-name">Chatterbox (Resemble AI)</div>
+                            <div class="tts-option-desc">Multilingua (23 lingue), voice cloning, emotion control</div>
+                        </div>
+                        <span class="tts-badge local">Self-Hosted</span>
+                    </div>
                 </div>
 
                 <!-- VibeVoice Settings Panel -->
@@ -836,6 +895,81 @@
                             📥 Scarica Modello
                         </button>
                     </div>
+                </div>
+
+                <!-- Chatterbox Settings Panel -->
+                <div class="vibevoice-settings hidden" id="chatterbox-settings">
+                    <div class="settings-divider"></div>
+                    <h3 class="settings-subtitle">⚙️ Impostazioni Chatterbox</h3>
+                    
+                    <div class="setting-row">
+                        <label>Modello</label>
+                        <select id="chatterbox-model" onchange="updateChatterboxSetting()">
+                            <option value="multilingual">Multilingual (23 lingue) - Consigliato</option>
+                            <option value="standard">Standard - Inglese</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>🌍 Lingua</label>
+                        <select id="chatterbox-language" onchange="updateChatterboxSetting()">
+                            <option value="it">🇮🇹 Italiano</option>
+                            <option value="en">🇬🇧 English</option>
+                            <option value="es">🇪🇸 Español</option>
+                            <option value="fr">🇫🇷 Français</option>
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="ja">🇯🇵 日本語 (Giapponese)</option>
+                            <option value="ko">🇰🇷 한국어 (Coreano)</option>
+                            <option value="zh">🇨🇳 中文 (Cinese)</option>
+                            <option value="ar">🇸🇦 العربية (Arabo)</option>
+                            <option value="pt">🇵🇹 Português</option>
+                            <option value="ru">🇷🇺 Русский (Russo)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>Device</label>
+                        <select id="chatterbox-device" onchange="updateChatterboxSetting()">
+                            <option value="auto">Auto (rileva automaticamente)</option>
+                            <option value="cuda">CUDA (GPU NVIDIA)</option>
+                            <option value="cpu">CPU</option>
+                            <option value="mps">MPS (GPU Apple)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>Exaggeration (Emozioni): <span id="chatterbox-exaggeration-value">--</span></label>
+                        <input type="range" id="chatterbox-exaggeration" min="0" max="1" step="0.1" value="" 
+                               oninput="const val = this.value; document.getElementById('chatterbox-exaggeration-value').textContent = val ? val : 'default'; updateChatterboxSetting()">
+                        <small>0.0-1.0 (vuoto = default)</small>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>Audio Prompt Path (Voice Cloning)</label>
+                        <input type="text" id="chatterbox-audio-prompt-path" placeholder="Path al file audio di riferimento" 
+                               onchange="updateChatterboxSetting()">
+                        <small>Opzionale: path a file .wav per clonare la voce</small>
+                    </div>
+                </div>
+                
+                <!-- TTS Test Area -->
+                <div class="settings-divider"></div>
+                <h3 class="settings-subtitle">🧪 Test TTS</h3>
+                <div class="tts-test-area">
+                    <div class="setting-row">
+                        <label>Testo da sintetizzare</label>
+                        <textarea id="tts-test-text" rows="3" placeholder="Inserisci qui il testo da testare...">Ciao! Questo è un test del TTS selezionato.</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="testTTS()" id="tts-test-btn">
+                            ▶️ Testa TTS
+                        </button>
+                        <button class="btn btn-secondary" onclick="stopTTSTest()" id="tts-stop-btn" style="display:none;">
+                            ⏹️ Ferma
+                        </button>
+                    </div>
+                    <div id="tts-test-status" class="tts-test-status"></div>
+                    <audio id="tts-test-audio" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
                 </div>
             </div>
 
@@ -943,6 +1077,15 @@
                 checkVibeVoiceModelStatus();
             } else {
                 vibevoiceSettings.classList.add('hidden');
+            }
+            
+            // Mostra/nascondi impostazioni Chatterbox
+            const chatterboxSettings = document.getElementById('chatterbox-settings');
+            if (engine === 'chatterbox') {
+                chatterboxSettings.classList.remove('hidden');
+                loadChatterboxSettings();
+            } else {
+                chatterboxSettings.classList.add('hidden');
             }
             
             // Applica automaticamente al server
@@ -1139,6 +1282,151 @@
             document.getElementById('speed-value').textContent = speed + 'x';
         }
 
+        // Chatterbox settings
+        function updateChatterboxSetting() {
+            const model = document.getElementById('chatterbox-model').value;
+            const language = document.getElementById('chatterbox-language').value;
+            const device = document.getElementById('chatterbox-device').value;
+            const exaggeration = document.getElementById('chatterbox-exaggeration').value;
+            const audioPromptPath = document.getElementById('chatterbox-audio-prompt-path').value;
+            
+            // Salva in localStorage
+            localStorage.setItem('chatterbox_model', model);
+            localStorage.setItem('chatterbox_language', language);
+            localStorage.setItem('chatterbox_device', device);
+            localStorage.setItem('chatterbox_exaggeration', exaggeration);
+            localStorage.setItem('chatterbox_audio_prompt_path', audioPromptPath);
+        }
+
+        // Carica impostazioni Chatterbox salvate
+        function loadChatterboxSettings() {
+            const model = localStorage.getItem('chatterbox_model') || 'multilingual';
+            const language = localStorage.getItem('chatterbox_language') || 'it';
+            const device = localStorage.getItem('chatterbox_device') || 'auto';
+            const exaggeration = localStorage.getItem('chatterbox_exaggeration') || '';
+            const audioPromptPath = localStorage.getItem('chatterbox_audio_prompt_path') || '';
+            
+            document.getElementById('chatterbox-model').value = model;
+            document.getElementById('chatterbox-language').value = language;
+            document.getElementById('chatterbox-device').value = device;
+            document.getElementById('chatterbox-exaggeration').value = exaggeration;
+            document.getElementById('chatterbox-audio-prompt-path').value = audioPromptPath;
+            
+            // Aggiorna display exaggeration
+            const exaggerationEl = document.getElementById('chatterbox-exaggeration-value');
+            if (exaggerationEl) {
+                exaggerationEl.textContent = exaggeration ? exaggeration : 'default';
+            }
+        }
+
+        // Test TTS
+        let currentTestAudio = null;
+        
+        async function testTTS() {
+            const engine = localStorage.getItem('tts_engine') || 'edge';
+            const text = document.getElementById('tts-test-text').value.trim();
+            const statusEl = document.getElementById('tts-test-status');
+            const audioEl = document.getElementById('tts-test-audio');
+            const testBtn = document.getElementById('tts-test-btn');
+            const stopBtn = document.getElementById('tts-stop-btn');
+            
+            if (!text) {
+                statusEl.textContent = '❌ Inserisci un testo da testare';
+                statusEl.className = 'tts-test-status error';
+                return;
+            }
+            
+            // Ferma audio precedente se presente
+            if (currentTestAudio) {
+                currentTestAudio.pause();
+                currentTestAudio = null;
+            }
+            
+            // Mostra stato caricamento
+            statusEl.textContent = '⏳ Sintesi in corso...';
+            statusEl.className = 'tts-test-status loading';
+            testBtn.disabled = true;
+            stopBtn.style.display = 'inline-block';
+            audioEl.style.display = 'none';
+            
+            try {
+                // Prepara parametri in base all'engine
+                const payload = {
+                    engine: engine,
+                    text: text,
+                    language: localStorage.getItem(`${engine}_language`) || localStorage.getItem('chatterbox_language') || localStorage.getItem('vibevoice_language') || 'it'
+                };
+                
+                // Aggiungi parametri specifici per engine
+                if (engine === 'vibevoice') {
+                    payload.model = localStorage.getItem('vibevoice_model') || 'realtime';
+                    payload.speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
+                    payload.speed = parseFloat(localStorage.getItem('vibevoice_speed') || '1.0');
+                } else if (engine === 'chatterbox') {
+                    payload.model = localStorage.getItem('chatterbox_model') || 'multilingual';
+                    payload.device = localStorage.getItem('chatterbox_device') || 'auto';
+                    const exaggeration = localStorage.getItem('chatterbox_exaggeration');
+                    if (exaggeration) payload.exaggeration = parseFloat(exaggeration);
+                }
+                
+                const resp = await fetch('/api/tts/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!resp.ok) {
+                    const error = await resp.text();
+                    throw new Error(error || `Errore HTTP ${resp.status}`);
+                }
+                
+                // Crea blob URL per l'audio
+                const audioBlob = await resp.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Imposta e riproduci audio
+                audioEl.src = audioUrl;
+                audioEl.style.display = 'block';
+                currentTestAudio = audioEl;
+                
+                // Riproduci automaticamente
+                await audioEl.play();
+                
+                const duration = resp.headers.get('X-Duration') || '?';
+                const actualEngine = resp.headers.get('X-Engine') || engine;
+                let statusMsg = `✅ Sintesi completata! Durata: ${parseFloat(duration).toFixed(2)}s`;
+                if (actualEngine !== engine && engine === 'chatterbox') {
+                    statusMsg += `\nℹ️ Nota: Chatterbox non è disponibile nel container web (richiede MPS sul Mac host). Test eseguito con EdgeTTS come fallback.`;
+                } else if (actualEngine !== engine) {
+                    statusMsg += `\nℹ️ ${engine} non disponibile, usato ${actualEngine} come fallback.`;
+                }
+                statusEl.textContent = statusMsg;
+                statusEl.className = 'tts-test-status success';
+                
+                // Pulisci URL quando finisce
+                audioEl.addEventListener('ended', () => {
+                    URL.revokeObjectURL(audioUrl);
+                }, { once: true });
+                
+            } catch (e) {
+                statusEl.textContent = `❌ Errore: ${e.message}`;
+                statusEl.className = 'tts-test-status error';
+                console.error('Errore test TTS:', e);
+            } finally {
+                testBtn.disabled = false;
+                stopBtn.style.display = 'none';
+            }
+        }
+        
+        function stopTTSTest() {
+            if (currentTestAudio) {
+                currentTestAudio.pause();
+                currentTestAudio.currentTime = 0;
+                currentTestAudio = null;
+            }
+            document.getElementById('tts-stop-btn').style.display = 'none';
+        }
+
         // Logs
         function addLog(time, type, msg) {
             const container = document.getElementById('logs-container');
@@ -1167,7 +1455,8 @@
         const stats = {
             stt: { values: [], avg: 0, last: 0, count: 0 },
             llm: { values: [], avg: 0, last: 0, count: 0, ttft: 0 },
-            tts: { values: [], avg: 0, last: 0, count: 0 }
+            tts: { values: [], avg: 0, last: 0, count: 0 },
+            latency: { values: [], avg: 0, last: 0, count: 0 }
         };
 
         function updateStats(type, value, details = {}) {
@@ -1199,8 +1488,13 @@
             if (type === 'tts' && details.audio_duration) {
                 detailText += ` | Audio: ${details.audio_duration}s`;
             }
-            detailText += ` | n=${stats[type].count}`;
-            document.getElementById(`stat-${type}-detail`).textContent = detailText;
+            if (type === 'latency') {
+                detailText = `Domanda→Risposta: ${value}ms | n=${stats[type].count}`;
+            } else {
+                detailText += ` | n=${stats[type].count}`;
+            }
+            const detailEl = document.getElementById(`stat-${type}-detail`);
+            if (detailEl) detailEl.textContent = detailText;
             
             // Update chart bars
             updateChart();
@@ -1236,9 +1530,17 @@
                 const resp = await fetch('/api/timing');
                 if (resp.ok) {
                     const data = await resp.json();
-                    if (data.stt) updateStats('stt', data.stt.time_ms);
-                    if (data.llm) updateStats('llm', data.llm.time_ms, { ttft: data.llm.ttft_ms });
-                    if (data.tts) updateStats('tts', data.tts.time_ms, { audio_duration: data.tts.audio_sec });
+                    if (data.stt && data.stt.time_ms > 0) updateStats('stt', data.stt.time_ms);
+                    if (data.llm && data.llm.time_ms > 0) updateStats('llm', data.llm.time_ms, { ttft: data.llm.ttft_ms });
+                    if (data.tts && data.tts.time_ms > 0) updateStats('tts', data.tts.time_ms, { audio_duration: data.tts.audio_sec });
+                    if (data.latency && data.latency.e2e_ms > 0) {
+                        updateStats('latency', data.latency.e2e_ms);
+                        // Aggiorna dettagli latenza
+                        const latencyDetail = document.getElementById('stat-latency-detail');
+                        if (latencyDetail) {
+                            latencyDetail.textContent = `Ultimo: ${data.latency.e2e_ms}ms | n=${data.latency.count}`;
+                        }
+                    }
                 }
             } catch (e) {
                 // Silently fail - stats are optional
@@ -1275,9 +1577,26 @@
         // Applica selezione TTS al server
         async function applyTTSSelection() {
             const engine = localStorage.getItem('tts_engine') || 'edge';
-            const language = localStorage.getItem('vibevoice_language') || 'it';
-            const speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
-            const speed = localStorage.getItem('vibevoice_speed') || '1.0';
+            
+            // Prepara payload in base al TTS engine
+            let payload = { engine: engine };
+            
+            if (engine === 'vibevoice') {
+                payload.language = localStorage.getItem('vibevoice_language') || 'it';
+                payload.speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
+                payload.speed = parseFloat(localStorage.getItem('vibevoice_speed') || '1.0');
+            } else if (engine === 'chatterbox') {
+                payload.language = localStorage.getItem('chatterbox_language') || 'it';
+                payload.model = localStorage.getItem('chatterbox_model') || 'multilingual';
+                payload.device = localStorage.getItem('chatterbox_device') || 'auto';
+                const exaggeration = localStorage.getItem('chatterbox_exaggeration');
+                if (exaggeration) payload.exaggeration = parseFloat(exaggeration);
+                const audioPromptPath = localStorage.getItem('chatterbox_audio_prompt_path');
+                if (audioPromptPath) payload.audio_prompt_path = audioPromptPath;
+            } else {
+                // Per altri engine, usa lingua di default
+                payload.language = localStorage.getItem('vibevoice_language') || 'it';
+            }
             
             // Mostra stato "salvando..."
             const statusEl = document.getElementById('tts-active-default');
@@ -1288,12 +1607,7 @@
                 const resp = await fetch('/api/tts/current', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        engine: engine,
-                        language: language,
-                        speaker: speaker,
-                        speed: parseFloat(speed)
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
                 if (resp.ok) {

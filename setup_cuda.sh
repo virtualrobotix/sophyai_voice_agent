@@ -65,3 +65,5 @@ echo "  2. Avvia il TTS server: python tts_server.py"
 echo "  3. In un altro terminale: python -m agent.main"
 echo ""
 echo "Il TTS server userà automaticamente la GPU CUDA."
+
+

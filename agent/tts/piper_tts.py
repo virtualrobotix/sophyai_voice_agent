@@ -102,40 +102,27 @@ class PiperTTS(BaseTTS):
     def synthesize(self, text: str) -> TTSResult:
         """Sintetizza testo in audio con Piper"""
         model_path = self._ensure_model()
-        
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            output_path = tmp.name
+        config_path = model_path + ".json"
         
         try:
-            # Esegui piper
-            cmd = [
-                "piper",
-                "--model", model_path,
-                "--output_file", output_path,
-                "--speaker", str(self.speaker)
-            ]
+            # Usa API Python di Piper
+            from piper import PiperVoice
             
-            process = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            voice = PiperVoice.load(model_path, config_path)
             
-            stdout, stderr = process.communicate(input=text.encode("utf-8"))
+            # Sintetizza - restituisce generator di AudioChunk
+            audio_chunks = []
+            for chunk in voice.synthesize(text):
+                # Usa audio_float_array per ottenere float32
+                audio_chunks.append(chunk.audio_float_array)
             
-            if process.returncode != 0:
-                logger.error(f"Piper error: {stderr.decode()}")
-                raise RuntimeError(f"Piper synthesis failed: {stderr.decode()}")
-            
-            # Leggi l'audio generato
-            audio_data, sr = sf.read(output_path, dtype="float32")
-            
-            # Converti in mono se stereo
-            if len(audio_data.shape) > 1:
-                audio_data = audio_data.mean(axis=1)
+            # Concatena tutti i chunk
+            audio_data = np.concatenate(audio_chunks) if audio_chunks else np.array([], dtype=np.float32)
+            sr = voice.config.sample_rate
             
             duration = len(audio_data) / sr
+            
+            logger.debug(f"Piper audio: {len(audio_data)} samples, {duration:.2f}s, sr={sr}")
             
             return TTSResult(
                 audio_data=audio_data,
@@ -145,10 +132,8 @@ class PiperTTS(BaseTTS):
                 engine=self.engine_type
             )
             
-        finally:
-            # Cleanup
-            if os.path.exists(output_path):
-                os.unlink(output_path)
+        except ImportError:
+            raise ImportError("Piper TTS non installato. Installa con: pip install piper-tts")
     
     async def synthesize_async(self, text: str) -> TTSResult:
         """Versione asincrona della sintesi"""
@@ -178,5 +163,7 @@ class PiperTTS(BaseTTS):
             logger.info(f"Voce impostata: {voice_id}")
         else:
             raise ValueError(f"Voce '{voice_id}' non trovata. Disponibili: {list(self.ITALIAN_VOICES.keys())}")
+
+
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.10
 """
 TTS Server - Server locale per Text-to-Speech con VibeVoice
 Simile a whisper_server.py, gira sul Mac host con accesso a MPS/GPU
@@ -41,7 +41,12 @@ class TTSRequest(BaseModel):
     language: str = "it"
     speaker: str = "carter"
     speed: float = 1.0
-    engine: str = "vibevoice"  # vibevoice, edge
+    engine: str = "vibevoice"  # vibevoice, edge, chatterbox
+    # Parametri Chatterbox
+    model: str = None  # "standard" o "multilingual"
+    device: str = None  # "auto", "cuda", "cpu", "mps"
+    exaggeration: float = None  # 0.0-1.0
+    audio_prompt_path: str = None  # Path per voice cloning
 
 
 class TTSStatus(BaseModel):
@@ -196,7 +201,7 @@ async def status():
         engine=_tts_type or "none",
         device=_device or "none",
         model_loaded=_tts_engine is not None,
-        available_engines=["vibevoice", "edge"]
+        available_engines=["vibevoice", "edge", "chatterbox"]
     )
 
 
@@ -209,7 +214,11 @@ async def synthesize(request: TTSRequest):
     """
     global _tts_engine, _tts_type
     
-    if not _tts_engine:
+    # Chatterbox non richiede pre-caricamento, può essere usato on-demand
+    if request.engine == "chatterbox":
+        # Non controlla _tts_engine per Chatterbox, verrà caricato on-demand
+        pass
+    elif not _tts_engine:
         raise HTTPException(status_code=503, detail="TTS engine non caricato")
     
     t_start = time.time()
@@ -218,15 +227,56 @@ async def synthesize(request: TTSRequest):
     if not text:
         raise HTTPException(status_code=400, detail="Testo vuoto")
     
-    logger.info(f"🎤 Sintesi: '{text[:50]}...' (engine={_tts_type}, lang={request.language})")
+    # Usa engine dalla request se specificato, altrimenti quello globale
+    engine_to_use = request.engine if request.engine else _tts_type
+    logger.info(f"🎤 Sintesi: '{text[:50]}...' (engine={engine_to_use}, lang={request.language})")
     
+    actual_engine_used = engine_to_use  # Tiene traccia dell'engine effettivamente usato
     try:
-        if _tts_type == "vibevoice":
-            pcm_data = await synthesize_vibevoice(text, request.speaker, request.speed)
-        elif _tts_type == "edge":
+        if engine_to_use == "chatterbox":
+            try:
+                pcm_data = await synthesize_chatterbox(
+                    text, 
+                    request.language,
+                    request.model,
+                    request.device,
+                    request.exaggeration,
+                    request.audio_prompt_path
+                )
+            except Exception as e:
+                # Se Chatterbox fallisce, usa EdgeTTS come fallback
+                error_str = str(e).lower()
+                if any(keyword in error_str for keyword in ["transformers", "torchvision", "circular import", "partially initialized", "extension", "nms", "import"]):
+                    logger.warning(f"⚠️ Chatterbox non disponibile, uso EdgeTTS come fallback")
+                    actual_engine_used = "edge"
+                    pcm_data = await synthesize_edge(text, request.language)
+                else:
+                    raise
+        elif engine_to_use == "piper":
+            try:
+                pcm_data = await synthesize_piper(text, request.model)
+            except Exception as e:
+                logger.warning(f"⚠️ Piper non disponibile, uso EdgeTTS come fallback: {e}")
+                actual_engine_used = "edge"
+                pcm_data = await synthesize_edge(text, request.language)
+        elif engine_to_use == "kokoro":
+            try:
+                pcm_data = await synthesize_kokoro(text, request.language, request.speed)
+            except Exception as e:
+                logger.warning(f"⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: {e}")
+                actual_engine_used = "edge"
+                pcm_data = await synthesize_edge(text, request.language)
+        elif engine_to_use == "vibevoice" or _tts_type == "vibevoice":
+            try:
+                pcm_data = await synthesize_vibevoice(text, request.speaker, request.speed)
+            except Exception as e:
+                logger.warning(f"⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: {e}")
+                actual_engine_used = "edge"
+                pcm_data = await synthesize_edge(text, request.language)
+        elif engine_to_use == "edge" or _tts_type == "edge":
             pcm_data = await synthesize_edge(text, request.language)
         else:
-            raise HTTPException(status_code=500, detail="Engine TTS sconosciuto")
+            raise HTTPException(status_code=500, detail=f"Engine TTS sconosciuto: {engine_to_use}")
         
         t_end = time.time()
         duration_audio = len(pcm_data) / (24000 * 2)  # 24kHz, 16-bit
@@ -240,7 +290,7 @@ async def synthesize(request: TTSRequest):
                 "X-Sample-Rate": "24000",
                 "X-Channels": "1",
                 "X-Duration": str(duration_audio),
-                "X-Engine": _tts_type
+                "X-Engine": actual_engine_used
             }
         )
         
@@ -371,6 +421,143 @@ async def synthesize_edge(text: str, language: str) -> bytes:
     return pcm_data
 
 
+async def synthesize_piper(text: str, model: str = None) -> bytes:
+    """Sintetizza con Piper TTS"""
+    import asyncio
+    
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    from agent.tts.piper_tts import PiperTTS
+    
+    # Usa modello di default se non specificato
+    piper_model = model or "it_IT-riccardo-x_low"
+    
+    logger.info(f"🎤 Piper TTS: model={piper_model}")
+    
+    # Crea istanza e sintetizza
+    piper = PiperTTS(model=piper_model)
+    
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, piper.synthesize, text)
+    
+    # Converti audio float32 in PCM int16
+    audio_float = result.audio_data
+    
+    # Resample a 24kHz se necessario
+    if result.sample_rate != 24000:
+        import scipy.signal as signal
+        num_samples = int(len(audio_float) * 24000 / result.sample_rate)
+        audio_float = signal.resample(audio_float, num_samples)
+    
+    # Normalizza e converti a int16
+    audio_float = np.clip(audio_float, -1.0, 1.0)
+    audio_int16 = (audio_float * 32767).astype(np.int16)
+    
+    return audio_int16.tobytes()
+
+
+async def synthesize_kokoro(text: str, language: str = "it", speed: float = 1.0) -> bytes:
+    """Sintetizza con Kokoro TTS"""
+    import asyncio
+    
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    from agent.tts.kokoro_tts import KokoroTTS
+    
+    # Seleziona voce in base alla lingua
+    voice = "if_sara" if language == "it" else "af_bella"
+    
+    logger.info(f"🎤 Kokoro TTS: voice={voice}, speed={speed}")
+    
+    # Crea istanza e sintetizza
+    kokoro = KokoroTTS(voice=voice, speed=speed)
+    
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, kokoro.synthesize, text)
+    
+    # Converti audio float32 in PCM int16
+    audio_float = result.audio_data
+    
+    # Resample a 24kHz se necessario (Kokoro già usa 24kHz)
+    if result.sample_rate != 24000:
+        import scipy.signal as signal
+        num_samples = int(len(audio_float) * 24000 / result.sample_rate)
+        audio_float = signal.resample(audio_float, num_samples)
+    
+    # Normalizza e converti a int16
+    audio_float = np.clip(audio_float, -1.0, 1.0)
+    audio_int16 = (audio_float * 32767).astype(np.int16)
+    
+    return audio_int16.tobytes()
+
+
+async def synthesize_chatterbox(
+    text: str, 
+    language: str = "it",
+    model: str = None,
+    device: str = None,
+    exaggeration: Optional[float] = None,
+    audio_prompt_path: Optional[str] = None
+) -> bytes:
+    """Sintetizza con Chatterbox TTS"""
+    try:
+        # Importa Chatterbox (deve essere installato sul Mac host)
+        # Aggiungi il path del progetto per importare agent.tts
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from agent.tts.chatterbox_tts import ChatterboxTTS
+        
+        chatterbox = ChatterboxTTS(
+            model=model or "multilingual",
+            language=language,
+            device=device or "auto",
+            exaggeration=exaggeration,
+            audio_prompt_path=audio_prompt_path
+        )
+        
+        # Sintetizza
+        result = chatterbox.synthesize(text)
+        
+        # Converti numpy array in PCM 16-bit
+        audio_data = result.audio_data
+        if audio_data.dtype != np.float32:
+            audio_data = audio_data.astype(np.float32)
+        
+        # Normalizza se necessario
+        max_val = np.abs(audio_data).max()
+        if max_val > 1.0:
+            audio_data = audio_data / max_val
+        
+        # Converti a int16 PCM
+        pcm_data = (audio_data * 32767).astype(np.int16).tobytes()
+        
+        # Se il sample rate non è 24kHz, ri-campiona (per ora assumiamo 24kHz)
+        if result.sample_rate != 24000:
+            # TODO: ri-campiona a 24kHz se necessario
+            logger.warning(f"Chatterbox sample rate {result.sample_rate} != 24000, potrebbe essere necessario ri-campionare")
+        
+        return pcm_data
+        
+    except (ImportError, RuntimeError) as e:
+        logger.warning(f"⚠️ Chatterbox TTS non disponibile ({type(e).__name__}), uso EdgeTTS come fallback: {e}")
+        # Fallback a EdgeTTS
+        return await synthesize_edge(text, language)
+    except Exception as e:
+        logger.error(f"❌ Errore sintesi Chatterbox: {e}")
+        import traceback
+        traceback.print_exc()
+        # Se è un errore di dipendenze/runtime, prova fallback a EdgeTTS
+        error_str = str(e).lower()
+        if any(keyword in error_str for keyword in ["transformers", "torchvision", "circular import", "partially initialized", "extension", "nms"]):
+            logger.warning(f"⚠️ Errore dipendenze Chatterbox ({type(e).__name__}), uso EdgeTTS come fallback")
+            return await synthesize_edge(text, language)
+        # Per altri errori, solleva eccezione
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/voices")
 async def get_voices():
     """Ritorna le voci disponibili"""
@@ -400,3 +587,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

@@ -59,3 +59,5 @@ echo "   - docker logs -f voice-agent-worker"
 echo "   - tail -f whisper_server.log"
 
 
+
+

@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -200,7 +200,8 @@ async def get_status():
 _timing_stats = {
     "stt": {"time_ms": 0, "count": 0},
     "llm": {"time_ms": 0, "ttft_ms": 0, "count": 0},
-    "tts": {"time_ms": 0, "audio_sec": 0, "count": 0}
+    "tts": {"time_ms": 0, "audio_sec": 0, "count": 0},
+    "latency": {"e2e_ms": 0, "to_first_audio_ms": 0, "count": 0}  # Latenza end-to-end
 }
 
 
@@ -233,6 +234,13 @@ async def update_timing(data: dict):
             "time_ms": data["tts"].get("time_ms", 0),
             "audio_sec": data["tts"].get("audio_sec", 0),
             "count": _timing_stats["tts"]["count"] + 1
+        }
+    
+    if "latency" in data:
+        _timing_stats["latency"] = {
+            "e2e_ms": data["latency"].get("e2e_ms", 0),
+            "to_first_audio_ms": data["latency"].get("to_first_audio_ms", 0),
+            "count": _timing_stats["latency"]["count"] + 1
         }
     
     return {"status": "ok"}
@@ -428,6 +436,11 @@ class TTSConfigUpdate(BaseModel):
     voice: str = None
     speaker: str = None
     speed: float = 1.0
+    # Parametri Chatterbox
+    model: str = None  # "standard" o "multilingual"
+    device: str = None  # "auto", "cuda", "cpu", "mps"
+    exaggeration: float = None  # 0.0-1.0
+    audio_prompt_path: str = None  # Path per voice cloning
 
 
 @app.post("/api/tts/current")
@@ -454,6 +467,16 @@ async def set_current_tts(update: TTSConfigUpdate):
         "updated_at": _current_tts_config["last_updated"]
     }
     
+    # Aggiungi parametri Chatterbox se presenti
+    if update.model is not None:
+        tts_file_config["model"] = update.model
+    if update.device is not None:
+        tts_file_config["device"] = update.device
+    if update.exaggeration is not None:
+        tts_file_config["exaggeration"] = update.exaggeration
+    if update.audio_prompt_path is not None:
+        tts_file_config["audio_prompt_path"] = update.audio_prompt_path
+    
     with open(config_path, "w") as f:
         json.dump(tts_file_config, f, indent=2)
     
@@ -467,6 +490,196 @@ async def set_current_tts(update: TTSConfigUpdate):
         "saved_to_file": True,
         "message": f"TTS {update.engine} configurato. Riavvia l'agent per applicare."
     }
+
+
+class TTSTestRequest(BaseModel):
+    """Richiesta per test TTS"""
+    engine: str
+    text: str
+    language: str = "it"
+    voice: str = None
+    speaker: str = None
+    speed: float = 1.0
+    # Parametri specifici
+    model: str = None  # Per Chatterbox/VibeVoice
+    device: str = None  # Per Chatterbox
+    exaggeration: float = None  # Per Chatterbox
+    audio_prompt_path: str = None  # Per Chatterbox voice cloning
+
+
+async def test_tts_via_external_server(request: TTSTestRequest, tts_server_url: str):
+    """Chiama il server TTS esterno (Mac host) per sintetizzare"""
+    import aiohttp
+    import numpy as np
+    import soundfile as sf
+    import io
+    
+    try:
+        # Prepara payload per il server esterno
+        payload = {
+            "text": request.text,
+            "language": request.language,
+            "engine": request.engine
+        }
+        
+        if request.engine == "chatterbox":
+            if request.model:
+                payload["model"] = request.model
+            if request.device:
+                payload["device"] = request.device
+            if request.exaggeration is not None:
+                payload["exaggeration"] = request.exaggeration
+            if request.audio_prompt_path:
+                payload["audio_prompt_path"] = request.audio_prompt_path
+        elif request.engine == "vibevoice":
+            if request.model:
+                payload["model"] = request.model
+            if request.speaker:
+                payload["speaker"] = request.speaker
+            if request.speed:
+                payload["speed"] = request.speed
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{tts_server_url}/synthesize",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status != 200:
+                    error = await resp.text()
+                    raise HTTPException(status_code=resp.status, detail=error)
+                
+                # Leggi PCM data
+                pcm_data = await resp.read()
+                sample_rate = int(resp.headers.get("X-Sample-Rate", "24000"))
+                duration = float(resp.headers.get("X-Duration", "0"))
+                
+                # Converti PCM in numpy array e poi in WAV
+                audio_array = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32767.0
+                
+                # Crea buffer WAV in memoria
+                wav_buffer = io.BytesIO()
+                sf.write(wav_buffer, audio_array, sample_rate, format='WAV', subtype='PCM_16')
+                wav_data = wav_buffer.getvalue()
+                
+                logger.info(f"✅ Test TTS via server esterno completato: engine={request.engine}, duration={duration:.2f}s")
+                
+                return Response(
+                    content=wav_data,
+                    media_type="audio/wav",
+                    headers={
+                        "X-Sample-Rate": str(sample_rate),
+                        "X-Duration": str(duration),
+                        "X-Engine": request.engine
+                    }
+                )
+    except aiohttp.ClientError as e:
+        logger.error(f"❌ Errore connessione server TTS esterno: {e}")
+        raise HTTPException(status_code=503, detail=f"Server TTS esterno non disponibile: {e}")
+    except Exception as e:
+        logger.error(f"❌ Errore test TTS via server esterno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/tts/test")
+async def test_tts(request: TTSTestRequest):
+    """Testa un TTS engine con un testo specifico, ritorna audio WAV"""
+    import numpy as np
+    import soundfile as sf
+    import io
+    
+    try:
+        # Importa il factory function per creare TTS engines
+        sys.path.insert(0, str(Path(__file__).parent))
+        from agent.tts import get_tts_engine
+        
+        # Prepara parametri in base all'engine
+        tts_params = {}
+        
+        # TTS che vanno chiamati via server esterno (venv locale con MPS/GPU)
+        if request.engine in ["chatterbox", "piper", "kokoro", "vibevoice"]:
+            tts_server_url = os.getenv("TTS_SERVER_URL", "http://host.docker.internal:8092")
+            logger.info(f"🔗 Routing {request.engine} a server esterno: {tts_server_url}")
+            return await test_tts_via_external_server(request, tts_server_url)
+        
+        # TTS che girano nel container Docker
+        if request.engine == "edge":
+            # EdgeTTS non accetta 'language' come parametro, ma possiamo usarlo per selezionare la voce
+            if request.voice:
+                tts_params["voice"] = request.voice
+            else:
+                # Usa una voce di default basata sulla lingua
+                voice_map = {
+                    "it": "it-IT-DiegoNeural",
+                    "en": "en-US-GuyNeural",
+                    "es": "es-ES-AlvaroNeural",
+                    "fr": "fr-FR-HenriNeural",
+                    "de": "de-DE-ConradNeural",
+                    "zh": "zh-CN-YunxiNeural"
+                }
+                tts_params["voice"] = voice_map.get(request.language, "it-IT-DiegoNeural")
+        else:
+            # Per altri engine, aggiungi language se supportato
+            tts_params["language"] = request.language
+        
+        # Crea istanza TTS (get_tts_engine gestisce automaticamente i fallback se un engine non è disponibile)
+        try:
+            tts_engine = get_tts_engine(request.engine, **tts_params)
+            # Verifica se il fallback è stato usato (controlla il tipo effettivo)
+            actual_engine_type = tts_engine.engine_type.value if hasattr(tts_engine, 'engine_type') else None
+            if request.engine.lower() != actual_engine_type and actual_engine_type == "edge":
+                logger.info(f"ℹ️ {request.engine} non disponibile nel container, uso EdgeTTS come fallback per il test")
+        except Exception as e:
+            # Se l'engine richiesto fallisce, prova con EdgeTTS come fallback
+            logger.warning(f"⚠️ Errore creazione {request.engine} TTS: {e}, uso EdgeTTS come fallback")
+            from agent.tts.edge_tts_engine import EdgeTTS
+            voice_map = {
+                "it": "it-IT-DiegoNeural",
+                "en": "en-US-GuyNeural",
+                "es": "es-ES-AlvaroNeural",
+                "fr": "fr-FR-HenriNeural",
+                "de": "de-DE-ConradNeural",
+                "zh": "zh-CN-YunxiNeural"
+            }
+            tts_engine = EdgeTTS(voice=voice_map.get(request.language, "it-IT-DiegoNeural"))
+        
+        # Sintetizza
+        import asyncio
+        result = await tts_engine.synthesize_async(request.text)
+        
+        # Converti audio_data (float32 numpy array) in WAV
+        # Normalizza se necessario
+        audio_data = result.audio_data
+        if audio_data.dtype != np.float32:
+            audio_data = audio_data.astype(np.float32)
+        
+        # Normalizza se fuori range [-1, 1]
+        max_val = np.abs(audio_data).max()
+        if max_val > 1.0:
+            audio_data = audio_data / max_val
+        
+        # Crea buffer WAV in memoria
+        wav_buffer = io.BytesIO()
+        sf.write(wav_buffer, audio_data, result.sample_rate, format='WAV', subtype='PCM_16')
+        wav_data = wav_buffer.getvalue()
+        
+        logger.info(f"✅ Test TTS completato: engine={request.engine}, text_len={len(request.text)}, audio_duration={result.duration_seconds:.2f}s")
+        
+        return Response(
+            content=wav_data,
+            media_type="audio/wav",
+            headers={
+                "X-Sample-Rate": str(result.sample_rate),
+                "X-Duration": str(result.duration_seconds),
+                "X-Engine": request.engine
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Errore test TTS: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # VibeVoice Model Management

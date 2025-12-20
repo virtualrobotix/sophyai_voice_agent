@@ -42,6 +42,7 @@ services:
       - ./models:/app/models
       - ./certs:/app/certs:ro
       - ./config:/app/config
+      - ./web:/app/web:ro  # Monta directory web per vedere modifiche immediate
     networks:
       - voiceagent
     extra_hosts:

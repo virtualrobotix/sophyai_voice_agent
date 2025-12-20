@@ -9,6 +9,16 @@ from typing import Optional
 import numpy as np
 from loguru import logger
 
+# Monkey patch torch.load per supportare checkpoint salvati su CUDA su sistemi senza CUDA
+import torch
+_original_torch_load = torch.load
+def _patched_torch_load(*args, **kwargs):
+    """Forza map_location='cpu' se non specificato, per supportare checkpoint CUDA su CPU/MPS"""
+    if 'map_location' not in kwargs:
+        kwargs['map_location'] = 'cpu'
+    return _original_torch_load(*args, **kwargs)
+torch.load = _patched_torch_load
+
 from .base import BaseTTS, TTSResult, TTSEngine
 
 
@@ -104,7 +114,11 @@ class ChatterboxTTS(BaseTTS):
         try:
             device = self._detect_device()
             
-            if self.model_type == "multilingual":
+            if self.model_type == "turbo":
+                from chatterbox.tts_turbo import ChatterboxTurboTTS
+                logger.info(f"Caricamento Chatterbox Turbo su {device}...")
+                self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+            elif self.model_type == "multilingual":
                 from chatterbox.mtl_tts import ChatterboxMultilingualTTS
                 logger.info(f"Caricamento Chatterbox Multilingual su {device}...")
                 self.model = ChatterboxMultilingualTTS.from_pretrained(device=device)
@@ -164,15 +178,20 @@ class ChatterboxTTS(BaseTTS):
             # Assicurati che sia float32
             audio_data = audio_data.astype(np.float32)
             
-            # Converti in mono se stereo (rimuovi dimensione extra se presente)
-            if len(audio_data.shape) > 1:
+            # Chatterbox restituisce tensor [1, samples] - rimuovi la dimensione batch
+            if len(audio_data.shape) == 2 and audio_data.shape[0] == 1:
+                audio_data = audio_data[0]  # Prendi il primo canale/batch
+            elif len(audio_data.shape) > 1:
+                # Converti in mono se stereo
                 if audio_data.shape[0] > 1:  # Formato [channels, samples]
                     audio_data = audio_data.mean(axis=0)
                 else:  # Formato [samples, channels]
                     audio_data = audio_data.mean(axis=1) if audio_data.shape[1] > 1 else audio_data.squeeze()
             
-            # Flatten se necessario
+            # Flatten se necessario per sicurezza
             audio_data = audio_data.flatten()
+            
+            logger.debug(f"Audio generato: {len(audio_data)} samples, durata={len(audio_data)/24000:.2f}s")
             
             # Normalizza se necessario (Chatterbox dovrebbe già essere normalizzato)
             max_val = np.abs(audio_data).max()
@@ -327,3 +346,4 @@ class ChatterboxTTS(BaseTTS):
             ]
         })
         return info
+

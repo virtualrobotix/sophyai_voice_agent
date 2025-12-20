@@ -8,10 +8,30 @@ import os
 import sys
 import time
 import uuid
+from typing import Optional
 
 import json
 import aiohttp
 from loguru import logger
+
+# #region debug logging
+DEBUG_LOG_PATH = "/Users/robertonavoni/Desktop/Lavoro/Progetti-2025/Progetti Software/livekit-test/.cursor/debug.log"
+def debug_log(hypothesis_id, location, message, data=None):
+    try:
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "run1",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "timestamp": int(time.time() * 1000)
+        }
+        with open(DEBUG_LOG_PATH, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception:
+        pass  # Ignora errori di logging
+# #endregion
 from livekit.agents import (
     JobContext,
     WorkerOptions,
@@ -33,6 +53,7 @@ _send_transcript_callback = None
 _sent_messages = set()  # Per evitare duplicati
 _last_user_message = ""  # Per evitare duplicati STT
 _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
+_last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
 
 def set_transcript_callback(callback):
     global _send_transcript_callback, _sent_messages
@@ -53,7 +74,7 @@ async def send_timing_to_server(timing_type: str, data: dict):
         async with aiohttp.ClientSession(connector=connector) as session:
             payload = {timing_type: data}
             async with session.post(
-                "https://host.docker.internal:8080/api/timing",
+                "https://host.docker.internal:8443/api/timing",
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=2)
             ) as resp:
@@ -218,6 +239,235 @@ class OllamaLLMStream(llm.LLMStream):
             traceback.print_exc()
 
 
+class ExternalTTSLiveKit(tts.TTS):
+    """
+    Wrapper LiveKit-compatibile generico per TTS esterni.
+    
+    Usa un server TTS esterno (tts_server.py) per la sintesi,
+    permettendo di sfruttare GPU/MPS sul host invece del container.
+    Supporta: kokoro, piper, vibevoice, chatterbox, edge
+    """
+
+    SUPPORTED_LANGUAGES = {
+        "it": "it-IT", "en": "en-US", "zh": "zh-CN",
+        "es": "es-ES", "fr": "fr-FR", "de": "de-DE"
+    }
+
+    def __init__(
+        self,
+        engine: str = "edge",
+        model: str = None,
+        language: str = "it",
+        speaker: str = None,
+        speed: float = 1.0,
+        auto_language: bool = True,
+        tts_server_url: str = None
+    ):
+        super().__init__(
+            capabilities=tts.TTSCapabilities(streaming=False),
+            sample_rate=24000,
+            num_channels=1,
+        )
+        self.engine = engine
+        self.model_name = model
+        self.language = language
+        self.speaker = speaker
+        self.speed = speed
+        self.auto_language = auto_language
+
+        # URL del server TTS esterno
+        self.tts_server_url = tts_server_url or os.getenv("TTS_SERVER_URL", "http://host.docker.internal:8092")
+        self._server_available = None
+
+        logger.info(f"🎤 ExternalTTSLiveKit inizializzato: engine={engine}, server={self.tts_server_url}, language={language}")
+
+    async def _check_server(self) -> bool:
+        """Verifica se il server TTS è disponibile"""
+        if self._server_available is not None:
+            return self._server_available
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.tts_server_url}/health", timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        logger.info(f"🎤 TTS Server disponibile: engine={data.get('engine')}, device={data.get('device')}")
+                        self._server_available = True
+                        return True
+        except Exception as e:
+            logger.warning(f"⚠️ TTS Server non disponibile: {e}")
+        
+        self._server_available = False
+        return False
+    
+    def get_current_language(self) -> str:
+        """Ritorna la lingua corrente (globale se auto_language)"""
+        if self.auto_language:
+            return _detected_language or self.language
+        return self.language
+    
+    def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "ExternalTTSStream":
+        # Se auto_language è attivo, usa la lingua rilevata
+        current_lang = self.get_current_language()
+        if current_lang != self.language:
+            logger.info(f"🎤 [{self.engine}] Cambio lingua: {self.language} → {current_lang}")
+            self.language = current_lang
+        
+        return ExternalTTSStream(self, text, conn_options)
+
+
+class ExternalTTSStream(tts.ChunkedStream):
+    """Stream audio da TTS esterno"""
+    
+    def __init__(self, tts_instance: ExternalTTSLiveKit, text: str, conn_options: APIConnectOptions):
+        super().__init__(tts=tts_instance, input_text=text, conn_options=conn_options)
+        self._tts_instance = tts_instance
+        self._text = text
+    
+    async def _run(self, output_emitter=None) -> None:
+        import subprocess
+        
+        try:
+            t_tts_start = time.time()
+            timestamp = time.strftime("%H:%M:%S", time.localtime())
+            text_preview = self._text[:50] + "..." if len(self._text) > 50 else self._text
+            engine = self._tts_instance.engine
+            logger.info(f"🎤 [{engine}] [{timestamp}] Sintesi ({len(self._text)} chars): \"{text_preview}\"")
+            
+            # Invia transcript
+            asyncio.create_task(send_transcript(self._text, "assistant"))
+            
+            pcm_data = None
+            
+            # Prova il server TTS esterno
+            try:
+                server_available = await self._tts_instance._check_server()
+                
+                if server_available:
+                    # Usa il server TTS esterno
+                    async with aiohttp.ClientSession() as session:
+                        payload = {
+                            "text": self._text,
+                            "language": self._tts_instance.language,
+                            "engine": engine
+                        }
+                        if self._tts_instance.speaker:
+                            payload["speaker"] = self._tts_instance.speaker
+                        if self._tts_instance.speed:
+                            payload["speed"] = self._tts_instance.speed
+                        if self._tts_instance.model_name:
+                            payload["model"] = self._tts_instance.model_name
+                        
+                        async with session.post(
+                            f"{self._tts_instance.tts_server_url}/synthesize",
+                            json=payload,
+                            timeout=aiohttp.ClientTimeout(total=60)
+                        ) as resp:
+                            if resp.status == 200:
+                                pcm_data = await resp.read()
+                                actual_engine = resp.headers.get("X-Engine", engine)
+                                logger.info(f"🎤 [{engine}] Sintesi via TTS Server (engine usato={actual_engine})")
+                            else:
+                                error = await resp.text()
+                                raise Exception(f"TTS Server error: {error}")
+                else:
+                    raise Exception("TTS Server non disponibile")
+                    
+            except Exception as e:
+                # Fallback a Edge TTS locale
+                logger.warning(f"⚠️ TTS Server non disponibile ({e}), uso Edge TTS locale")
+                
+                import edge_tts
+                
+                # Mappa lingua a voce Edge
+                edge_voices = {
+                    "it": "it-IT-DiegoNeural",
+                    "en": "en-US-GuyNeural",
+                    "zh": "zh-CN-YunxiNeural",
+                    "es": "es-ES-AlvaroNeural",
+                    "fr": "fr-FR-HenriNeural",
+                    "de": "de-DE-ConradNeural"
+                }
+                voice = edge_voices.get(self._tts_instance.language, "it-IT-DiegoNeural")
+                
+                communicate = edge_tts.Communicate(self._text, voice)
+                audio_data = b""
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_data += chunk["data"]
+                
+                # Converti MP3 in PCM
+                process = subprocess.Popen(
+                    ['ffmpeg', '-i', 'pipe:0', '-f', 's16le', '-ar', '24000', '-ac', '1', 'pipe:1'],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
+                pcm_data, _ = process.communicate(audio_data)
+            
+            t_tts_end = time.time()
+            tts_time_ms = (t_tts_end - t_tts_start) * 1000
+            duration = len(pcm_data) / (24000 * 2) if pcm_data else 0
+            logger.info(f"🎤 [{engine}] Tempo: {tts_time_ms:.0f}ms | Audio: {duration:.2f}s")
+            
+            # ⏱️ LATENCY: Tempo dalla fine domanda all'inizio risposta
+            latency_ms = 0
+            if _last_stt_end_time:
+                latency_ms = (t_tts_end - _last_stt_end_time) * 1000
+                logger.info(f"⚡ [LATENCY] Domanda→Risposta: {latency_ms:.0f}ms")
+            
+            # Emetti l'audio
+            if pcm_data:
+                import uuid
+                req_id = str(uuid.uuid4())
+                seg_id = str(uuid.uuid4())
+                
+                if output_emitter is not None:
+                    # API 1.3.x - inizializza e usa output_emitter
+                    output_emitter.initialize(
+                        request_id=req_id,
+                        sample_rate=24000,
+                        num_channels=1,
+                        mime_type="audio/pcm",
+                        stream=True
+                    )
+                    output_emitter.start_segment(segment_id=seg_id)
+                    output_emitter.push(pcm_data)
+                    output_emitter.end_segment()
+                    output_emitter.end_input()
+                    
+                    # Invia timing stats
+                    asyncio.create_task(send_timing_to_server("tts", {
+                        "time_ms": int(tts_time_ms),
+                        "audio_sec": round(duration, 2)
+                    }))
+                    if latency_ms > 0:
+                        asyncio.create_task(send_timing_to_server("latency", {
+                            "e2e_ms": int(latency_ms),
+                            "to_first_audio_ms": int(tts_time_ms)
+                        }))
+                else:
+                    # Fallback API 1.0.x - usa _event_ch
+                    import numpy as np
+                    frame = rtc.AudioFrame(
+                        data=pcm_data,
+                        sample_rate=24000,
+                        num_channels=1,
+                        samples_per_channel=len(pcm_data) // 2
+                    )
+                    audio_event = tts.SynthesizedAudio(
+                        frame=frame,
+                        request_id=req_id,
+                        is_final=True
+                    )
+                    await self._event_ch.send(audio_event)
+                
+        except Exception as e:
+            logger.error(f"❌ [{self._tts_instance.engine}] Errore TTS: {e}")
+            import traceback
+            traceback.print_exc()
+
+
 class VibeVoiceLiveKit(tts.TTS):
     """
     Wrapper LiveKit-compatibile per Microsoft VibeVoice TTS.
@@ -225,12 +475,12 @@ class VibeVoiceLiveKit(tts.TTS):
     Usa un server TTS esterno (tts_server.py) per la sintesi,
     permettendo di sfruttare GPU/MPS sul host invece del container.
     """
-    
+
     SUPPORTED_LANGUAGES = {
         "it": "it-IT", "en": "en-US", "zh": "zh-CN",
         "es": "es-ES", "fr": "fr-FR", "de": "de-DE"
     }
-    
+
     def __init__(
         self,
         model: str = "realtime",
@@ -250,11 +500,11 @@ class VibeVoiceLiveKit(tts.TTS):
         self.speaker = speaker
         self.speed = speed
         self.auto_language = auto_language
-        
+
         # URL del server TTS esterno
         self.tts_server_url = tts_server_url or os.getenv("TTS_SERVER_URL", "http://host.docker.internal:8092")
         self._server_available = None
-        
+
         logger.info(f"🎤 VibeVoiceLiveKit inizializzato: server={self.tts_server_url}, language={language}, speaker={speaker}")
     
     async def _check_server(self) -> bool:
@@ -283,13 +533,20 @@ class VibeVoiceLiveKit(tts.TTS):
         return self.language
     
     def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "VibeVoiceTTSStream":
+        # #region debug log - synthesize entry
+        debug_log("A", "main.py:304", "VibeVoiceLiveKit.synthesize() ENTRY", {"text": text[:50], "text_length": len(text), "language": self.language})
+        # #endregion
         # Se auto_language è attivo, usa la lingua rilevata
         current_lang = self.get_current_language()
         if current_lang != self.language:
             logger.info(f"🎤 [VibeVoice] Cambio lingua: {self.language} → {current_lang}")
             self.language = current_lang
         
-        return VibeVoiceTTSStream(self, text, conn_options)
+        stream = VibeVoiceTTSStream(self, text, conn_options)
+        # #region debug log - synthesize exit
+        debug_log("A", "main.py:311", "VibeVoiceLiveKit.synthesize() EXIT", {"returned_stream": type(stream).__name__})
+        # #endregion
+        return stream
 
 
 class VibeVoiceTTSStream(tts.ChunkedStream):
@@ -304,6 +561,10 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
         import subprocess
         import uuid
         
+        # #region debug log - TTS stream start
+        debug_log("E", "main.py:303", "VibeVoiceTTSStream._run() ENTRY", {"text_length": len(self._text), "has_output_emitter": output_emitter is not None, "text_preview": self._text[:50]})
+        # #endregion
+        
         try:
             t_tts_start = time.time()
             timestamp = time.strftime("%H:%M:%S", time.localtime())
@@ -317,7 +578,13 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
             
             # Prova il server TTS esterno
             try:
+                # #region debug log - check server
+                debug_log("B", "main.py:320", "PRIMA _check_server()", {})
+                # #endregion
                 server_available = await self._tts_instance._check_server()
+                # #region debug log - server check result
+                debug_log("B", "main.py:320", "DOPO _check_server()", {"server_available": server_available})
+                # #endregion
                 
                 if server_available:
                     # Usa il server TTS esterno
@@ -330,22 +597,37 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                             "engine": "vibevoice"
                         }
                         
+                        # #region debug log - TTS server request
+                        debug_log("B", "main.py:334", "PRIMA POST a TTS server", {"url": f"{self._tts_instance.tts_server_url}/synthesize", "payload_text": payload["text"]})
+                        # #endregion
                         async with session.post(
                             f"{self._tts_instance.tts_server_url}/synthesize",
                             json=payload,
                             timeout=aiohttp.ClientTimeout(total=60)
                         ) as resp:
+                            # #region debug log - TTS server response
+                            debug_log("B", "main.py:339", "DOPO POST a TTS server", {"status": resp.status, "headers": dict(resp.headers)})
+                            # #endregion
                             if resp.status == 200:
                                 pcm_data = await resp.read()
                                 engine = resp.headers.get("X-Engine", "unknown")
+                                # #region debug log - audio received
+                                debug_log("B", "main.py:342", "Audio ricevuto da TTS server", {"pcm_size": len(pcm_data) if pcm_data else 0, "engine": engine})
+                                # #endregion
                                 logger.info(f"🎤 [VibeVoice] Sintesi via TTS Server (engine={engine})")
                             else:
                                 error = await resp.text()
+                                # #region debug log - TTS server error
+                                debug_log("B", "main.py:345", "ERRORE TTS server", {"status": resp.status, "error": error})
+                                # #endregion
                                 raise Exception(f"TTS Server error: {error}")
                 else:
                     raise Exception("TTS Server non disponibile")
                     
             except Exception as e:
+                # #region debug log - fallback
+                debug_log("B", "main.py:349", "TTS Server fallback a Edge", {"error": str(e), "type": type(e).__name__})
+                # #endregion
                 # Fallback a Edge TTS locale
                 logger.warning(f"⚠️ TTS Server non disponibile ({e}), uso Edge TTS locale")
                 
@@ -382,6 +664,9 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
             tts_time_ms = (t_tts_end - t_tts_start) * 1000
             
             if pcm_data:
+                # #region debug log - audio ready
+                debug_log("C", "main.py:385", "PCM audio pronto per emissione", {"pcm_size": len(pcm_data), "samples": len(pcm_data) // 2})
+                # #endregion
                 req_id = str(uuid.uuid4())
                 seg_id = str(uuid.uuid4())
                 
@@ -397,6 +682,9 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                 
                 # Emetti audio
                 if output_emitter is not None:
+                    # #region debug log - emit via output_emitter
+                    debug_log("C", "main.py:400", "PRIMA output_emitter.initialize()", {"request_id": req_id})
+                    # #endregion
                     output_emitter.initialize(
                         request_id=req_id,
                         sample_rate=24000,
@@ -408,15 +696,31 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                     output_emitter.push(pcm_data)
                     output_emitter.end_segment()
                     output_emitter.end_input()
+                    # #region debug log - emit completed
+                    debug_log("C", "main.py:410", "DOPO output_emitter.end_input() - audio emesso", {})
+                    # #endregion
                 else:
+                    # #region debug log - emit via event_ch
+                    debug_log("C", "main.py:412", "PRIMA self._event_ch.send()", {"request_id": req_id})
+                    # #endregion
                     audio_event = tts.SynthesizedAudio(
                         frame=frame,
                         request_id=req_id,
                         is_final=True
                     )
                     await self._event_ch.send(audio_event)
+                    # #region debug log - event sent
+                    debug_log("C", "main.py:417", "DOPO self._event_ch.send() - audio event inviato", {})
+                    # #endregion
+            else:
+                # #region debug log - no audio
+                debug_log("C", "main.py:384", "Nessun PCM audio generato", {})
+                # #endregion
                     
         except Exception as e:
+            # #region debug log - exception
+            debug_log("D", "main.py:420", "ECCEZIONE in VibeVoiceTTSStream._run()", {"error": str(e), "type": type(e).__name__})
+            # #endregion
             logger.error(f"❌ [VibeVoice] Errore: {e}")
             raise
 
@@ -454,6 +758,9 @@ class EdgeTTS(tts.TTS):
         return self.VOICES_BY_LANGUAGE.get(language, self.default_voice)
     
     def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "EdgeTTSStream":
+        # #region debug log - EdgeTTS synthesize entry
+        debug_log("A", "main.py:529", "EdgeTTS.synthesize() ENTRY", {"text": text[:50], "text_length": len(text), "voice": self.voice})
+        # #endregion
         # Se auto_language è attivo, usa la lingua rilevata globalmente
         if self.auto_language:
             current_voice = self.get_voice_for_language(_detected_language)
@@ -461,7 +768,11 @@ class EdgeTTS(tts.TTS):
                 logger.info(f"🔊 [TTS] Cambio voce: {self.voice} → {current_voice} (lingua: {_detected_language})")
                 self.voice = current_voice
         
-        return EdgeTTSStream(self, text, conn_options)
+        stream = EdgeTTSStream(self, text, conn_options)
+        # #region debug log - EdgeTTS synthesize exit
+        debug_log("A", "main.py:537", "EdgeTTS.synthesize() EXIT", {"returned_stream": type(stream).__name__})
+        # #endregion
+        return stream
 
 
 class EdgeTTSStream(tts.ChunkedStream):
@@ -476,6 +787,10 @@ class EdgeTTSStream(tts.ChunkedStream):
         import edge_tts
         import subprocess
         import uuid
+        
+        # #region debug log - EdgeTTS stream start
+        debug_log("E", "main.py:548", "EdgeTTSStream._run() ENTRY", {"text_length": len(self._text), "has_output_emitter": output_emitter is not None, "text_preview": self._text[:50]})
+        # #endregion
         
         try:
             # ⏱️ TIMING: Inizio TTS
@@ -527,8 +842,14 @@ class EdgeTTSStream(tts.ChunkedStream):
                     )
                     
                     # Prova entrambi i metodi per compatibilità
+                    # #region debug log - audio emission
+                    debug_log("C", "main.py:603", "PRIMA emissione audio EdgeTTS", {"has_output_emitter": output_emitter is not None, "has_event_ch": hasattr(self, '_event_ch'), "pcm_size": len(pcm_data)})
+                    # #endregion
                     if output_emitter is not None:
                         # API 1.3.x
+                        # #region debug log - output_emitter path
+                        debug_log("C", "main.py:605", "Usando output_emitter path", {"request_id": req_id})
+                        # #endregion
                         output_emitter.initialize(
                             request_id=req_id,
                             sample_rate=24000,
@@ -540,19 +861,34 @@ class EdgeTTSStream(tts.ChunkedStream):
                         output_emitter.push(pcm_data)
                         output_emitter.end_segment()
                         output_emitter.end_input()
+                        # #region debug log - output_emitter completed
+                        debug_log("C", "main.py:615", "output_emitter.end_input() completato", {})
+                        # #endregion
                     else:
                         # API 1.0.x
+                        # #region debug log - event_ch path
+                        debug_log("C", "main.py:617", "Usando _event_ch path", {"request_id": req_id})
+                        # #endregion
                         audio_event = tts.SynthesizedAudio(
                             frame=frame,
                             request_id=req_id,
                             is_final=True
                         )
                         await self._event_ch.send(audio_event)
+                        # #region debug log - event_ch sent
+                        debug_log("C", "main.py:623", "_event_ch.send() completato", {})
+                        # #endregion
                     
                     # ⏱️ TIMING: Fine TTS
                     t_tts_end = time.time()
                     total_tts_time_ms = (t_tts_end - t_tts_start) * 1000
                     audio_duration_sec = len(pcm_data) / 2 / 24000  # 2 bytes/sample, 24kHz
+                    
+                    # ⏱️ LATENCY: Tempo dalla fine domanda all'inizio risposta
+                    latency_ms = 0
+                    if _last_stt_end_time:
+                        latency_ms = (t_tts_end - _last_stt_end_time) * 1000
+                        logger.info(f"⚡ [LATENCY] Domanda→Risposta: {latency_ms:.0f}ms")
                     
                     logger.info(f"🔊 [TTS] Tempo totale: {total_tts_time_ms:.0f}ms (API: {download_time_ms:.0f}ms, Convert: {convert_time_ms:.0f}ms) | Audio: {audio_duration_sec:.2f}s | {len(pcm_data)} bytes")
                     
@@ -562,7 +898,17 @@ class EdgeTTSStream(tts.ChunkedStream):
                         "audio_sec": round(audio_duration_sec, 2)
                     }))
                     
+                    # Invia latency stats
+                    if latency_ms > 0:
+                        asyncio.create_task(send_timing_to_server("latency", {
+                            "e2e_ms": int(latency_ms),
+                            "to_first_audio_ms": int(total_tts_time_ms)  # Tempo solo TTS
+                        }))
+                    
         except Exception as e:
+            # #region debug log - EdgeTTS exception
+            debug_log("D", "main.py:638", "ECCEZIONE in EdgeTTSStream._run()", {"error": str(e), "type": type(e).__name__})
+            # #endregion
             logger.error(f"Errore Edge TTS: {e}")
             import traceback
             traceback.print_exc()
@@ -689,7 +1035,9 @@ class WhisperSTT(stt.STT):
             text = ""
         
         # ⏱️ TIMING: Fine STT
+        global _last_stt_end_time
         t_stt_end = time.time()
+        _last_stt_end_time = t_stt_end  # Salva per calcolo latenza
         stt_time_ms = (t_stt_end - t_stt_start) * 1000
         
         logger.info(f"🎤 [STT] Tempo: {stt_time_ms:.0f}ms | Lingua: {detected_lang} | Trascritto: \"{text}\"")
@@ -743,6 +1091,121 @@ class WhisperSTT(stt.STT):
         return self.LANGUAGE_TTS_VOICES.get(language, self.LANGUAGE_TTS_VOICES.get("it"))
 
 
+def create_chatterbox_livekit_wrapper(
+    model: str = "multilingual",
+    language: str = "it",
+    device: str = "auto",
+    exaggeration: Optional[float] = None,
+    audio_prompt_path: Optional[str] = None,
+    auto_language: bool = True
+) -> "tts.TTS":
+    """
+    Crea un wrapper LiveKit-compatibile per Chatterbox TTS.
+    
+    Questo wrapper usa ChatterboxTTS internamente e lo adatta all'API LiveKit.
+    """
+    from agent.tts.chatterbox_tts import ChatterboxTTS
+    
+    # Salva i parametri in variabili locali per la closure
+    _model = model
+    _language = language
+    _device = device
+    _exaggeration = exaggeration
+    _audio_prompt_path = audio_prompt_path
+    _auto_language = auto_language
+    
+    class ChatterboxLiveKit(tts.TTS):
+        """Wrapper LiveKit-compatibile per Chatterbox TTS"""
+        
+        def __init__(self):
+            super().__init__(
+                capabilities=tts.TTSCapabilities(streaming=False),
+                sample_rate=24000,
+                num_channels=1,
+            )
+            self.chatterbox = ChatterboxTTS(
+                model=_model,
+                language=_language,
+                sample_rate=24000,
+                device=_device,
+                exaggeration=_exaggeration,
+                audio_prompt_path=_audio_prompt_path
+            )
+            self.language = _language
+            self.auto_language = _auto_language
+        
+        def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "ChatterboxTTSStream":
+            # #region debug log - hypothesis D
+            debug_log("D", "main.py:892", "ChatterboxLiveKit.synthesize chiamato", {"text_preview": text[:50], "tts_type": "ChatterboxLiveKit"})
+            # #endregion
+            # Se auto_language è attivo, usa la lingua rilevata
+            if self.auto_language:
+                current_lang = _detected_language or self.language
+                if current_lang != self.language:
+                    logger.info(f"🎭 [Chatterbox] Cambio lingua: {self.language} → {current_lang}")
+                    self.language = current_lang
+                    self.chatterbox.language = current_lang
+            
+            return ChatterboxTTSStream(self, text, conn_options)
+    
+    class ChatterboxTTSStream(tts.ChunkedStream):
+        """Stream audio da Chatterbox TTS"""
+        
+        def __init__(self, tts_instance: ChatterboxLiveKit, text: str, conn_options: APIConnectOptions):
+            super().__init__(tts=tts_instance, input_text=text, conn_options=conn_options)
+            self._tts_instance = tts_instance
+            self._text = text
+        
+        async def _run(self, output_emitter=None) -> None:
+            import numpy as np
+            try:
+                # Sintetizza con Chatterbox
+                result = await self._tts_instance.chatterbox.synthesize_async(self._text)
+                
+                # Converti numpy array in bytes (PCM 16-bit)
+                audio_data = result.audio_data
+                pcm_data = (audio_data * 32767).astype(np.int16).tobytes()
+                
+                req_id = str(uuid.uuid4())
+                seg_id = str(uuid.uuid4())
+                
+                frame = rtc.AudioFrame(
+                    data=pcm_data,
+                    sample_rate=result.sample_rate,
+                    num_channels=1,
+                    samples_per_channel=len(pcm_data) // 2
+                )
+                
+                # Emetti audio
+                if output_emitter is not None:
+                    output_emitter.initialize(
+                        request_id=req_id,
+                        sample_rate=result.sample_rate,
+                        num_channels=1,
+                        mime_type="audio/pcm",
+                        stream=True
+                    )
+                    output_emitter.start_segment(segment_id=seg_id)
+                    output_emitter.push(pcm_data)
+                    output_emitter.end_segment()
+                    output_emitter.end_input()
+                else:
+                    audio_event = tts.SynthesizedAudio(
+                        frame=frame,
+                        request_id=req_id,
+                        is_final=True
+                    )
+                    await self._event_ch.send(audio_event)
+                
+                logger.info(f"🎭 [Chatterbox] Sintesi completata: {len(pcm_data)} bytes, {result.duration_seconds:.2f}s")
+                
+            except Exception as e:
+                logger.error(f"❌ [Chatterbox] Errore: {e}")
+                raise
+    
+    return ChatterboxLiveKit()
+
+
 async def entrypoint(ctx: JobContext):
     """Entry point per l'agent LiveKit"""
     await ctx.connect()
@@ -758,7 +1221,60 @@ async def entrypoint(ctx: JobContext):
         api_key="ollama",  # Ollama non richiede API key
     )
     
-    # Wrapper per timing LLM
+    # Wrapper per timing LLM - usa callback su eventi stream
+    class TimedLLMStream:
+        """Wrapper per stream LLM che traccia i timing"""
+        def __init__(self, wrapped_stream, t_start):
+            self._wrapped = wrapped_stream
+            self._t_start = t_start
+            self._first_chunk = True
+            self._ttfb = 0
+            
+        def __aiter__(self):
+            return self
+            
+        async def __anext__(self):
+            try:
+                chunk = await self._wrapped.__anext__()
+                if self._first_chunk:
+                    self._ttfb = (time.time() - self._t_start) * 1000
+                    logger.info(f"🤖 [LLM] Time to first token: {self._ttfb:.0f}ms")
+                    self._first_chunk = False
+                return chunk
+            except StopAsyncIteration:
+                # Stream finito - invia timing
+                total_time = (time.time() - self._t_start) * 1000
+                logger.info(f"🤖 [LLM] Tempo totale: {total_time:.0f}ms")
+                asyncio.create_task(send_timing_to_server("llm", {
+                    "time_ms": int(total_time),
+                    "ttft_ms": int(self._ttfb)
+                }))
+                raise
+        
+        # Supporto async context manager (async with)
+        async def __aenter__(self):
+            if hasattr(self._wrapped, '__aenter__'):
+                await self._wrapped.__aenter__()
+            return self
+            
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            # Invia timing alla fine del context
+            total_time = (time.time() - self._t_start) * 1000
+            if self._first_chunk:
+                # Non c'erano chunk, ma registriamo comunque il tempo
+                logger.info(f"🤖 [LLM] Tempo totale (no chunks): {total_time:.0f}ms")
+            asyncio.create_task(send_timing_to_server("llm", {
+                "time_ms": int(total_time),
+                "ttft_ms": int(self._ttfb)
+            }))
+            if hasattr(self._wrapped, '__aexit__'):
+                return await self._wrapped.__aexit__(exc_type, exc_val, exc_tb)
+            return False
+        
+        # Proxy tutti gli altri attributi/metodi allo stream originale
+        def __getattr__(self, name):
+            return getattr(self._wrapped, name)
+    
     class TimedLLM(llm.LLM):
         def __init__(self, wrapped_llm):
             super().__init__()
@@ -768,34 +1284,7 @@ async def entrypoint(ctx: JobContext):
             t_start = time.time()
             logger.info(f"🤖 [LLM] Inizio richiesta a {config.ollama.model}...")
             stream = self._wrapped.chat(**kwargs)
-            
-            # Wrap dello stream per tracciare la fine
-            original_aiter = stream.__aiter__
-            first_chunk = True
-            
-            async def timed_aiter():
-                nonlocal first_chunk
-                t_first = None
-                ttfb = 0
-                async for chunk in original_aiter():
-                    if first_chunk:
-                        t_first = time.time()
-                        ttfb = (t_first - t_start) * 1000
-                        logger.info(f"🤖 [LLM] Time to first token: {ttfb:.0f}ms")
-                        first_chunk = False
-                    yield chunk
-                t_end = time.time()
-                total_time = (t_end - t_start) * 1000
-                logger.info(f"🤖 [LLM] Tempo totale: {total_time:.0f}ms")
-                
-                # Invia timing stats al server
-                asyncio.create_task(send_timing_to_server("llm", {
-                    "time_ms": int(total_time),
-                    "ttft_ms": int(ttfb)
-                }))
-            
-            stream.__aiter__ = timed_aiter
-            return stream
+            return TimedLLMStream(stream, t_start)
     
     my_llm = TimedLLM(base_llm)
     logger.info(f"Usando OpenAI plugin con Ollama: {ollama_base_url}, model={config.ollama.model}")
@@ -822,6 +1311,10 @@ async def entrypoint(ctx: JobContext):
         tts_engine = config.tts.default_engine.lower()
         tts_language = config.tts.vibevoice_language
     
+    # #region debug log - hypothesis D
+    debug_log("D", "main.py:1028", "Configurazione TTS letta", {"engine": tts_engine, "language": tts_language, "from_file": bool(tts_from_file), "file_content": tts_from_file})
+    # #endregion
+    
     logger.info(f"🔊 ======================================")
     logger.info(f"🔊 CONFIGURAZIONE TTS")
     logger.info(f"🔊 Engine selezionato: {tts_engine}")
@@ -846,20 +1339,64 @@ async def entrypoint(ctx: JobContext):
             my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
     elif tts_engine == "kokoro":
         try:
-            # Kokoro richiede wrapper LiveKit
-            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
-            logger.info(f"🔊 TTS attivo: EdgeTTS (fallback da Kokoro)")
-            logger.warning(f"⚠️ Kokoro non ancora integrato con LiveKit, uso EdgeTTS")
+            # Kokoro usa il server TTS esterno
+            kokoro_speed = tts_from_file.get("speed", 1.0) if tts_from_file else 1.0
+            my_tts = ExternalTTSLiveKit(
+                engine="kokoro",
+                language=tts_language,
+                speed=kokoro_speed,
+                auto_language=True
+            )
+            logger.info(f"🔊 TTS attivo: Kokoro (via server esterno)")
+            logger.info(f"🎤 Lingua: {tts_language}")
         except Exception as e:
             logger.error(f"❌ Errore configurazione Kokoro: {e}")
             my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
     elif tts_engine == "piper":
         try:
-            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
-            logger.info(f"🔊 TTS attivo: EdgeTTS (fallback da Piper)")
-            logger.warning(f"⚠️ Piper non ancora integrato con LiveKit, uso EdgeTTS")
+            # Piper usa il server TTS esterno
+            piper_model = tts_from_file.get("model", "it_IT-riccardo-x_low") if tts_from_file else "it_IT-riccardo-x_low"
+            my_tts = ExternalTTSLiveKit(
+                engine="piper",
+                model=piper_model,
+                language=tts_language,
+                auto_language=True
+            )
+            logger.info(f"🔊 TTS attivo: Piper (via server esterno)")
+            logger.info(f"🎤 Lingua: {tts_language}, Model: {piper_model}")
         except Exception as e:
             logger.error(f"❌ Errore configurazione Piper: {e}")
+            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
+    elif tts_engine == "chatterbox":
+        try:
+            from agent.tts.chatterbox_tts import ChatterboxTTS
+            # Usa parametri da file o default da config
+            chatterbox_model = tts_from_file.get("model", config.tts.chatterbox_model) if tts_from_file else config.tts.chatterbox_model
+            chatterbox_language = tts_from_file.get("language", config.tts.chatterbox_language) if tts_from_file else config.tts.chatterbox_language
+            chatterbox_device = tts_from_file.get("device", config.tts.chatterbox_device) if tts_from_file else config.tts.chatterbox_device
+            chatterbox_exaggeration = tts_from_file.get("exaggeration") if tts_from_file else config.tts.chatterbox_exaggeration
+            chatterbox_audio_prompt_path = tts_from_file.get("audio_prompt_path") if tts_from_file else config.tts.chatterbox_audio_prompt_path
+            
+            # Crea wrapper LiveKit-compatibile
+            my_tts = create_chatterbox_livekit_wrapper(
+                model=chatterbox_model,
+                language=chatterbox_language,
+                device=chatterbox_device,
+                exaggeration=chatterbox_exaggeration,
+                audio_prompt_path=chatterbox_audio_prompt_path,
+                auto_language=True
+            )
+            logger.info(f"🎭 TTS attivo: Chatterbox (model={chatterbox_model}, language={chatterbox_language})")
+            # #region debug log - hypothesis A
+            debug_log("A", "main.py:1098", "Chatterbox TTS creato con successo", {"tts_type": type(my_tts).__name__, "model": chatterbox_model, "language": chatterbox_language})
+            # #endregion
+        except Exception as e:
+            logger.error(f"❌ Errore configurazione Chatterbox: {e}")
+            import traceback
+            traceback.print_exc()
+            # #region debug log - hypothesis A
+            debug_log("A", "main.py:1100", "Chatterbox fallito, fallback a EdgeTTS", {"error": str(e), "error_type": type(e).__name__})
+            # #endregion
             my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
     else:
         # Default: Edge TTS
@@ -870,9 +1407,14 @@ async def entrypoint(ctx: JobContext):
     
     logger.info(f"🔊 ======================================")
     
+    # #region debug log - hypothesis B
+    debug_log("B", "main.py:1111", "TTS finale prima di creare Agent", {"tts_type": type(my_tts).__name__, "tts_module": type(my_tts).__module__, "tts_str": str(my_tts)[:100]})
+    # #endregion
+    
     my_stt = WhisperSTT(
         model_size=config.whisper.model,
-        language=config.whisper.language
+        language=config.whisper.language,
+        auto_detect=False  # Forza lingua italiana per evitare rilevamenti errati
     )
     
     # VAD
@@ -880,35 +1422,35 @@ async def entrypoint(ctx: JobContext):
     
     logger.info("Componenti caricati, creo Agent...")
     
-    # Crea l'agent con le istruzioni - risposte BREVI e ottimizzate per TTS
+    # Crea l'agent con le istruzioni - risposte ULTRA-BREVI e ottimizzate per velocità
     # Include rilevamento automatico della lingua
     agent = Agent(
-        instructions="""Sei un assistente vocale multilingue chiamato Sophy. REGOLE IMPORTANTI:
+        instructions="""Sei Sophy, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
 
-LINGUA:
-- RILEVA automaticamente la lingua in cui l'utente ti parla
-- RISPONDI SEMPRE nella STESSA LINGUA dell'utente
-- Se l'utente parla in italiano, rispondi in italiano
-- Se l'utente parla in inglese, rispondi in inglese
-- Adatta il tuo stile alla cultura della lingua
+REGOLE FONDAMENTALI:
+1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai più di 30 parole
+2. VAI DRITTO AL PUNTO: niente preamboli, saluti inutili o ripetizioni
+3. LINGUA: rispondi nella stessa lingua dell'utente
 
-FORMATO RISPOSTA:
-- Rispondi SEMPRE in modo BREVISSIMO (massimo 2-3 frasi)
-- Vai dritto al punto, niente introduzioni lunghe
-- Parla in modo naturale e colloquiale
+STILE:
+- Rispondi come un amico esperto: diretto, chiaro, utile
+- Se non sai qualcosa, dillo in 5 parole
+- Preferisci risposte secche e precise
 
-REGOLE PER IL TTS (Text-to-Speech):
-- NON usare MAI caratteri speciali come: * # @ € $ % & / \\ | < > { } [ ] ~ ^ ` 
-- NON usare emoji o simboli
-- Scrivi i numeri IN PAROLE (es: "ventitre" invece di "23", "twenty-three" in inglese)
-- Evita abbreviazioni (es: "chilometri" invece di "km", "kilometers" in inglese)
-- Usa la punteggiatura normale: virgole, punti, punti esclamativi e interrogativi
-- Evita elenchi puntati, scrivi in modo discorsivo""",
+FORMATO TTS:
+- NO simboli: * # @ € $ % & / | < > { } [ ] ~ ^ `
+- NO emoji
+- Numeri in parole (ventitre, non 23)
+- NO elenchi puntati, scrivi discorsivo""",
         vad=vad,
         stt=my_stt,
         llm=my_llm,
         tts=my_tts,
     )
+    
+    # #region debug log - hypothesis C
+    debug_log("C", "main.py:1151", "Agent creato, verifico TTS passato", {"agent_tts_type": type(agent.tts).__name__ if hasattr(agent, 'tts') else "no_tts_attr"})
+    # #endregion
     
     logger.info("Agent creato, creo AgentSession...")
     
@@ -988,7 +1530,16 @@ REGOLE PER IL TTS (Text-to-Speech):
             logger.error(f"Errore gestione messaggio testuale: {e}")
     
     # Messaggio di benvenuto
-    await session.say("Ciao! Come posso aiutarti?")
+    # #region debug log - welcome message
+    debug_log("A", "main.py:991", "PRIMA di session.say() benvenuto", {"text": "Ciao! Come posso aiutarti?", "session_ready": True})
+    try:
+        await session.say("Ciao! Come posso aiutarti?")
+        debug_log("A", "main.py:991", "DOPO session.say() benvenuto - completato senza eccezioni", {})
+    except Exception as e:
+        debug_log("A", "main.py:991", "ERRORE in session.say() benvenuto", {"error": str(e), "type": type(e).__name__})
+        logger.error(f"❌ Errore nel messaggio di benvenuto: {e}")
+        raise
+    # #endregion
     
     # Mantieni attivo
     await asyncio.Event().wait()

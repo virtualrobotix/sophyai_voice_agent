@@ -465,3 +465,5 @@ class VibeVoiceTTS(BaseTTS):
             "supported_languages": list(self.SUPPORTED_LANGUAGES.keys())
         })
         return info
+
+

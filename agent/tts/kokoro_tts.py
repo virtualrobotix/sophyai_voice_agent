@@ -76,44 +76,45 @@ class KokoroTTS(BaseTTS):
             return
         
         try:
-            from kokoro import KokoroTTS as KokoroModel
+            from kokoro import KPipeline
         except ImportError:
-            # Fallback: prova import alternativo
-            try:
-                import kokoro
-                self.model = kokoro
-                logger.info("Kokoro caricato (modulo)")
-                return
-            except ImportError:
-                raise ImportError("Kokoro TTS non installato. Installa con: pip install kokoro")
+            raise ImportError("Kokoro TTS non installato. Installa con: pip install kokoro")
         
         logger.info("Caricamento modello Kokoro...")
         
-        device = "cuda" if self.gpu else "cpu"
-        self.model = KokoroModel(device=device)
+        # Determina il codice lingua (i=italiano, a=american english, b=british english, etc.)
+        lang_code = 'i'  # Italiano di default
+        if 'en' in self.voice.lower() or self.voice.startswith('a') or self.voice.startswith('b'):
+            lang_code = 'a'  # American English
         
-        logger.info("Modello Kokoro caricato")
+        device = "cuda" if self.gpu else None  # None = auto (CPU/MPS)
+        self.model = KPipeline(lang_code=lang_code, repo_id='hexgrad/Kokoro-82M', device=device)
+        
+        logger.info(f"Modello Kokoro caricato (lang={lang_code})")
     
     def synthesize(self, text: str) -> TTSResult:
         """Sintetizza testo in audio con Kokoro"""
         self._load_model()
         
         try:
-            # Prova prima l'API principale
-            if hasattr(self.model, 'generate'):
-                audio, sr = self.model.generate(
-                    text=text,
-                    voice=self.voice,
-                    speed=self.speed
-                )
-            elif hasattr(self.model, 'tts'):
-                audio, sr = self.model.tts(
-                    text=text,
-                    voice=self.voice,
-                    speed=self.speed
-                )
+            import numpy as np
+            
+            # Usa KPipeline API
+            audio_chunks = []
+            for gs, ps, audio_chunk in self.model(text, voice=self.voice, speed=self.speed):
+                if hasattr(audio_chunk, 'numpy'):
+                    audio_chunks.append(audio_chunk.numpy())
+                else:
+                    audio_chunks.append(np.array(audio_chunk))
+            
+            # Concatena tutti i chunk
+            if audio_chunks:
+                audio = np.concatenate(audio_chunks)
+                sr = 24000  # Kokoro usa 24kHz
+                logger.debug(f"Kokoro audio: {len(audio)} samples, {len(audio)/sr:.2f}s")
             else:
-                # Fallback generico
+                # Fallback se non ci sono chunk
+                logger.warning("Nessun chunk audio da Kokoro, uso fallback")
                 audio, sr = self._synthesize_fallback(text)
             
             # Converti in numpy array float32
@@ -202,5 +203,7 @@ class KokoroTTS(BaseTTS):
         
         self.speed = speed
         logger.info(f"Velocità impostata: {speed}")
+
+
 
 
