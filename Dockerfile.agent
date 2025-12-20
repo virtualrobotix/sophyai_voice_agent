@@ -18,6 +18,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Installa Chatterbox TTS (opzionale, ma presente in requirements-cuda.txt)
+# RUN pip install chatterbox-tts || echo "Chatterbox TTS non installato (opzionale)"
+
 # Copia il codice
 COPY . .
 

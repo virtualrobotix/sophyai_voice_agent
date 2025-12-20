@@ -17,6 +17,7 @@ class TTSEngine(str, Enum):
     EDGE = "edge"
     KOKORO = "kokoro"
     VIBEVOICE = "vibevoice"
+    CHATTERBOX = "chatterbox"
 
 
 @dataclass
@@ -130,5 +131,6 @@ class BaseTTS(ABC):
             "language": self.language,
             "self_hosted": self.is_self_hosted,
         }
+
 
 

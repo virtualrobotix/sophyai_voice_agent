@@ -15,7 +15,7 @@ def get_tts_engine(engine_name: str, **kwargs) -> BaseTTS:
     Factory function per ottenere il TTS engine desiderato.
     
     Args:
-        engine_name: Nome del TTS engine (edge, piper, coqui, kokoro, vibevoice)
+        engine_name: Nome del TTS engine (edge, piper, coqui, kokoro, vibevoice, chatterbox)
         **kwargs: Argomenti aggiuntivi per il TTS
         
     Returns:
@@ -61,6 +61,15 @@ def get_tts_engine(engine_name: str, **kwargs) -> BaseTTS:
             return VibeVoiceTTS(**kwargs)
         except ImportError:
             print("VibeVoice TTS non disponibile, uso Edge TTS")
+            return EdgeTTS(**kwargs)
+    
+    # Chatterbox TTS (opzionale)
+    if engine_name == "chatterbox":
+        try:
+            from .chatterbox_tts import ChatterboxTTS
+            return ChatterboxTTS(**kwargs)
+        except ImportError:
+            print("Chatterbox TTS non disponibile, uso Edge TTS")
             return EdgeTTS(**kwargs)
     
     # Default a Edge TTS

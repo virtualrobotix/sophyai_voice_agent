@@ -60,6 +60,14 @@ class TTSConfig:
     vibevoice_speaker: str = field(default_factory=lambda: os.getenv("VIBEVOICE_SPEAKER", "speaker_1"))
     vibevoice_speed: float = field(default_factory=lambda: float(os.getenv("VIBEVOICE_SPEED", "1.0")))
     vibevoice_gpu: bool = field(default_factory=lambda: os.getenv("VIBEVOICE_GPU", "true").lower() in ("true", "1", "yes"))
+    
+    # Chatterbox TTS (Resemble AI)
+    chatterbox_model: str = field(default_factory=lambda: os.getenv("CHATTERBOX_MODEL", "multilingual"))
+    chatterbox_language: str = field(default_factory=lambda: os.getenv("CHATTERBOX_LANGUAGE", "it"))
+    chatterbox_device: str = field(default_factory=lambda: os.getenv("CHATTERBOX_DEVICE", "auto"))
+    chatterbox_exaggeration: Optional[float] = field(default_factory=lambda: float(os.getenv("CHATTERBOX_EXAGGERATION")) if os.getenv("CHATTERBOX_EXAGGERATION") else None)
+    chatterbox_cfg_weight: Optional[float] = field(default_factory=lambda: float(os.getenv("CHATTERBOX_CFG_WEIGHT")) if os.getenv("CHATTERBOX_CFG_WEIGHT") else None)
+    chatterbox_audio_prompt_path: Optional[str] = field(default_factory=lambda: os.getenv("CHATTERBOX_AUDIO_PROMPT_PATH"))
 
 
 @dataclass
@@ -89,5 +97,6 @@ def reload_config() -> AppConfig:
     load_dotenv()
     config = AppConfig()
     return config
+
 
 
