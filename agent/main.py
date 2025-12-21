@@ -1206,20 +1206,97 @@ def create_chatterbox_livekit_wrapper(
     return ChatterboxLiveKit()
 
 
+async def load_settings_from_server() -> dict:
+    """Carica impostazioni dal web server (database)"""
+    import ssl
+    
+    settings = {
+        "llm_provider": "ollama",
+        "ollama_model": config.ollama.model,
+        "openrouter_model": "",
+        "openrouter_api_key": "",
+        "system_prompt": "",
+        "context_injection": "",
+        "whisper_model": config.whisper.model,
+        "whisper_language": config.whisper.language,
+    }
+    
+    try:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            # Carica settings
+            async with session.get(
+                "https://host.docker.internal:8443/api/settings",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    settings.update(data)
+                    logger.info(f"📥 Settings caricati da database")
+            
+            # Carica prompt
+            async with session.get(
+                "https://host.docker.internal:8443/api/prompt",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    settings["system_prompt"] = data.get("prompt", "")
+            
+            # Carica context
+            async with session.get(
+                "https://host.docker.internal:8443/api/context",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    settings["context_injection"] = data.get("context", "")
+                    
+    except Exception as e:
+        logger.warning(f"⚠️ Impossibile caricare settings da DB: {e}")
+    
+    return settings
+
+
 async def entrypoint(ctx: JobContext):
     """Entry point per l'agent LiveKit"""
     await ctx.connect()
     
     logger.info(f"Agent connesso alla room: {ctx.room.name}")
     
-    # Inizializza componenti - Usa plugin OpenAI con endpoint Ollama
-    # Ollama è compatibile con l'API OpenAI su /v1/
-    ollama_base_url = config.ollama.host + "/v1"
-    base_llm = openai.LLM(
-        model=config.ollama.model,
-        base_url=ollama_base_url,
-        api_key="ollama",  # Ollama non richiede API key
-    )
+    # Carica impostazioni dal database
+    db_settings = await load_settings_from_server()
+    logger.info(f"📥 LLM Provider: {db_settings.get('llm_provider', 'ollama')}")
+    
+    # Inizializza LLM in base al provider configurato
+    llm_provider = db_settings.get("llm_provider", "ollama")
+    
+    if llm_provider == "openrouter" and db_settings.get("openrouter_api_key"):
+        # Usa OpenRouter
+        openrouter_model = db_settings.get("openrouter_model", "openai/gpt-3.5-turbo")
+        openrouter_key = db_settings.get("openrouter_api_key", "")
+        
+        base_llm = openai.LLM(
+            model=openrouter_model,
+            base_url="https://openrouter.ai/api/v1",
+            api_key=openrouter_key,
+        )
+        logger.info(f"🌐 LLM: OpenRouter ({openrouter_model})")
+    else:
+        # Usa Ollama (default)
+        ollama_base_url = config.ollama.host + "/v1"
+        ollama_model = db_settings.get("ollama_model", config.ollama.model)
+        
+        base_llm = openai.LLM(
+            model=ollama_model,
+            base_url=ollama_base_url,
+            api_key="ollama",  # Ollama non richiede API key
+        )
+        logger.info(f"🦙 LLM: Ollama ({ollama_model})")
     
     # Wrapper per timing LLM - usa callback su eventi stream
     class TimedLLMStream:
@@ -1282,12 +1359,12 @@ async def entrypoint(ctx: JobContext):
         
         def chat(self, **kwargs) -> llm.LLMStream:
             t_start = time.time()
-            logger.info(f"🤖 [LLM] Inizio richiesta a {config.ollama.model}...")
+            logger.info(f"🤖 [LLM] Inizio richiesta...")
             stream = self._wrapped.chat(**kwargs)
             return TimedLLMStream(stream, t_start)
     
     my_llm = TimedLLM(base_llm)
-    logger.info(f"Usando OpenAI plugin con Ollama: {ollama_base_url}, model={config.ollama.model}")
+    logger.info(f"LLM configurato e pronto")
     
     # Leggi configurazione TTS dal file condiviso (se esiste)
     tts_config_file = "/app/config/tts_config.json"
@@ -1411,21 +1488,25 @@ async def entrypoint(ctx: JobContext):
     debug_log("B", "main.py:1111", "TTS finale prima di creare Agent", {"tts_type": type(my_tts).__name__, "tts_module": type(my_tts).__module__, "tts_str": str(my_tts)[:100]})
     # #endregion
     
+    # Configura Whisper STT usando settings dal database
+    whisper_model = db_settings.get("whisper_model", config.whisper.model)
+    whisper_language = db_settings.get("whisper_language", config.whisper.language)
+    whisper_auto_detect = db_settings.get("whisper_auto_detect", "false") == "true"
+    
     my_stt = WhisperSTT(
-        model_size=config.whisper.model,
-        language=config.whisper.language,
-        auto_detect=False  # Forza lingua italiana per evitare rilevamenti errati
+        model_size=whisper_model,
+        language=whisper_language,
+        auto_detect=whisper_auto_detect
     )
+    logger.info(f"🎤 Whisper: model={whisper_model}, language={whisper_language}, auto_detect={whisper_auto_detect}")
     
     # VAD
     vad = silero.VAD.load()
     
     logger.info("Componenti caricati, creo Agent...")
     
-    # Crea l'agent con le istruzioni - risposte ULTRA-BREVI e ottimizzate per velocità
-    # Include rilevamento automatico della lingua
-    agent = Agent(
-        instructions="""Sei Sophy, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
+    # Costruisci il prompt usando quello dal database (se disponibile)
+    default_prompt = """Sei Sophy, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
 
 REGOLE FONDAMENTALI:
 1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai più di 30 parole
@@ -1441,7 +1522,25 @@ FORMATO TTS:
 - NO simboli: * # @ € $ % & / | < > { } [ ] ~ ^ `
 - NO emoji
 - Numeri in parole (ventitre, non 23)
-- NO elenchi puntati, scrivi discorsivo""",
+- NO elenchi puntati, scrivi discorsivo"""
+
+    # Usa prompt dal database se disponibile
+    system_prompt = db_settings.get("system_prompt", "").strip()
+    if not system_prompt:
+        system_prompt = default_prompt
+    
+    # Aggiungi context injection se presente
+    context_injection = db_settings.get("context_injection", "").strip()
+    if context_injection:
+        system_prompt = f"{system_prompt}\n\n--- INFORMAZIONI AGGIUNTIVE ---\n{context_injection}"
+        logger.info(f"📝 Context injection aggiunto: {len(context_injection)} caratteri")
+    
+    logger.info(f"📝 System prompt: {len(system_prompt)} caratteri")
+    
+    # Crea l'agent con le istruzioni - risposte ULTRA-BREVI e ottimizzate per velocità
+    # Include rilevamento automatico della lingua
+    agent = Agent(
+        instructions=system_prompt,
         vad=vad,
         stt=my_stt,
         llm=my_llm,

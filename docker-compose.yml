@@ -1,4 +1,26 @@
 services:
+  # PostgreSQL per persistenza configurazioni e chat
+  postgres:
+    image: postgres:16-alpine
+    container_name: voice-agent-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=voiceagent
+      - POSTGRES_USER=voiceagent
+      - POSTGRES_PASSWORD=voiceagent_pwd
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voiceagent -d voiceagent"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - voiceagent
+
   # Redis per LiveKit (locale)
   redis:
     image: redis:7-alpine
@@ -38,11 +60,17 @@ services:
       - WEB_PORT=8443
       - LOG_LEVEL=INFO
       - HF_HOME=/app/models/huggingface
+      - DATABASE_URL=postgresql://voiceagent:voiceagent_pwd@postgres:5432/voiceagent
     volumes:
       - ./models:/app/models
       - ./certs:/app/certs:ro
       - ./config:/app/config
       - ./web:/app/web:ro  # Monta directory web per vedere modifiche immediate
+      - ./server.py:/app/server.py:ro  # Server con nuove API
+      - ./db:/app/db:ro  # Modulo database
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - voiceagent
     extra_hosts:
@@ -94,9 +122,13 @@ services:
       - LOG_LEVEL=INFO
       - HF_HOME=/app/models/huggingface
       - XDG_CACHE_HOME=/app/models/cache
+      - DATABASE_URL=postgresql://voiceagent:voiceagent_pwd@postgres:5432/voiceagent
     volumes:
       - ./models:/app/models
       - ./config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - voiceagent
     extra_hosts:
@@ -108,3 +140,4 @@ networks:
 
 volumes:
   redis_data:
+  postgres_data:

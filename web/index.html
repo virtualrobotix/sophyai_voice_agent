@@ -669,7 +669,149 @@
             transition: width 0.3s ease;
         }
 
+        /* Chat Sidebar */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .new-chat-btn:hover { background: #7c3aed; }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .chat-item {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .chat-item:hover { background: var(--bg-card); }
+        .chat-item.active { background: var(--accent); }
+
+        .chat-item-info { flex: 1; overflow: hidden; }
+        .chat-item-title { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item-date { font-size: 0.75rem; color: var(--text-muted); }
+        .chat-item.active .chat-item-date { color: rgba(255,255,255,0.7); }
+
+        .chat-item-delete {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .chat-item:hover .chat-item-delete { opacity: 1; }
+        .chat-item-delete:hover { background: rgba(239, 68, 68, 0.2); }
+
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Toggle Sidebar Button */
+        .sidebar-toggle-btn {
+            width: 42px;
+            height: 42px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 1.4rem;
+            font-weight: 300;
+            margin-right: 12px;
+        }
+        
+        .sidebar-toggle-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .sidebar-toggle-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        
+        .sidebar-overlay.active { display: block; }
+        
+        /* Sidebar hidden by default */
+        .sidebar.hidden {
+            display: none;
+        }
+        
         /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar:not(.hidden) { 
+                position: fixed;
+                top: 0; left: 0;
+                height: 100vh;
+                z-index: 100;
+            }
+        }
+
         @media (max-width: 600px) {
             header { padding: 16px; }
             main { padding: 16px; }
@@ -680,15 +822,34 @@
 </head>
 <body>
     <div class="bg-glow"></div>
-
-    <header>
-        <div class="logo">
-            <div class="logo-icon">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm-1 14.93A7.006 7.006 0 0 1 5 10h2a5 5 0 0 0 10 0h2a7.006 7.006 0 0 1-6 6.93V20h4v2H7v-2h4v-3.07z"/>
-                </svg>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <div class="app-container">
+        <!-- Sidebar Chat -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    + Nuova Chat
+                </button>
             </div>
-            <span class="logo-text">SophyAi Live</span>
+            <div class="chat-list" id="chat-list">
+                <!-- Chat items will be loaded here -->
+            </div>
+        </aside>
+        
+        <!-- Main Area -->
+        <div class="main-area">
+            <header>
+        <div style="display: flex; align-items: center;">
+            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Mostra/Nascondi Chat">+</button>
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm-1 14.93A7.006 7.006 0 0 1 5 10h2a5 5 0 0 0 10 0h2a7.006 7.006 0 0 1-6 6.93V20h4v2H7v-2h4v-3.07z"/>
+                    </svg>
+                </div>
+                <span class="logo-text">SophyAi Live</span>
+            </div>
         </div>
         <div class="header-actions">
             <div class="status-pill" id="status-pill">
@@ -746,6 +907,9 @@
             </div>
         </div>
     </div>
+
+        </div><!-- End main-area -->
+    </div><!-- End app-container -->
 
     <!-- Initialization Modal -->
     <div class="init-modal hidden" id="init-modal">
@@ -1139,9 +1303,276 @@
             elements.voiceStatus.textContent = '💭 Elaborando...';
         }
 
+        // ==================== Sidebar Toggle ====================
+        let sidebarVisible = true;
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const toggleBtn = document.getElementById('sidebar-toggle-btn');
+            
+            sidebarVisible = !sidebarVisible;
+            
+            if (sidebarVisible) {
+                sidebar.classList.remove('hidden');
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '−';
+                if (window.innerWidth <= 768) {
+                    overlay.classList.add('active');
+                }
+            } else {
+                sidebar.classList.add('hidden');
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '+';
+                overlay.classList.remove('active');
+            }
+        }
+        
+        // Inizializza stato bottone
+        function initSidebarToggle() {
+            const toggleBtn = document.getElementById('sidebar-toggle-btn');
+            if (toggleBtn) {
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '−';
+            }
+        }
+        
+        // ==================== Chat Management ====================
+        let currentChatId = null;
+        let chatMessages = []; // Storico messaggi per contesto LLM
+        
+        async function loadChats() {
+            try {
+                const resp = await fetch('/api/chats');
+                const data = await resp.json();
+                renderChats(data.chats || []);
+            } catch (e) {
+                console.error('Errore caricamento chat:', e);
+            }
+        }
+
+        function renderChats(chats) {
+            const container = document.getElementById('chat-list');
+            if (!container) return;
+            
+            if (chats.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Nessuna chat</div>';
+                return;
+            }
+            
+            container.innerHTML = chats.map(chat => `
+                <div class="chat-item ${chat.id === currentChatId ? 'active' : ''}" onclick="selectChat(${chat.id})">
+                    <div class="chat-item-info">
+                        <div class="chat-item-title">${escapeHtml(chat.title)}</div>
+                        <div class="chat-item-date">${formatDate(chat.updated_at)}</div>
+                    </div>
+                    <button class="chat-item-delete" onclick="event.stopPropagation(); deleteChat(${chat.id})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        async function createNewChat() {
+            try {
+                const resp = await fetch('/api/chats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'Nuova Chat' })
+                });
+                const data = await resp.json();
+                currentChatId = data.id;
+                chatMessages = []; // Reset contesto
+                
+                // Pulisci messaggi visualizzati
+                const messagesContainer = document.getElementById('messages');
+                const emptyMsg = document.getElementById('messages-empty');
+                if (messagesContainer && emptyMsg) {
+                    messagesContainer.innerHTML = '';
+                    messagesContainer.appendChild(emptyMsg);
+                    emptyMsg.classList.remove('hidden');
+                }
+                
+                // Reset contesto sul server
+                await fetch('/api/context', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ context: '' })
+                });
+                
+                await loadChats();
+                
+                // Chiudi sidebar su mobile
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            } catch (e) {
+                console.error('Errore creazione chat:', e);
+            }
+        }
+
+        async function selectChat(chatId) {
+            currentChatId = chatId;
+            await loadChats();
+            await loadChatMessages(chatId);
+            
+            // Chiudi sidebar su mobile
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        async function loadChatMessages(chatId) {
+            try {
+                const resp = await fetch(`/api/chats/${chatId}`);
+                const data = await resp.json();
+                
+                const messagesContainer = document.getElementById('messages');
+                const emptyMsg = document.getElementById('messages-empty');
+                
+                // Salva messaggi per il contesto LLM
+                chatMessages = data.messages || [];
+                
+                if (data.messages && data.messages.length > 0) {
+                    emptyMsg.classList.add('hidden');
+                    messagesContainer.innerHTML = '';
+                    data.messages.forEach(msg => {
+                        addMessageToDOM(msg.content, msg.role);
+                    });
+                } else {
+                    messagesContainer.innerHTML = '';
+                    messagesContainer.appendChild(emptyMsg);
+                    emptyMsg.classList.remove('hidden');
+                }
+                
+                // Invia contesto al server per l'agent
+                await updateChatContext();
+            } catch (e) {
+                console.error('Errore caricamento messaggi:', e);
+            }
+        }
+        
+        async function updateChatContext() {
+            // Crea un contesto formattato con gli ultimi messaggi
+            const recentMessages = chatMessages.slice(-20); // Ultimi 20 messaggi
+            
+            if (recentMessages.length === 0) return;
+            
+            const contextText = recentMessages.map(m => 
+                `${m.role === 'user' ? 'Utente' : 'Assistente'}: ${m.content}`
+            ).join('\n');
+            
+            try {
+                await fetch('/api/context', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        context: `--- STORICO CONVERSAZIONE ---\n${contextText}\n--- FINE STORICO ---`
+                    })
+                });
+            } catch (e) {
+                console.error('Errore aggiornamento contesto:', e);
+            }
+        }
+
+        async function deleteChat(chatId) {
+            if (!confirm('Eliminare questa chat?')) return;
+            try {
+                await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+                if (currentChatId === chatId) {
+                    currentChatId = null;
+                    chatMessages = [];
+                    
+                    // Pulisci UI
+                    const messagesContainer = document.getElementById('messages');
+                    const emptyMsg = document.getElementById('messages-empty');
+                    if (messagesContainer && emptyMsg) {
+                        messagesContainer.innerHTML = '';
+                        messagesContainer.appendChild(emptyMsg);
+                        emptyMsg.classList.remove('hidden');
+                    }
+                    
+                    // Reset contesto server
+                    await fetch('/api/context', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ context: '' })
+                    });
+                }
+                await loadChats();
+            } catch (e) {
+                console.error('Errore eliminazione chat:', e);
+            }
+        }
+
+        function addMessageToDOM(text, role) {
+            const messagesContainer = document.getElementById('messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            msgDiv.innerHTML = `
+                <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+                <div class="message-bubble">${escapeHtml(text)}</div>
+            `;
+            messagesContainer.insertBefore(msgDiv, messagesContainer.firstChild);
+        }
+
+        // Salva messaggi nel database quando aggiunti alla chat
+        async function saveMessageToDB(text, role) {
+            if (!currentChatId) {
+                // Crea nuova chat se non esiste
+                try {
+                    const resp = await fetch('/api/chats', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: text.substring(0, 30) + '...' })
+                    });
+                    const data = await resp.json();
+                    currentChatId = data.id;
+                    chatMessages = []; // Reset contesto per nuova chat
+                    await loadChats();
+                } catch (e) {
+                    console.error('Errore creazione chat:', e);
+                    return;
+                }
+            }
+            
+            try {
+                await fetch(`/api/chats/${currentChatId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role, content: text })
+                });
+                
+                // Aggiungi al contesto locale e aggiorna il server
+                chatMessages.push({ role, content: text });
+                await updateChatContext();
+                
+            } catch (e) {
+                console.error('Errore salvataggio messaggio:', e);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Override addMessage per salvare anche in DB
+        const originalAddMessage = addMessage;
+        addMessage = function(text, role) {
+            originalAddMessage(text, role);
+            saveMessageToDB(text, role);
+        };
+
         // Init
         checkServices();
         setInterval(checkServices, 10000);
+        loadChats();
+        initSidebarToggle();
     </script>
 </body>
 </html>

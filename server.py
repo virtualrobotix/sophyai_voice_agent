@@ -16,8 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, List
 from loguru import logger
 from livekit import api
+import httpx
 
 # Aggiungi il path del progetto
 sys.path.insert(0, str(Path(__file__).parent))
@@ -244,6 +246,565 @@ async def update_timing(data: dict):
         }
     
     return {"status": "ok"}
+
+
+@app.post("/api/timing/reset")
+async def reset_timing():
+    """Resetta tutte le statistiche di timing"""
+    global _timing_stats
+    _timing_stats = {
+        "stt": {"time_ms": 0, "count": 0},
+        "llm": {"time_ms": 0, "ttft_ms": 0, "count": 0},
+        "tts": {"time_ms": 0, "audio_sec": 0, "count": 0},
+        "latency": {"e2e_ms": 0, "to_first_audio_ms": 0, "count": 0}
+    }
+    return {"status": "ok", "message": "Stats reset"}
+
+
+# ==================== Database Connection ====================
+_db = None
+
+async def get_database():
+    """Get database instance, initialize if needed."""
+    global _db
+    if _db is None:
+        try:
+            from db.database import get_db
+            _db = await get_db()
+        except Exception as e:
+            logger.warning(f"Database non disponibile: {e}")
+            return None
+    return _db
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connection on startup."""
+    try:
+        await get_database()
+        logger.info("Database connesso")
+    except Exception as e:
+        logger.warning(f"Database non disponibile all'avvio: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connection on shutdown."""
+    global _db
+    if _db:
+        try:
+            from db.database import close_db
+            await close_db()
+        except:
+            pass
+
+
+# ==================== Settings API ====================
+
+class SettingsUpdate(BaseModel):
+    """Update settings request."""
+    settings: dict
+
+
+@app.get("/api/settings")
+async def get_settings():
+    """Get all settings from database."""
+    db = await get_database()
+    if db is None:
+        # Fallback to defaults
+        return {
+            "llm_provider": "ollama",
+            "ollama_model": os.getenv("OLLAMA_MODEL", "gpt-oss"),
+            "openrouter_model": "",
+            "openrouter_api_key": "",
+            "whisper_model": os.getenv("WHISPER_MODEL", "medium"),
+            "whisper_language": "it",
+            "whisper_auto_detect": "false",
+            "tts_engine": os.getenv("DEFAULT_TTS", "edge"),
+            "tts_language": "it",
+            "system_prompt": "",
+            "context_injection": ""
+        }
+    
+    try:
+        settings = await db.get_all_settings()
+        return settings
+    except Exception as e:
+        logger.error(f"Errore lettura settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/settings")
+async def update_settings(update: SettingsUpdate):
+    """Update multiple settings."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        await db.set_multiple_settings(update.settings)
+        return {"status": "ok", "updated": list(update.settings.keys())}
+    except Exception as e:
+        logger.error(f"Errore aggiornamento settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/settings/{key}")
+async def get_setting(key: str):
+    """Get a single setting."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        value = await db.get_setting(key)
+        if value is None:
+            raise HTTPException(status_code=404, detail=f"Setting '{key}' non trovato")
+        return {"key": key, "value": value}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore lettura setting {key}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class SettingValue(BaseModel):
+    """Single setting value."""
+    value: str
+
+
+@app.put("/api/settings/{key}")
+async def set_setting(key: str, setting: SettingValue):
+    """Set a single setting."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        await db.set_setting(key, setting.value)
+        return {"status": "ok", "key": key}
+    except Exception as e:
+        logger.error(f"Errore salvataggio setting {key}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Ollama API ====================
+
+@app.get("/api/ollama/models")
+async def get_ollama_models():
+    """Get list of available Ollama models."""
+    import aiohttp
+    
+    ollama_url = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{ollama_url}/api/tags",
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+                if resp.status != 200:
+                    raise HTTPException(status_code=resp.status, detail="Ollama non raggiungibile")
+                
+                data = await resp.json()
+                models = []
+                for m in data.get("models", []):
+                    models.append({
+                        "id": m["name"],
+                        "name": m["name"],
+                        "size": m.get("size", 0),
+                        "modified_at": m.get("modified_at", ""),
+                        "details": m.get("details", {})
+                    })
+                
+                return {"models": models, "host": ollama_url}
+    except aiohttp.ClientError as e:
+        logger.error(f"Errore connessione Ollama: {e}")
+        raise HTTPException(status_code=503, detail=f"Ollama non raggiungibile: {e}")
+
+
+class OllamaSelectRequest(BaseModel):
+    """Select Ollama model request."""
+    model: str
+
+
+@app.post("/api/ollama/select")
+async def select_ollama_model(request: OllamaSelectRequest):
+    """Select an Ollama model and save to settings."""
+    db = await get_database()
+    
+    if db:
+        try:
+            await db.set_setting("llm_provider", "ollama")
+            await db.set_setting("ollama_model", request.model)
+        except Exception as e:
+            logger.warning(f"Errore salvataggio in DB: {e}")
+    
+    # Aggiorna anche la variabile d'ambiente per l'agent
+    os.environ["OLLAMA_MODEL"] = request.model
+    
+    return {"status": "ok", "model": request.model, "provider": "ollama"}
+
+
+# ==================== OpenRouter API ====================
+
+@app.get("/api/openrouter/models")
+async def get_openrouter_models(search: str = None, sort_by: str = "name"):
+    """Get list of available OpenRouter models."""
+    db = await get_database()
+    api_key = None
+    
+    if db:
+        try:
+            api_key = await db.get_setting("openrouter_api_key")
+        except:
+            pass
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            headers = {}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            
+            resp = await client.get(
+                "https://openrouter.ai/api/v1/models",
+                headers=headers,
+                timeout=30.0
+            )
+            
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail="OpenRouter API error")
+            
+            data = resp.json()
+            models = []
+            
+            for m in data.get("data", []):
+                pricing = m.get("pricing", {})
+                prompt_cost = float(pricing.get("prompt", 0)) * 1000000  # Per 1M tokens
+                completion_cost = float(pricing.get("completion", 0)) * 1000000
+                
+                model_info = {
+                    "id": m["id"],
+                    "name": m.get("name", m["id"]),
+                    "description": m.get("description", ""),
+                    "context_length": m.get("context_length", 0),
+                    "prompt_cost": prompt_cost,
+                    "completion_cost": completion_cost,
+                    "total_cost": prompt_cost + completion_cost,
+                    "top_provider": m.get("top_provider", {}).get("max_completion_tokens"),
+                }
+                
+                # Filtro per ricerca
+                if search:
+                    search_lower = search.lower()
+                    if search_lower not in model_info["id"].lower() and search_lower not in model_info["name"].lower():
+                        continue
+                
+                models.append(model_info)
+            
+            # Filtro gratuiti o ordinamento
+            if sort_by == "free":
+                models = [m for m in models if m["total_cost"] == 0]
+                models.sort(key=lambda x: x["name"].lower())
+            elif sort_by == "cost":
+                models.sort(key=lambda x: x["total_cost"])
+            elif sort_by == "cost_desc":
+                models.sort(key=lambda x: x["total_cost"], reverse=True)
+            elif sort_by == "context":
+                models.sort(key=lambda x: x["context_length"], reverse=True)
+            else:
+                models.sort(key=lambda x: x["name"].lower())
+            
+            return {"models": models, "count": len(models)}
+    
+    except httpx.HTTPError as e:
+        logger.error(f"Errore OpenRouter API: {e}")
+        raise HTTPException(status_code=503, detail=f"OpenRouter non raggiungibile: {e}")
+
+
+class OpenRouterKeyRequest(BaseModel):
+    """Save OpenRouter API key request."""
+    api_key: str
+
+
+@app.post("/api/openrouter/key")
+async def save_openrouter_key(request: OpenRouterKeyRequest):
+    """Save OpenRouter API key to database."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        await db.set_setting("openrouter_api_key", request.api_key)
+        return {"status": "ok", "message": "API key salvata"}
+    except Exception as e:
+        logger.error(f"Errore salvataggio API key: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class OpenRouterSelectRequest(BaseModel):
+    """Select OpenRouter model request."""
+    model: str
+
+
+@app.post("/api/openrouter/select")
+async def select_openrouter_model(request: OpenRouterSelectRequest):
+    """Select an OpenRouter model and save to settings."""
+    db = await get_database()
+    
+    if db:
+        try:
+            await db.set_setting("llm_provider", "openrouter")
+            await db.set_setting("openrouter_model", request.model)
+        except Exception as e:
+            logger.warning(f"Errore salvataggio in DB: {e}")
+    
+    return {"status": "ok", "model": request.model, "provider": "openrouter"}
+
+
+# ==================== ElevenLabs API ====================
+
+@app.get("/api/elevenlabs/voices")
+async def get_elevenlabs_voices():
+    """Get available ElevenLabs voices."""
+    db = await get_database()
+    api_key = None
+    
+    if db:
+        try:
+            api_key = await db.get_setting("elevenlabs_api_key")
+        except Exception as e:
+            logger.warning(f"Errore lettura API key: {e}")
+    
+    if not api_key:
+        api_key = os.environ.get("ELEVENLABS_API_KEY")
+    
+    if not api_key:
+        return {"error": "API Key ElevenLabs non configurata", "voices": []}
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": api_key}
+            )
+            
+            if resp.status_code == 401:
+                return {"error": "API Key non valida", "voices": []}
+            
+            resp.raise_for_status()
+            data = resp.json()
+            
+            voices = []
+            for v in data.get("voices", []):
+                voices.append({
+                    "voice_id": v.get("voice_id"),
+                    "name": v.get("name"),
+                    "category": v.get("category"),
+                    "labels": v.get("labels", {}),
+                    "preview_url": v.get("preview_url"),
+                    "description": v.get("description")
+                })
+            
+            return {"voices": voices}
+            
+    except httpx.HTTPError as e:
+        logger.error(f"Errore ElevenLabs API: {e}")
+        return {"error": f"Errore API: {str(e)}", "voices": []}
+
+
+@app.get("/api/elevenlabs/models")
+async def get_elevenlabs_models():
+    """Get available ElevenLabs models."""
+    models = [
+        {"id": "eleven_multilingual_v2", "name": "Multilingual v2", "description": "Migliore qualità, multilingua"},
+        {"id": "eleven_turbo_v2_5", "name": "Turbo v2.5", "description": "Veloce, bassa latenza"},
+        {"id": "eleven_turbo_v2", "name": "Turbo v2", "description": "Veloce, bassa latenza"},
+        {"id": "eleven_monolingual_v1", "name": "Monolingual v1", "description": "Solo inglese"},
+        {"id": "eleven_flash_v2_5", "name": "Flash v2.5", "description": "Ultra veloce, streaming"},
+        {"id": "eleven_flash_v2", "name": "Flash v2", "description": "Ultra veloce, streaming"}
+    ]
+    return {"models": models}
+
+
+# ==================== Chat API ====================
+
+class ChatCreateRequest(BaseModel):
+    """Create chat request."""
+    title: str = "Nuova Chat"
+
+
+class MessageRequest(BaseModel):
+    """Add message request."""
+    role: str
+    content: str
+
+
+@app.get("/api/chats")
+async def get_chats():
+    """Get all chats."""
+    db = await get_database()
+    if db is None:
+        return {"chats": []}
+    
+    try:
+        chats = await db.get_chats()
+        return {"chats": chats}
+    except Exception as e:
+        logger.error(f"Errore lettura chats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chats")
+async def create_chat(request: ChatCreateRequest):
+    """Create a new chat."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        chat_id = await db.create_chat(request.title)
+        return {"status": "ok", "id": chat_id, "title": request.title}
+    except Exception as e:
+        logger.error(f"Errore creazione chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chats/{chat_id}")
+async def get_chat(chat_id: int):
+    """Get a chat with its messages."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        chat = await db.get_chat(chat_id)
+        if chat is None:
+            raise HTTPException(status_code=404, detail="Chat non trovata")
+        
+        messages = await db.get_messages(chat_id)
+        chat["messages"] = messages
+        return chat
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore lettura chat {chat_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/chats/{chat_id}")
+async def delete_chat(chat_id: int):
+    """Delete a chat and all its messages."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        deleted = await db.delete_chat(chat_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Chat non trovata")
+        return {"status": "ok", "deleted": chat_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore eliminazione chat {chat_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chats/{chat_id}/messages")
+async def add_message(chat_id: int, request: MessageRequest):
+    """Add a message to a chat."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        message_id = await db.add_message(chat_id, request.role, request.content)
+        return {"status": "ok", "id": message_id, "chat_id": chat_id}
+    except Exception as e:
+        logger.error(f"Errore aggiunta messaggio a chat {chat_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Prompt/Context API ====================
+
+class PromptUpdate(BaseModel):
+    """Update system prompt."""
+    prompt: str
+
+
+@app.get("/api/prompt")
+async def get_prompt():
+    """Get current system prompt."""
+    db = await get_database()
+    
+    default_prompt = """Sei Sophy, assistente vocale ultra-veloce. PRIORITA ASSOLUTA: VELOCITA E SINTESI.
+
+REGOLE FONDAMENTALI:
+1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai piu di 30 parole
+2. VAI DRITTO AL PUNTO: niente preamboli, saluti inutili o ripetizioni
+3. LINGUA: rispondi nella stessa lingua dell utente"""
+    
+    if db is None:
+        return {"prompt": default_prompt}
+    
+    try:
+        prompt = await db.get_setting("system_prompt")
+        return {"prompt": prompt or default_prompt}
+    except Exception as e:
+        logger.error(f"Errore lettura prompt: {e}")
+        return {"prompt": default_prompt}
+
+
+@app.post("/api/prompt")
+async def update_prompt(request: PromptUpdate):
+    """Update system prompt."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        await db.set_setting("system_prompt", request.prompt)
+        return {"status": "ok", "message": "Prompt aggiornato"}
+    except Exception as e:
+        logger.error(f"Errore salvataggio prompt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ContextUpdate(BaseModel):
+    """Update context injection."""
+    context: str
+
+
+@app.get("/api/context")
+async def get_context():
+    """Get current context injection."""
+    db = await get_database()
+    
+    if db is None:
+        return {"context": ""}
+    
+    try:
+        context = await db.get_setting("context_injection")
+        return {"context": context or ""}
+    except Exception as e:
+        logger.error(f"Errore lettura context: {e}")
+        return {"context": ""}
+
+
+@app.post("/api/context")
+async def update_context(request: ContextUpdate):
+    """Update context injection."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        await db.set_setting("context_injection", request.context)
+        return {"status": "ok", "message": "Context aggiornato"}
+    except Exception as e:
+        logger.error(f"Errore salvataggio context: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/token", response_model=TokenResponse)

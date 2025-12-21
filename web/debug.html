@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SophyAi Live - Debug & Settings</title>
+    <title>SophyAi - Impostazioni</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -34,20 +34,14 @@
             min-height: 100vh;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 24px;
-        }
-
         /* Header */
-        header {
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 24px;
+            padding: 20px 24px;
             border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
         }
 
         .logo {
@@ -57,27 +51,20 @@
         }
 
         .logo-icon {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, var(--accent), #c084fc);
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
         }
 
-        .logo-text {
-            font-size: 1.4rem;
-            font-weight: 700;
-        }
+        .logo-text { font-size: 1.2rem; font-weight: 700; }
+        .logo-subtitle { font-size: 0.75rem; color: var(--text-muted); }
 
-        .logo-subtitle {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .btn-back {
+        .back-btn {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -91,17 +78,47 @@
             transition: all 0.2s;
         }
 
-        .btn-back:hover {
-            background: var(--accent);
-            border-color: var(--accent);
+        .back-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+        /* Tabs */
+        .tabs-container {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
         }
 
-        /* Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
+        .tabs {
+            display: flex;
+            gap: 4px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
+
+        .tab {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .tab-content.active { display: block; }
 
         /* Cards */
         .card {
@@ -109,6 +126,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 24px;
+            margin-bottom: 24px;
         }
 
         .card-header {
@@ -131,310 +149,225 @@
             font-size: 1.2rem;
         }
 
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
+        .card-title { font-size: 1.1rem; font-weight: 600; }
 
-        /* Services Status */
-        .service-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px;
+        /* Form Elements */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-secondary); }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
             background: var(--bg-secondary);
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
-            margin-bottom: 12px;
-            border-left: 3px solid var(--text-muted);
-        }
-
-        .service-item.available { border-left-color: var(--success); }
-        .service-item.unavailable { border-left-color: var(--danger); }
-        .service-item.loading { border-left-color: var(--warning); }
-
-        .service-icon { font-size: 1.3rem; }
-        .service-info { flex: 1; }
-        .service-name { font-weight: 600; font-size: 0.95rem; }
-        .service-message { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
-        
-        .service-status {
-            font-size: 0.75rem;
-            padding: 4px 10px;
-            border-radius: 100px;
-            font-weight: 600;
-        }
-
-        .service-status.ok { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .service-status.error { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        .service-status.loading { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
-
-        /* TTS Options */
-        .tts-grid {
-            display: grid;
-            gap: 12px;
-        }
-
-        .tts-option {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px;
-            background: var(--bg-secondary);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .tts-option:hover { border-color: var(--accent); background: rgba(139, 92, 246, 0.05); }
-        .tts-option.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
-
-        .tts-option-icon { font-size: 1.5rem; }
-        .tts-option-info { flex: 1; }
-        .tts-option-name { font-weight: 600; }
-        .tts-option-desc { font-size: 0.8rem; color: var(--text-muted); }
-        
-        .tts-badge {
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 100px;
-            font-weight: 600;
-        }
-
-        .tts-badge.local { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .tts-badge.cloud { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
-
-        /* Config Info */
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .config-item:last-child { border-bottom: none; }
-
-        .config-label { color: var(--text-secondary); font-size: 0.9rem; }
-        .config-value { 
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--accent);
-        }
-
-        /* Logs */
-        .logs-container {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            padding: 16px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-        }
-
-        .log-line {
-            padding: 6px 0;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            gap: 12px;
-        }
-
-        .log-time { color: var(--text-muted); min-width: 70px; }
-        .log-type { min-width: 50px; font-weight: 600; }
-        .log-type.audio { color: #22d3ee; }
-        .log-type.stt { color: #22c55e; }
-        .log-type.llm { color: #f59e0b; }
-        .log-type.tts { color: #8b5cf6; }
-        .log-msg { color: var(--text-secondary); flex: 1; }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.95rem;
             font-family: inherit;
-            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-textarea { min-height: 120px; resize: vertical; }
+
+        /* Model Grid */
+        .model-grid { display: grid; gap: 12px; max-height: 400px; overflow-y: auto; }
+
+        .model-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:hover { background: #7c3aed; }
-        .btn-secondary { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary); }
-        .btn-secondary:hover { background: var(--accent); border-color: var(--accent); }
+        .model-item:hover { border-color: var(--accent); }
+        .model-item.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
 
-        .btn-group {
+        .model-info { flex: 1; }
+        .model-name { font-weight: 600; }
+        .model-desc { font-size: 0.85rem; color: var(--text-muted); }
+        .model-cost { font-size: 0.85rem; color: var(--success); font-family: 'JetBrains Mono', monospace; }
+
+        /* Provider Toggle */
+        .provider-toggle {
             display: flex;
-            gap: 12px;
-            margin-top: 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            padding: 4px;
+            margin-bottom: 20px;
         }
 
-        /* Stats */
+        .provider-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .provider-btn.active { background: var(--accent); color: white; }
+
+        /* Search */
+        .search-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Sort */
+        .sort-select {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
         }
 
         .stat-box {
             background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
             padding: 16px;
-            text-align: center;
+            border-radius: var(--radius-sm);
             border-left: 3px solid var(--accent);
         }
 
         .stat-box.stt { border-left-color: #22c55e; }
         .stat-box.llm { border-left-color: #f59e0b; }
         .stat-box.tts { border-left-color: #8b5cf6; }
+        .stat-box.latency { border-left-color: #ef4444; }
 
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
         .stat-value.stt { color: #22c55e; }
         .stat-value.llm { color: #f59e0b; }
         .stat-value.tts { color: #8b5cf6; }
+        .stat-value.latency { color: #ef4444; }
+        .stat-unit { font-size: 0.9rem; color: var(--text-muted); }
+        .stat-details { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
 
-        .stat-unit {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .stat-details {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        .timing-chart {
-            display: flex;
-            align-items: end;
-            gap: 8px;
-            height: 80px;
-            padding: 12px;
-            background: var(--bg-secondary);
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
             border-radius: var(--radius-sm);
-            margin-top: 16px;
-        }
-
-        .timing-bar {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .timing-bar-fill {
-            width: 100%;
-            border-radius: 4px 4px 0 0;
-            transition: height 0.3s ease;
-            min-height: 4px;
-        }
-
-        .timing-bar-fill.stt { background: linear-gradient(180deg, #22c55e, #16a34a); }
-        .timing-bar-fill.llm { background: linear-gradient(180deg, #f59e0b, #d97706); }
-        .timing-bar-fill.tts { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
-
-        .timing-bar-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-        }
-
-        .timing-bar-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
-        .total-time {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(139, 92, 246, 0.1);
-            border-radius: var(--radius-sm);
-            margin-top: 12px;
-        }
-
-        .total-label {
             font-size: 0.9rem;
-            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
         }
 
-        .total-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #7c3aed; }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); }
 
-        /* TTS Active Status */
-        .tts-active-status {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            padding: 16px;
-            border-left: 4px solid var(--accent);
-        }
+        .btn-group { display: flex; gap: 12px; margin-top: 16px; }
 
-        .tts-active-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .tts-active-info > div {
+        /* API Key Input */
+        .api-key-container {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            gap: 12px;
+            align-items: flex-end;
         }
 
-        .tts-active-info .label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
+        .api-key-container .form-group { flex: 1; margin-bottom: 0; }
 
-        .tts-active-info .value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.95rem;
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        .tts-active-info .value.warning {
-            color: var(--warning);
-        }
-
-        .tts-active-info .value.success {
-            color: var(--success);
-        }
-
-        /* VibeVoice Settings */
-        .vibevoice-settings {
-            margin-top: 20px;
-            padding-top: 16px;
-        }
-
-        .vibevoice-settings.hidden {
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
             display: none;
         }
-        
-        /* TTS Test Area */
+
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--danger); }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* TTS Options */
+        .tts-grid { display: grid; gap: 12px; }
+
+        .tts-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tts-option:hover { border-color: var(--accent); }
+        .tts-option.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
+        .tts-option-icon { font-size: 1.5rem; }
+        .tts-option-info { flex: 1; }
+        .tts-option-name { font-weight: 600; }
+        .tts-option-desc { font-size: 0.85rem; color: var(--text-muted); }
+        .tts-badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 100px; font-weight: 600; }
+        .tts-badge.local { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .tts-badge.cloud { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+        /* TTS Test */
         .tts-test-area {
             margin-top: 20px;
             padding: 20px;
@@ -442,1016 +375,473 @@
             border-radius: 12px;
         }
         
-        .tts-test-area textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-secondary);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 14px;
-            resize: vertical;
-            min-height: 80px;
+        /* ElevenLabs Panel */
+        .elevenlabs-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
         }
-        
-        .tts-test-status {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            min-height: 20px;
-        }
-        
-        .tts-test-status.success {
-            background: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
-        }
-        
-        .tts-test-status.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-        
-        .tts-test-status.loading {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
-        }
-
-        .settings-divider {
-            height: 1px;
-            background: var(--border);
-            margin-bottom: 16px;
-        }
-
-        .settings-subtitle {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 16px;
-        }
-
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .setting-row label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .setting-row select,
-        .setting-row input[type="range"] {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            padding: 8px 12px;
-            font-family: inherit;
-            min-width: 180px;
-        }
-
-        .setting-row select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .setting-row input[type="range"] {
-            -webkit-appearance: none;
-            height: 6px;
-            padding: 0;
-        }
-
-        .setting-row input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-        }
-
-        .model-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            margin-top: 16px;
-            border-left: 3px solid var(--warning);
-        }
-
-        .model-status.ready {
-            border-left-color: var(--success);
-        }
-
-        .model-status.downloading {
-            border-left-color: var(--accent);
-        }
-
-        .model-status.error {
-            border-left-color: var(--danger);
-        }
-
-        .model-status .status-icon {
-            font-size: 1.3rem;
-        }
-
-        .model-status .status-text {
-            flex: 1;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .model-status .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .model-status .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #c084fc);
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
-        .download-details {
+        .voice-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-            padding: 12px;
-            background: var(--bg-primary);
-            border-radius: var(--radius-sm);
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 4px;
         }
-
-        .download-stat {
-            text-align: center;
+        .voice-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-
-        .download-stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--accent);
+        .voice-item:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary);
         }
-
-        .download-stat-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-top: 2px;
+        .voice-item.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--primary);
         }
-
-        .download-file {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 8px;
-            font-family: 'JetBrains Mono', monospace;
+        .voice-item .voice-icon {
+            font-size: 18px;
+        }
+        .voice-item .voice-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .voice-item .voice-name {
+            font-weight: 500;
+            font-size: 13px;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .grid { grid-template-columns: 1fr; }
-            .container { padding: 16px; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .setting-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-            .setting-row select, .setting-row input[type="range"] { width: 100%; min-width: unset; }
+        .voice-item .voice-labels {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        .voice-item .voice-preview {
+            opacity: 0;
+            padding: 4px;
+            border-radius: 50%;
+            transition: opacity 0.2s;
+        }
+        .voice-item:hover .voice-preview {
+            opacity: 1;
+        }
+        
+        /* Cost Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">⚙️</div>
-                <div>
-                    <div class="logo-text">SophyAi Live</div>
-                    <div class="logo-subtitle">Debug & Impostazioni</div>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">S</div>
+            <div>
+                <div class="logo-text">SophyAi</div>
+                <div class="logo-subtitle">Impostazioni</div>
+            </div>
+        </div>
+        <a href="/" class="back-btn">← Torna alla Chat</a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <div class="tabs">
+            <button class="tab active" data-tab="stats" onclick="switchTab('stats')">📊 Statistiche</button>
+            <button class="tab" data-tab="whisper" onclick="switchTab('whisper')">🎤 Whisper</button>
+            <button class="tab" data-tab="llm" onclick="switchTab('llm')">🧠 LLM</button>
+            <button class="tab" data-tab="tts" onclick="switchTab('tts')">🔊 TTS</button>
+        </div>
+    </div>
+
+    <!-- Stats Tab -->
+    <div class="tab-content active" id="tab-stats">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">⚡</div>
+                <h2 class="card-title">Performance</h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box stt">
+                    <div class="stat-label">🎤 STT (Whisper)</div>
+                    <div class="stat-value stt" id="stat-stt">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-stt-detail">In attesa...</div>
+                </div>
+                <div class="stat-box llm">
+                    <div class="stat-label">🧠 LLM</div>
+                    <div class="stat-value llm" id="stat-llm">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-llm-detail">In attesa...</div>
+                </div>
+                <div class="stat-box tts">
+                    <div class="stat-label">🔊 TTS</div>
+                    <div class="stat-value tts" id="stat-tts">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-tts-detail">In attesa...</div>
+                </div>
+                <div class="stat-box latency">
+                    <div class="stat-label">⚡ Latenza E2E</div>
+                    <div class="stat-value latency" id="stat-latency">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-latency-detail">Domanda → Risposta</div>
                 </div>
             </div>
-            <a href="/" class="btn-back">← Torna alla Chat</a>
-        </header>
-
-        <div class="grid">
-            <!-- Services Status -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">📡</div>
-                    <h2 class="card-title">Stato Servizi</h2>
-                </div>
-
-                <div id="services-list">
-                    <div class="service-item loading">
-                        <span class="service-icon">⏳</span>
-                        <div class="service-info">
-                            <div class="service-name">Caricamento...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="checkServices()">🔄 Aggiorna</button>
-                </div>
-            </div>
-
-            <!-- Performance Stats -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">⚡</div>
-                    <h2 class="card-title">Statistiche Performance</h2>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-box stt">
-                        <div class="stat-label">🎤 STT (Whisper)</div>
-                        <div class="stat-value stt" id="stat-stt">--</div>
-                        <div class="stat-unit">ms</div>
-                        <div class="stat-details" id="stat-stt-detail">In attesa...</div>
-                    </div>
-                    <div class="stat-box llm">
-                        <div class="stat-label">🧠 LLM (Ollama)</div>
-                        <div class="stat-value llm" id="stat-llm">--</div>
-                        <div class="stat-unit">ms</div>
-                        <div class="stat-details" id="stat-llm-detail">In attesa...</div>
-                    </div>
-                    <div class="stat-box tts">
-                        <div class="stat-label">🔊 TTS (Edge)</div>
-                        <div class="stat-value tts" id="stat-tts">--</div>
-                        <div class="stat-unit">ms</div>
-                        <div class="stat-details" id="stat-tts-detail">In attesa...</div>
-                    </div>
-                    <div class="stat-box latency" style="border-left-color: #ef4444;">
-                        <div class="stat-label">⚡ Latenza (End-to-End)</div>
-                        <div class="stat-value" id="stat-latency" style="color: #ef4444;">--</div>
-                        <div class="stat-unit">ms</div>
-                        <div class="stat-details" id="stat-latency-detail">Domanda → Risposta</div>
-                    </div>
-                </div>
-
-                <div class="timing-chart" id="timing-chart">
-                    <div class="timing-bar">
-                        <div class="timing-bar-fill stt" id="bar-stt" style="height: 20px;"></div>
-                        <div class="timing-bar-value stt" id="bar-stt-val">--</div>
-                        <div class="timing-bar-label">STT</div>
-                    </div>
-                    <div class="timing-bar">
-                        <div class="timing-bar-fill llm" id="bar-llm" style="height: 30px;"></div>
-                        <div class="timing-bar-value llm" id="bar-llm-val">--</div>
-                        <div class="timing-bar-label">LLM</div>
-                    </div>
-                    <div class="timing-bar">
-                        <div class="timing-bar-fill tts" id="bar-tts" style="height: 25px;"></div>
-                        <div class="timing-bar-value tts" id="bar-tts-val">--</div>
-                        <div class="timing-bar-label">TTS</div>
-                    </div>
-                </div>
-
-                <div class="total-time">
-                    <span class="total-label">Tempo Totale Risposta</span>
-                    <span class="total-value" id="stat-total">-- ms</span>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="resetStats()">🗑️ Reset Stats</button>
-                </div>
-            </div>
-
-            <!-- Configuration -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">🔧</div>
-                    <h2 class="card-title">Configurazione</h2>
-                </div>
-
-                <div id="config-list">
-                    <div class="config-item">
-                        <span class="config-label">LiveKit Server</span>
-                        <span class="config-value" id="cfg-livekit">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Modello LLM</span>
-                        <span class="config-value" id="cfg-llm">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Modello Whisper</span>
-                        <span class="config-value" id="cfg-whisper">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">TTS Engine</span>
-                        <span class="config-value" id="cfg-tts">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TTS Status (Real-time) -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">📢</div>
-                    <h2 class="card-title">TTS Attivo</h2>
-                </div>
-                
-                <div class="tts-active-status" id="tts-active-status">
-                    <div class="tts-active-info">
-                        <div class="tts-active-engine">
-                            <span class="label">Engine:</span>
-                            <span class="value" id="tts-active-engine">--</span>
-                        </div>
-                        <div class="tts-active-lang">
-                            <span class="label">Lingua:</span>
-                            <span class="value" id="tts-active-lang">--</span>
-                        </div>
-                        <div class="tts-active-voice">
-                            <span class="label">Voce:</span>
-                            <span class="value" id="tts-active-voice">--</span>
-                        </div>
-                        <div class="tts-active-default">
-                            <span class="label">Stato:</span>
-                            <span class="value" id="tts-active-default">--</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="refreshTTSStatus()">🔄 Aggiorna</button>
-                    <button class="btn btn-primary" onclick="applyTTSSelection()">✅ Applica Selezione</button>
-                </div>
-            </div>
-
-            <!-- TTS Selection -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">🔊</div>
-                    <h2 class="card-title">Voce TTS</h2>
-                </div>
-
-                <div class="tts-grid" id="tts-grid">
-                    <div class="tts-option selected" data-engine="edge" onclick="selectTTS('edge')">
-                        <span class="tts-option-icon">🎙️</span>
-                        <div class="tts-option-info">
-                            <div class="tts-option-name">Edge TTS (Microsoft)</div>
-                            <div class="tts-option-desc">Alta qualità, italiano naturale</div>
-                        </div>
-                        <span class="tts-badge cloud">Cloud</span>
-                    </div>
-
-                    <div class="tts-option" data-engine="piper" onclick="selectTTS('piper')">
-                        <span class="tts-option-icon">🔈</span>
-                        <div class="tts-option-info">
-                            <div class="tts-option-name">Piper TTS</div>
-                            <div class="tts-option-desc">Veloce e leggero, self-hosted</div>
-                        </div>
-                        <span class="tts-badge local">Self-Hosted</span>
-                    </div>
-
-                    <div class="tts-option" data-engine="kokoro" onclick="selectTTS('kokoro')">
-                        <span class="tts-option-icon">🎵</span>
-                        <div class="tts-option-info">
-                            <div class="tts-option-name">Kokoro TTS</div>
-                            <div class="tts-option-desc">Alta qualità, multilingua (82M)</div>
-                        </div>
-                        <span class="tts-badge local">Self-Hosted</span>
-                    </div>
-
-                    <div class="tts-option" data-engine="vibevoice" onclick="selectTTS('vibevoice')">
-                        <span class="tts-option-icon">🎤</span>
-                        <div class="tts-option-info">
-                            <div class="tts-option-name">VibeVoice (Microsoft)</div>
-                            <div class="tts-option-desc">Espressivo, multi-speaker, real-time streaming</div>
-                        </div>
-                        <span class="tts-badge local">Self-Hosted</span>
-                    </div>
-
-                    <div class="tts-option" data-engine="chatterbox" onclick="selectTTS('chatterbox')">
-                        <span class="tts-option-icon">🎭</span>
-                        <div class="tts-option-info">
-                            <div class="tts-option-name">Chatterbox (Resemble AI)</div>
-                            <div class="tts-option-desc">Multilingua (23 lingue), voice cloning, emotion control</div>
-                        </div>
-                        <span class="tts-badge local">Self-Hosted</span>
-                    </div>
-                </div>
-
-                <!-- VibeVoice Settings Panel -->
-                <div class="vibevoice-settings hidden" id="vibevoice-settings">
-                    <div class="settings-divider"></div>
-                    <h3 class="settings-subtitle">⚙️ Impostazioni VibeVoice</h3>
-                    
-                    <div class="setting-row">
-                        <label>Modello</label>
-                        <select id="vibevoice-model" onchange="updateVibeVoiceSetting()">
-                            <option value="realtime">Realtime (0.5B) - Bassa latenza</option>
-                            <option value="longform">Long-form (1.6B) - Alta qualità</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>🌍 Lingua</label>
-                        <select id="vibevoice-language" onchange="updateVibeVoiceSetting()">
-                            <option value="it">🇮🇹 Italiano</option>
-                            <option value="en">🇬🇧 English</option>
-                            <option value="zh">🇨🇳 中文 (Cinese)</option>
-                            <option value="es">🇪🇸 Español</option>
-                            <option value="fr">🇫🇷 Français</option>
-                            <option value="de">🇩🇪 Deutsch</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>Speaker</label>
-                        <select id="vibevoice-speaker" onchange="updateVibeVoiceSetting()">
-                            <option value="speaker_1">Speaker 1</option>
-                            <option value="speaker_2">Speaker 2</option>
-                            <option value="speaker_3">Speaker 3</option>
-                            <option value="speaker_4">Speaker 4</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>Velocità: <span id="speed-value">1.0x</span></label>
-                        <input type="range" id="vibevoice-speed" min="0.5" max="2" step="0.1" value="1" 
-                               oninput="document.getElementById('speed-value').textContent = this.value + 'x'; updateVibeVoiceSetting()">
-                    </div>
-                    
-                    <div class="model-status" id="vibevoice-model-status">
-                        <span class="status-icon">⏳</span>
-                        <span class="status-text">Verifica modello...</span>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" id="download-vibevoice-btn" onclick="downloadVibeVoiceModel()">
-                            📥 Scarica Modello
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Chatterbox Settings Panel -->
-                <div class="vibevoice-settings hidden" id="chatterbox-settings">
-                    <div class="settings-divider"></div>
-                    <h3 class="settings-subtitle">⚙️ Impostazioni Chatterbox</h3>
-                    
-                    <div class="setting-row">
-                        <label>Modello</label>
-                        <select id="chatterbox-model" onchange="updateChatterboxSetting()">
-                            <option value="multilingual">Multilingual (23 lingue) - Consigliato</option>
-                            <option value="standard">Standard - Inglese</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>🌍 Lingua</label>
-                        <select id="chatterbox-language" onchange="updateChatterboxSetting()">
-                            <option value="it">🇮🇹 Italiano</option>
-                            <option value="en">🇬🇧 English</option>
-                            <option value="es">🇪🇸 Español</option>
-                            <option value="fr">🇫🇷 Français</option>
-                            <option value="de">🇩🇪 Deutsch</option>
-                            <option value="ja">🇯🇵 日本語 (Giapponese)</option>
-                            <option value="ko">🇰🇷 한국어 (Coreano)</option>
-                            <option value="zh">🇨🇳 中文 (Cinese)</option>
-                            <option value="ar">🇸🇦 العربية (Arabo)</option>
-                            <option value="pt">🇵🇹 Português</option>
-                            <option value="ru">🇷🇺 Русский (Russo)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>Device</label>
-                        <select id="chatterbox-device" onchange="updateChatterboxSetting()">
-                            <option value="auto">Auto (rileva automaticamente)</option>
-                            <option value="cuda">CUDA (GPU NVIDIA)</option>
-                            <option value="cpu">CPU</option>
-                            <option value="mps">MPS (GPU Apple)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>Exaggeration (Emozioni): <span id="chatterbox-exaggeration-value">--</span></label>
-                        <input type="range" id="chatterbox-exaggeration" min="0" max="1" step="0.1" value="" 
-                               oninput="const val = this.value; document.getElementById('chatterbox-exaggeration-value').textContent = val ? val : 'default'; updateChatterboxSetting()">
-                        <small>0.0-1.0 (vuoto = default)</small>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <label>Audio Prompt Path (Voice Cloning)</label>
-                        <input type="text" id="chatterbox-audio-prompt-path" placeholder="Path al file audio di riferimento" 
-                               onchange="updateChatterboxSetting()">
-                        <small>Opzionale: path a file .wav per clonare la voce</small>
-                    </div>
-                </div>
-                
-                <!-- TTS Test Area -->
-                <div class="settings-divider"></div>
-                <h3 class="settings-subtitle">🧪 Test TTS</h3>
-                <div class="tts-test-area">
-                    <div class="setting-row">
-                        <label>Testo da sintetizzare</label>
-                        <textarea id="tts-test-text" rows="3" placeholder="Inserisci qui il testo da testare...">Ciao! Questo è un test del TTS selezionato.</textarea>
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="testTTS()" id="tts-test-btn">
-                            ▶️ Testa TTS
-                        </button>
-                        <button class="btn btn-secondary" onclick="stopTTSTest()" id="tts-stop-btn" style="display:none;">
-                            ⏹️ Ferma
-                        </button>
-                    </div>
-                    <div id="tts-test-status" class="tts-test-status"></div>
-                    <audio id="tts-test-audio" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
-                </div>
-            </div>
-
-            <!-- Logs -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">📋</div>
-                    <h2 class="card-title">Log Recenti</h2>
-                </div>
-
-                <div class="logs-container" id="logs-container">
-                    <div class="log-line">
-                        <span class="log-time">--:--:--</span>
-                        <span class="log-type">INFO</span>
-                        <span class="log-msg">In attesa di log...</span>
-                    </div>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Pulisci</button>
-                    <button class="btn btn-secondary" onclick="fetchLogs()">🔄 Aggiorna</button>
-                </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="resetStats()">🗑️ Reset Stats</button>
+                <button class="btn btn-secondary" onclick="fetchStats()">🔄 Aggiorna</button>
             </div>
         </div>
     </div>
 
+    <!-- Whisper Tab -->
+    <div class="tab-content" id="tab-whisper">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎤</div>
+                <h2 class="card-title">Configurazione Whisper STT</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Modello</label>
+                <select class="form-select" id="whisper-model" onchange="saveWhisperSettings()">
+                    <option value="tiny">Tiny (39M) - Velocissimo</option>
+                    <option value="base">Base (74M) - Veloce</option>
+                    <option value="small">Small (244M) - Bilanciato</option>
+                    <option value="medium" selected>Medium (769M) - Preciso</option>
+                    <option value="large-v3">Large-v3 (1.5B) - Massima precisione</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Lingua</label>
+                <select class="form-select" id="whisper-language" onchange="saveWhisperSettings()">
+                    <option value="it" selected>Italiano</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="zh">中文</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <input type="checkbox" id="whisper-auto-detect" onchange="saveWhisperSettings()">
+                    Rilevamento automatico lingua
+                </label>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveWhisperSettings()">💾 Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LLM Tab -->
+    <div class="tab-content" id="tab-llm">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🧠</div>
+                <h2 class="card-title">Configurazione LLM</h2>
+            </div>
+            
+            <!-- Provider Toggle -->
+            <div class="provider-toggle">
+                <button class="provider-btn active" data-provider="ollama" onclick="switchProvider('ollama')">
+                    🦙 Ollama (Locale)
+                </button>
+                <button class="provider-btn" data-provider="openrouter" onclick="switchProvider('openrouter')">
+                    🌐 OpenRouter (Cloud)
+                </button>
+            </div>
+            
+            <!-- Ollama Section -->
+            <div id="ollama-section">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="ollama-search" placeholder="Cerca modello..." oninput="filterOllamaModels()">
+                </div>
+                <div class="model-grid" id="ollama-models">
+                    <div class="loading"></div>
+                </div>
+            </div>
+            
+            <!-- OpenRouter Section -->
+            <div id="openrouter-section" style="display: none;">
+                <div class="api-key-container">
+                    <div class="form-group">
+                        <label class="form-label">API Key</label>
+                        <input type="password" class="form-input" id="openrouter-key" placeholder="sk-or-...">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveOpenRouterKey()">💾</button>
+                </div>
+                
+                <div style="display: flex; gap: 12px; margin: 16px 0;">
+                    <div class="search-container" style="flex: 1; margin-bottom: 0;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="openrouter-search" placeholder="Cerca modello..." oninput="searchOpenRouterModels()">
+                    </div>
+                    <select class="sort-select" id="openrouter-sort" onchange="filterAndRenderOpenRouter()">
+                        <option value="name">Nome</option>
+                        <option value="cost">Costo (min)</option>
+                        <option value="cost_desc">Costo (max)</option>
+                        <option value="context">Context (max)</option>
+                    </select>
+                </div>
+                
+                <div class="cost-slider-container" style="margin: 16px 0; padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-weight: 500;">💰 Costo massimo</label>
+                        <span id="max-cost-value" style="font-weight: 600; color: var(--primary);">$100.00</span>
+                    </div>
+                    <input type="range" id="openrouter-max-cost" min="0" max="100" value="100" step="0.5" 
+                           style="width: 100%; cursor: pointer;" oninput="updateCostSlider()">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        <span>$0 (Gratuiti)</span>
+                        <span>$100/1M tokens</span>
+                    </div>
+                </div>
+                
+                <div class="model-grid" id="openrouter-models">
+                    <div class="loading"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prompt Configuration -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📝</div>
+                <h2 class="card-title">System Prompt</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Prompt di sistema</label>
+                <textarea class="form-textarea" id="system-prompt" rows="8" placeholder="Inserisci il prompt di sistema..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Context Injection (informazioni aggiuntive)</label>
+                <textarea class="form-textarea" id="context-injection" rows="4" placeholder="Informazioni extra da aggiungere al contesto..."></textarea>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="savePromptSettings()">💾 Salva Prompt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TTS Tab -->
+    <div class="tab-content" id="tab-tts">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🔊</div>
+                <h2 class="card-title">Configurazione TTS</h2>
+            </div>
+            
+            <div class="tts-grid" id="tts-grid">
+                <div class="tts-option selected" data-engine="edge" onclick="selectTTS('edge')">
+                    <span class="tts-option-icon">🎙️</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Edge TTS (Microsoft)</div>
+                        <div class="tts-option-desc">Alta qualità, italiano naturale</div>
+                    </div>
+                    <span class="tts-badge cloud">Cloud</span>
+                </div>
+                
+                <div class="tts-option" data-engine="kokoro" onclick="selectTTS('kokoro')">
+                    <span class="tts-option-icon">🎵</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Kokoro TTS</div>
+                        <div class="tts-option-desc">Alta qualità, multilingua (82M)</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="piper" onclick="selectTTS('piper')">
+                    <span class="tts-option-icon">🔈</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Piper TTS</div>
+                        <div class="tts-option-desc">Veloce e leggero</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="vibevoice" onclick="selectTTS('vibevoice')">
+                    <span class="tts-option-icon">🎤</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">VibeVoice (Microsoft)</div>
+                        <div class="tts-option-desc">Espressivo, multi-speaker</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="chatterbox" onclick="selectTTS('chatterbox')">
+                    <span class="tts-option-icon">🎭</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Chatterbox</div>
+                        <div class="tts-option-desc">Multilingua, voice cloning</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="elevenlabs" onclick="selectTTS('elevenlabs')">
+                    <span class="tts-option-icon">🌟</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">ElevenLabs</div>
+                        <div class="tts-option-desc">Premium, ultra-realistico</div>
+                    </div>
+                    <span class="tts-badge cloud" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Premium</span>
+                </div>
+            </div>
+            
+            <!-- ElevenLabs Configuration Panel -->
+            <div id="elevenlabs-config" class="elevenlabs-panel" style="display: none;">
+                <div class="card-header" style="padding: 0; margin-bottom: 16px;">
+                    <div class="card-icon">🌟</div>
+                    <h3 style="font-size: 16px; margin: 0;">Configurazione ElevenLabs</h3>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">API Key</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="password" class="form-input" id="elevenlabs-key" placeholder="xi-...">
+                        <button class="btn btn-primary" onclick="saveElevenLabsKey()">💾</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Modello</label>
+                    <select class="form-select" id="elevenlabs-model" onchange="saveElevenLabsSettings()">
+                        <option value="eleven_multilingual_v2">Multilingual v2 (Migliore)</option>
+                        <option value="eleven_turbo_v2_5">Turbo v2.5 (Veloce)</option>
+                        <option value="eleven_turbo_v2">Turbo v2</option>
+                        <option value="eleven_monolingual_v1">Monolingual v1 (Solo EN)</option>
+                        <option value="eleven_flash_v2_5">Flash v2.5 (Streaming)</option>
+                        <option value="eleven_flash_v2">Flash v2 (Streaming)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Voce</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input" id="elevenlabs-voice-search" placeholder="Cerca voce..." oninput="searchElevenLabsVoices()">
+                        <button class="btn btn-secondary" onclick="loadElevenLabsVoices()">🔄</button>
+                    </div>
+                    <div class="voice-grid" id="elevenlabs-voices">
+                        <div style="color: var(--text-muted); padding: 12px;">Inserisci API Key per caricare le voci</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Stability: <span id="stability-value">50%</span></label>
+                    <input type="range" id="elevenlabs-stability" min="0" max="100" value="50" oninput="updateElevenLabsSlider('stability')">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                        <span>Variabile</span>
+                        <span>Stabile</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Similarity Boost: <span id="similarity-value">75%</span></label>
+                    <input type="range" id="elevenlabs-similarity" min="0" max="100" value="75" oninput="updateElevenLabsSlider('similarity')">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                        <span>Creativo</span>
+                        <span>Fedele</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Style Exaggeration: <span id="style-value">0%</span></label>
+                    <input type="range" id="elevenlabs-style" min="0" max="100" value="0" oninput="updateElevenLabsSlider('style')">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="elevenlabs-boost" onchange="saveElevenLabsSettings()">
+                        <span>Speaker Boost (migliora chiarezza)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label class="form-label">Lingua TTS</label>
+                <select class="form-select" id="tts-language">
+                    <option value="it" selected>Italiano</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveTTSSettings()">💾 Salva</button>
+            </div>
+            
+            <!-- TTS Test -->
+            <div class="tts-test-area">
+                <div class="form-group">
+                    <label class="form-label">Testa TTS</label>
+                    <textarea class="form-textarea" id="tts-test-text" rows="2">Ciao! Questo è un test del TTS.</textarea>
+                </div>
+                <button class="btn btn-secondary" onclick="testTTS()">▶️ Testa</button>
+                <div id="tts-test-status" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
     <script>
-        // Check services
-        async function checkServices() {
-            const list = document.getElementById('services-list');
-            list.innerHTML = '<div class="service-item loading"><span class="service-icon">⏳</span><div class="service-info"><div class="service-name">Caricamento...</div></div></div>';
-
-            try {
-                const resp = await fetch('/api/status');
-                const status = await resp.json();
-
-                list.innerHTML = '';
-
-                // LiveKit
-                addServiceItem(list, '🌐', 'LiveKit Server', status.livekit);
-                // Ollama
-                addServiceItem(list, '🧠', 'Ollama LLM', status.ollama);
-                // Agent
-                addServiceItem(list, '🤖', 'Voice Agent', status.agent);
-                // Whisper
-                addServiceItem(list, '🎤', 'Whisper STT', status.whisper);
-                // SIP (opzionale)
-                if (status.sip) {
-                    addServiceItem(list, '📞', 'SIP Bridge', status.sip);
-                }
-
-            } catch (e) {
-                list.innerHTML = '<div class="service-item unavailable"><span class="service-icon">❌</span><div class="service-info"><div class="service-name">Errore connessione</div><div class="service-message">' + e.message + '</div></div></div>';
-            }
-        }
-
-        function addServiceItem(container, icon, name, data) {
-            const cls = data?.available ? 'available' : 'unavailable';
-            const statusCls = data?.available ? 'ok' : 'error';
-            const statusText = data?.available ? 'OK' : 'Errore';
-            const msg = data?.message || '';
-
-            container.innerHTML += `
-                <div class="service-item ${cls}">
-                    <span class="service-icon">${icon}</span>
-                    <div class="service-info">
-                        <div class="service-name">${name}</div>
-                        <div class="service-message">${msg}</div>
-                    </div>
-                    <span class="service-status ${statusCls}">${statusText}</span>
-                </div>
-            `;
-        }
-
-        // Load config
-        async function loadConfig() {
-            try {
-                const resp = await fetch('/api/config');
-                const cfg = await resp.json();
-
-                document.getElementById('cfg-livekit').textContent = cfg.livekit_url || '-';
-                document.getElementById('cfg-llm').textContent = cfg.ollama_model || '-';
-                document.getElementById('cfg-whisper').textContent = cfg.whisper_model || '-';
-                document.getElementById('cfg-tts').textContent = cfg.default_tts || '-';
-
-            } catch (e) {
-                console.error('Error loading config:', e);
-            }
-        }
-
-        // TTS selection
-        function selectTTS(engine) {
-            document.querySelectorAll('.tts-option').forEach(el => {
-                el.classList.remove('selected');
-            });
-            document.querySelector(`[data-engine="${engine}"]`).classList.add('selected');
-            
-            // Save preference
-            localStorage.setItem('tts_engine', engine);
-            
-            // Mostra/nascondi impostazioni VibeVoice
-            const vibevoiceSettings = document.getElementById('vibevoice-settings');
-            if (engine === 'vibevoice') {
-                vibevoiceSettings.classList.remove('hidden');
-                checkVibeVoiceModelStatus();
-            } else {
-                vibevoiceSettings.classList.add('hidden');
-            }
-            
-            // Mostra/nascondi impostazioni Chatterbox
-            const chatterboxSettings = document.getElementById('chatterbox-settings');
-            if (engine === 'chatterbox') {
-                chatterboxSettings.classList.remove('hidden');
-                loadChatterboxSettings();
-            } else {
-                chatterboxSettings.classList.add('hidden');
-            }
-            
-            // Applica automaticamente al server
-            applyTTSSelection();
-        }
-
-        // VibeVoice settings
-        function updateVibeVoiceSetting() {
-            const model = document.getElementById('vibevoice-model').value;
-            const language = document.getElementById('vibevoice-language').value;
-            const speaker = document.getElementById('vibevoice-speaker').value;
-            const speed = document.getElementById('vibevoice-speed').value;
-            
-            // Salva in localStorage
-            localStorage.setItem('vibevoice_model', model);
-            localStorage.setItem('vibevoice_language', language);
-            localStorage.setItem('vibevoice_speaker', speaker);
-            localStorage.setItem('vibevoice_speed', speed);
-            
-            // Aggiorna stato modello
-            checkVibeVoiceModelStatus();
-        }
-
-        // Verifica stato modello VibeVoice
-        async function checkVibeVoiceModelStatus() {
-            const statusDiv = document.getElementById('vibevoice-model-status');
-            const downloadBtn = document.getElementById('download-vibevoice-btn');
-            const model = document.getElementById('vibevoice-model').value;
-            
-            statusDiv.className = 'model-status';
-            statusDiv.innerHTML = `
-                <span class="status-icon">⏳</span>
-                <span class="status-text">Verifica modello ${model}...</span>
-            `;
-            
-            try {
-                const resp = await fetch(`/api/tts/vibevoice/status?model=${model}`);
-                const data = await resp.json();
-                
-                if (data.installed) {
-                    statusDiv.className = 'model-status ready';
-                    statusDiv.innerHTML = `
-                        <span class="status-icon">✅</span>
-                        <span class="status-text">Modello ${data.model_name} pronto (${data.size || 'N/A'})</span>
-                    `;
-                    downloadBtn.textContent = '✓ Modello Installato';
-                    downloadBtn.disabled = true;
-                } else {
-                    statusDiv.className = 'model-status';
-                    statusDiv.innerHTML = `
-                        <span class="status-icon">📥</span>
-                        <span class="status-text">Modello non installato. Clicca per scaricare (~${data.download_size || '1.5GB'})</span>
-                    `;
-                    downloadBtn.textContent = '📥 Scarica Modello';
-                    downloadBtn.disabled = false;
-                }
-            } catch (e) {
-                statusDiv.className = 'model-status error';
-                statusDiv.innerHTML = `
-                    <span class="status-icon">❌</span>
-                    <span class="status-text">Errore verifica: ${e.message}</span>
-                `;
-                downloadBtn.disabled = true;
-            }
-        }
-
-        // Formatta bytes in formato leggibile
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        // Formatta secondi in formato leggibile
-        function formatTime(seconds) {
-            if (seconds <= 0) return '--:--';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // Download modello VibeVoice
-        async function downloadVibeVoiceModel() {
-            const statusDiv = document.getElementById('vibevoice-model-status');
-            const downloadBtn = document.getElementById('download-vibevoice-btn');
-            const model = document.getElementById('vibevoice-model').value;
-            
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = '⏳ Download in corso...';
-            
-            statusDiv.className = 'model-status downloading';
-            updateDownloadUI(statusDiv, { percent: 0, current_file: 'Avvio download...' });
-            
-            try {
-                // Avvia download
-                const resp = await fetch('/api/tts/vibevoice/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: model })
-                });
-                
-                if (!resp.ok) {
-                    throw new Error('Download fallito');
-                }
-                
-                // Poll per progresso con dettagli
-                const pollProgress = setInterval(async () => {
-                    try {
-                        const progressResp = await fetch('/api/tts/vibevoice/download/progress');
-                        const progress = await progressResp.json();
-                        
-                        updateDownloadUI(statusDiv, progress);
-                        
-                        if (progress.complete) {
-                            clearInterval(pollProgress);
-                            checkVibeVoiceModelStatus();
-                            downloadBtn.textContent = '✅ Download Completato';
-                        }
-                        
-                        if (progress.error) {
-                            clearInterval(pollProgress);
-                            throw new Error(progress.error);
-                        }
-                    } catch (e) {
-                        // Continua polling
-                    }
-                }, 1000);
-                
-                // Timeout dopo 30 minuti (per modelli grandi)
-                setTimeout(() => {
-                    clearInterval(pollProgress);
-                    checkVibeVoiceModelStatus();
-                }, 1800000);
-                
-            } catch (e) {
-                statusDiv.className = 'model-status error';
-                statusDiv.innerHTML = `
-                    <span class="status-icon">❌</span>
-                    <span class="status-text">Errore download: ${e.message}</span>
-                `;
-                downloadBtn.textContent = '📥 Riprova Download';
-                downloadBtn.disabled = false;
-            }
-        }
-
-        // Aggiorna UI del download con dettagli
-        function updateDownloadUI(statusDiv, progress) {
-            const percent = progress.percent || 0;
-            const downloaded = progress.downloaded_bytes || 0;
-            const total = progress.total_bytes || 0;
-            const speed = progress.speed_bps || 0;
-            const eta = progress.eta_seconds || 0;
-            const currentFile = progress.current_file || 'Download...';
-            
-            statusDiv.innerHTML = `
-                <span class="status-icon">📥</span>
-                <div style="flex: 1;">
-                    <span class="status-text">Download in corso... <strong>${percent}%</strong></span>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${percent}%"></div>
-                    </div>
-                    <div class="download-details">
-                        <div class="download-stat">
-                            <div class="download-stat-value">${formatBytes(downloaded)}</div>
-                            <div class="download-stat-label">Scaricato</div>
-                        </div>
-                        <div class="download-stat">
-                            <div class="download-stat-value">${formatBytes(speed)}/s</div>
-                            <div class="download-stat-label">Velocità</div>
-                        </div>
-                        <div class="download-stat">
-                            <div class="download-stat-value">${formatTime(eta)}</div>
-                            <div class="download-stat-label">Tempo rim.</div>
-                        </div>
-                    </div>
-                    <div class="download-file">📄 ${currentFile}</div>
-                </div>
-            `;
-        }
-
-        // Carica impostazioni VibeVoice salvate
-        function loadVibeVoiceSettings() {
-            const model = localStorage.getItem('vibevoice_model') || 'realtime';
-            const language = localStorage.getItem('vibevoice_language') || 'it';  // Default: Italiano
-            const speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
-            const speed = localStorage.getItem('vibevoice_speed') || '1';
-            
-            document.getElementById('vibevoice-model').value = model;
-            document.getElementById('vibevoice-language').value = language;
-            document.getElementById('vibevoice-speaker').value = speaker;
-            document.getElementById('vibevoice-speed').value = speed;
-            document.getElementById('speed-value').textContent = speed + 'x';
-        }
-
-        // Chatterbox settings
-        function updateChatterboxSetting() {
-            const model = document.getElementById('chatterbox-model').value;
-            const language = document.getElementById('chatterbox-language').value;
-            const device = document.getElementById('chatterbox-device').value;
-            const exaggeration = document.getElementById('chatterbox-exaggeration').value;
-            const audioPromptPath = document.getElementById('chatterbox-audio-prompt-path').value;
-            
-            // Salva in localStorage
-            localStorage.setItem('chatterbox_model', model);
-            localStorage.setItem('chatterbox_language', language);
-            localStorage.setItem('chatterbox_device', device);
-            localStorage.setItem('chatterbox_exaggeration', exaggeration);
-            localStorage.setItem('chatterbox_audio_prompt_path', audioPromptPath);
-        }
-
-        // Carica impostazioni Chatterbox salvate
-        function loadChatterboxSettings() {
-            const model = localStorage.getItem('chatterbox_model') || 'multilingual';
-            const language = localStorage.getItem('chatterbox_language') || 'it';
-            const device = localStorage.getItem('chatterbox_device') || 'auto';
-            const exaggeration = localStorage.getItem('chatterbox_exaggeration') || '';
-            const audioPromptPath = localStorage.getItem('chatterbox_audio_prompt_path') || '';
-            
-            document.getElementById('chatterbox-model').value = model;
-            document.getElementById('chatterbox-language').value = language;
-            document.getElementById('chatterbox-device').value = device;
-            document.getElementById('chatterbox-exaggeration').value = exaggeration;
-            document.getElementById('chatterbox-audio-prompt-path').value = audioPromptPath;
-            
-            // Aggiorna display exaggeration
-            const exaggerationEl = document.getElementById('chatterbox-exaggeration-value');
-            if (exaggerationEl) {
-                exaggerationEl.textContent = exaggeration ? exaggeration : 'default';
-            }
-        }
-
-        // Test TTS
-        let currentTestAudio = null;
+        // ==================== State ====================
+        let ollamaModels = [];
+        let openrouterModels = [];
+        let selectedTTS = 'edge';
         
-        async function testTTS() {
-            const engine = localStorage.getItem('tts_engine') || 'edge';
-            const text = document.getElementById('tts-test-text').value.trim();
-            const statusEl = document.getElementById('tts-test-status');
-            const audioEl = document.getElementById('tts-test-audio');
-            const testBtn = document.getElementById('tts-test-btn');
-            const stopBtn = document.getElementById('tts-stop-btn');
-            
-            if (!text) {
-                statusEl.textContent = '❌ Inserisci un testo da testare';
-                statusEl.className = 'tts-test-status error';
-                return;
-            }
-            
-            // Ferma audio precedente se presente
-            if (currentTestAudio) {
-                currentTestAudio.pause();
-                currentTestAudio = null;
-            }
-            
-            // Mostra stato caricamento
-            statusEl.textContent = '⏳ Sintesi in corso...';
-            statusEl.className = 'tts-test-status loading';
-            testBtn.disabled = true;
-            stopBtn.style.display = 'inline-block';
-            audioEl.style.display = 'none';
-            
-            try {
-                // Prepara parametri in base all'engine
-                const payload = {
-                    engine: engine,
-                    text: text,
-                    language: localStorage.getItem(`${engine}_language`) || localStorage.getItem('chatterbox_language') || localStorage.getItem('vibevoice_language') || 'it'
-                };
-                
-                // Aggiungi parametri specifici per engine
-                if (engine === 'vibevoice') {
-                    payload.model = localStorage.getItem('vibevoice_model') || 'realtime';
-                    payload.speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
-                    payload.speed = parseFloat(localStorage.getItem('vibevoice_speed') || '1.0');
-                } else if (engine === 'chatterbox') {
-                    payload.model = localStorage.getItem('chatterbox_model') || 'multilingual';
-                    payload.device = localStorage.getItem('chatterbox_device') || 'auto';
-                    const exaggeration = localStorage.getItem('chatterbox_exaggeration');
-                    if (exaggeration) payload.exaggeration = parseFloat(exaggeration);
-                }
-                
-                const resp = await fetch('/api/tts/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!resp.ok) {
-                    const error = await resp.text();
-                    throw new Error(error || `Errore HTTP ${resp.status}`);
-                }
-                
-                // Crea blob URL per l'audio
-                const audioBlob = await resp.blob();
-                const audioUrl = URL.createObjectURL(audioBlob);
-                
-                // Imposta e riproduci audio
-                audioEl.src = audioUrl;
-                audioEl.style.display = 'block';
-                currentTestAudio = audioEl;
-                
-                // Riproduci automaticamente
-                await audioEl.play();
-                
-                const duration = resp.headers.get('X-Duration') || '?';
-                const actualEngine = resp.headers.get('X-Engine') || engine;
-                let statusMsg = `✅ Sintesi completata! Durata: ${parseFloat(duration).toFixed(2)}s`;
-                if (actualEngine !== engine && engine === 'chatterbox') {
-                    statusMsg += `\nℹ️ Nota: Chatterbox non è disponibile nel container web (richiede MPS sul Mac host). Test eseguito con EdgeTTS come fallback.`;
-                } else if (actualEngine !== engine) {
-                    statusMsg += `\nℹ️ ${engine} non disponibile, usato ${actualEngine} come fallback.`;
-                }
-                statusEl.textContent = statusMsg;
-                statusEl.className = 'tts-test-status success';
-                
-                // Pulisci URL quando finisce
-                audioEl.addEventListener('ended', () => {
-                    URL.revokeObjectURL(audioUrl);
-                }, { once: true });
-                
-            } catch (e) {
-                statusEl.textContent = `❌ Errore: ${e.message}`;
-                statusEl.className = 'tts-test-status error';
-                console.error('Errore test TTS:', e);
-            } finally {
-                testBtn.disabled = false;
-                stopBtn.style.display = 'none';
-            }
-        }
-        
-        function stopTTSTest() {
-            if (currentTestAudio) {
-                currentTestAudio.pause();
-                currentTestAudio.currentTime = 0;
-                currentTestAudio = null;
-            }
-            document.getElementById('tts-stop-btn').style.display = 'none';
-        }
-
-        // Logs
-        function addLog(time, type, msg) {
-            const container = document.getElementById('logs-container');
-            const typeClass = type.toLowerCase();
-            
-            container.innerHTML += `
-                <div class="log-line">
-                    <span class="log-time">${time}</span>
-                    <span class="log-type ${typeClass}">${type}</span>
-                    <span class="log-msg">${msg}</span>
-                </div>
-            `;
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function clearLogs() {
-            document.getElementById('logs-container').innerHTML = '';
-        }
-
-        async function fetchLogs() {
-            // This would fetch logs from server in a real implementation
-            addLog(new Date().toLocaleTimeString(), 'INFO', 'Log aggiornati');
-        }
-
-        // Performance Stats
         const stats = {
             stt: { values: [], avg: 0, last: 0, count: 0 },
             llm: { values: [], avg: 0, last: 0, count: 0, ttft: 0 },
@@ -1459,224 +849,649 @@
             latency: { values: [], avg: 0, last: 0, count: 0 }
         };
 
-        function updateStats(type, value, details = {}) {
-            if (!stats[type]) return;
+        // ==================== Init ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            await loadOllamaModels();
+            await loadPromptSettings();
+            startStatsPolling();
+        });
+
+        // ==================== Tabs ====================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // ==================== Settings ====================
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const settings = await resp.json();
+                
+                // Whisper
+                if (settings.whisper_model) {
+                    document.getElementById('whisper-model').value = settings.whisper_model;
+                }
+                if (settings.whisper_language) {
+                    document.getElementById('whisper-language').value = settings.whisper_language;
+                }
+                document.getElementById('whisper-auto-detect').checked = settings.whisper_auto_detect === 'true';
+                
+                // TTS
+                if (settings.tts_engine) {
+                    selectTTS(settings.tts_engine);
+                }
+                if (settings.tts_language) {
+                    document.getElementById('tts-language').value = settings.tts_language;
+                }
+                
+                // ElevenLabs
+                if (settings.elevenlabs_model) {
+                    document.getElementById('elevenlabs-model').value = settings.elevenlabs_model;
+                }
+                if (settings.elevenlabs_voice) {
+                    selectedElevenLabsVoice = settings.elevenlabs_voice;
+                }
+                if (settings.elevenlabs_stability) {
+                    document.getElementById('elevenlabs-stability').value = settings.elevenlabs_stability;
+                    document.getElementById('stability-value').textContent = `${settings.elevenlabs_stability}%`;
+                }
+                if (settings.elevenlabs_similarity) {
+                    document.getElementById('elevenlabs-similarity').value = settings.elevenlabs_similarity;
+                    document.getElementById('similarity-value').textContent = `${settings.elevenlabs_similarity}%`;
+                }
+                if (settings.elevenlabs_style) {
+                    document.getElementById('elevenlabs-style').value = settings.elevenlabs_style;
+                    document.getElementById('style-value').textContent = `${settings.elevenlabs_style}%`;
+                }
+                if (settings.elevenlabs_boost === 'true') {
+                    document.getElementById('elevenlabs-boost').checked = true;
+                }
+                
+                // LLM Provider
+                if (settings.llm_provider === 'openrouter') {
+                    switchProvider('openrouter');
+                }
+            } catch (e) {
+                console.error('Errore caricamento settings:', e);
+            }
+        }
+
+        async function saveWhisperSettings() {
+            const settings = {
+                whisper_model: document.getElementById('whisper-model').value,
+                whisper_language: document.getElementById('whisper-language').value,
+                whisper_auto_detect: document.getElementById('whisper-auto-detect').checked ? 'true' : 'false'
+            };
             
-            stats[type].values.push(value);
-            stats[type].last = value;
-            stats[type].count++;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                showToast('Impostazioni Whisper salvate', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        async function saveTTSSettings() {
+            const settings = {
+                tts_engine: selectedTTS,
+                tts_language: document.getElementById('tts-language').value
+            };
             
-            // Keep only last 20 values
-            if (stats[type].values.length > 20) {
-                stats[type].values.shift();
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                
+                // Salva anche nella config file per l'agent
+                await fetch('/api/tts/current', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        engine: selectedTTS,
+                        language: settings.tts_language
+                    })
+                });
+                
+                showToast('Impostazioni TTS salvate', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        // ==================== LLM Provider ====================
+        function switchProvider(provider) {
+            document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-provider="${provider}"]`).classList.add('active');
+            
+            document.getElementById('ollama-section').style.display = provider === 'ollama' ? 'block' : 'none';
+            document.getElementById('openrouter-section').style.display = provider === 'openrouter' ? 'block' : 'none';
+            
+            if (provider === 'openrouter' && openrouterModels.length === 0) {
+                loadOpenRouterModels();
+            }
+        }
+
+        // ==================== Ollama ====================
+        async function loadOllamaModels() {
+            try {
+                const resp = await fetch('/api/ollama/models');
+                const data = await resp.json();
+                ollamaModels = data.models || [];
+                renderOllamaModels(ollamaModels);
+            } catch (e) {
+                document.getElementById('ollama-models').innerHTML = '<div style="color: var(--danger);">Errore caricamento modelli Ollama</div>';
+            }
+        }
+
+        // Variabile per memorizzare i modelli Ollama visualizzati
+        let displayedOllamaModels = [];
+
+        function renderOllamaModels(models) {
+            const container = document.getElementById('ollama-models');
+            if (models.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessun modello trovato</div>';
+                displayedOllamaModels = [];
+                return;
             }
             
-            // Calculate average
-            stats[type].avg = Math.round(
-                stats[type].values.reduce((a, b) => a + b, 0) / stats[type].values.length
-            );
+            displayedOllamaModels = models;
             
-            // Update UI
-            document.getElementById(`stat-${type}`).textContent = stats[type].avg;
+            container.innerHTML = models.map((m, idx) => `
+                <div class="model-item" onclick="selectOllamaModelByIndex(${idx}, this)">
+                    <div class="model-info">
+                        <div class="model-name">${escapeHtml(m.name)}</div>
+                        <div class="model-desc">${formatBytes(m.size)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterOllamaModels() {
+            const search = document.getElementById('ollama-search').value.toLowerCase();
+            const filtered = ollamaModels.filter(m => m.name.toLowerCase().includes(search));
+            renderOllamaModels(filtered);
+        }
+
+        async function selectOllamaModelByIndex(idx, element) {
+            const model = displayedOllamaModels[idx];
+            if (!model) {
+                showToast('Errore: modello non trovato', 'error');
+                return;
+            }
             
-            // Update details
-            let detailText = `Ultimo: ${value}ms`;
-            if (type === 'llm' && details.ttft) {
-                stats[type].ttft = details.ttft;
-                detailText += ` | TTFT: ${details.ttft}ms`;
+            try {
+                const resp = await fetch('/api/ollama/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: model.id })
+                });
+                if (!resp.ok) throw new Error('Errore API');
+                
+                showToast(`Modello ${model.name} selezionato`, 'success');
+                
+                document.querySelectorAll('#ollama-models .model-item').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+            } catch (e) {
+                console.error('Errore selezione Ollama:', e);
+                showToast('Errore selezione modello', 'error');
             }
-            if (type === 'tts' && details.audio_duration) {
-                detailText += ` | Audio: ${details.audio_duration}s`;
+        }
+
+        // ==================== OpenRouter ====================
+        let allOpenRouterModels = []; // Tutti i modelli caricati dal server
+        
+        async function loadOpenRouterModels() {
+            const search = document.getElementById('openrouter-search')?.value || '';
+            
+            try {
+                const resp = await fetch(`/api/openrouter/models?search=${encodeURIComponent(search)}&sort_by=name`);
+                const data = await resp.json();
+                allOpenRouterModels = data.models || [];
+                filterAndRenderOpenRouter();
+            } catch (e) {
+                document.getElementById('openrouter-models').innerHTML = '<div style="color: var(--danger);">Errore caricamento modelli</div>';
             }
-            if (type === 'latency') {
-                detailText = `Domanda→Risposta: ${value}ms | n=${stats[type].count}`;
+        }
+        
+        function updateCostSlider() {
+            const slider = document.getElementById('openrouter-max-cost');
+            const valueDisplay = document.getElementById('max-cost-value');
+            const value = parseFloat(slider.value);
+            
+            if (value === 0) {
+                valueDisplay.textContent = '🆓 Gratuiti';
+                valueDisplay.style.color = '#10b981';
             } else {
-                detailText += ` | n=${stats[type].count}`;
+                valueDisplay.textContent = `$${value.toFixed(2)}`;
+                valueDisplay.style.color = 'var(--primary)';
             }
-            const detailEl = document.getElementById(`stat-${type}-detail`);
-            if (detailEl) detailEl.textContent = detailText;
             
-            // Update chart bars
-            updateChart();
+            filterAndRenderOpenRouter();
+        }
+        
+        function filterAndRenderOpenRouter() {
+            const maxCost = parseFloat(document.getElementById('openrouter-max-cost')?.value || 100);
+            const sort = document.getElementById('openrouter-sort')?.value || 'name';
+            
+            // Filtra per costo massimo
+            let filtered = allOpenRouterModels.filter(m => m.total_cost <= maxCost);
+            
+            // Ordina
+            switch(sort) {
+                case 'cost':
+                    filtered.sort((a, b) => a.total_cost - b.total_cost);
+                    break;
+                case 'cost_desc':
+                    filtered.sort((a, b) => b.total_cost - a.total_cost);
+                    break;
+                case 'context':
+                    filtered.sort((a, b) => (b.context_length || 0) - (a.context_length || 0));
+                    break;
+                default: // name
+                    filtered.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            renderOpenRouterModels(filtered);
         }
 
-        function updateChart() {
-            const maxTime = Math.max(stats.stt.avg || 100, stats.llm.avg || 100, stats.tts.avg || 100, 100);
-            const chartHeight = 60; // max px
+        function renderOpenRouterModels(models) {
+            const container = document.getElementById('openrouter-models');
+            if (models.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessun modello trovato con questi criteri</div>';
+                displayedOpenRouterModels = [];
+                return;
+            }
             
-            ['stt', 'llm', 'tts'].forEach(type => {
-                const height = stats[type].avg ? Math.max(4, (stats[type].avg / maxTime) * chartHeight) : 4;
-                document.getElementById(`bar-${type}`).style.height = `${height}px`;
-                document.getElementById(`bar-${type}-val`).textContent = stats[type].avg ? `${stats[type].avg}` : '--';
-            });
+            // Salva i modelli visualizzati per la selezione
+            displayedOpenRouterModels = models.slice(0, 50);
             
-            // Total time
-            const total = (stats.stt.avg || 0) + (stats.llm.avg || 0) + (stats.tts.avg || 0);
-            document.getElementById('stat-total').textContent = total > 0 ? `${total} ms` : '-- ms';
+            container.innerHTML = displayedOpenRouterModels.map((m, idx) => `
+                <div class="model-item" onclick="selectOpenRouterModelByIndex(${idx}, this)">
+                    <div class="model-info">
+                        <div class="model-name">${escapeHtml(m.name)}</div>
+                        <div class="model-desc">${escapeHtml(m.description?.substring(0, 80) || '')}</div>
+                        <div class="model-cost" style="color: ${m.total_cost === 0 ? '#10b981' : 'var(--text-muted)'}">
+                            ${m.total_cost === 0 ? '🆓 Gratuito' : '$' + m.total_cost.toFixed(4) + '/1M tokens'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function resetStats() {
-            ['stt', 'llm', 'tts'].forEach(type => {
-                stats[type] = { values: [], avg: 0, last: 0, count: 0 };
-                document.getElementById(`stat-${type}`).textContent = '--';
-                document.getElementById(`stat-${type}-detail`).textContent = 'In attesa...';
-            });
-            updateChart();
+        function searchOpenRouterModels() {
+            clearTimeout(window.openrouterSearchTimeout);
+            window.openrouterSearchTimeout = setTimeout(loadOpenRouterModels, 300);
         }
 
-        // Fetch timing stats from server
+        async function saveOpenRouterKey() {
+            const key = document.getElementById('openrouter-key').value;
+            try {
+                await fetch('/api/openrouter/key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: key })
+                });
+                showToast('API Key salvata', 'success');
+                loadOpenRouterModels();
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        // Variabile per memorizzare i modelli filtrati visualizzati
+        let displayedOpenRouterModels = [];
+
+        async function selectOpenRouterModelByIndex(idx, element) {
+            const model = displayedOpenRouterModels[idx];
+            if (!model) {
+                showToast('Errore: modello non trovato', 'error');
+                return;
+            }
+            
+            try {
+                const resp = await fetch('/api/openrouter/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: model.id })
+                });
+                if (!resp.ok) throw new Error('Errore API');
+                
+                showToast(`Modello ${model.name} selezionato`, 'success');
+                
+                document.querySelectorAll('#openrouter-models .model-item').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+            } catch (e) {
+                console.error('Errore selezione OpenRouter:', e);
+                showToast('Errore selezione modello', 'error');
+            }
+        }
+
+        // ==================== Prompt ====================
+        async function loadPromptSettings() {
+            try {
+                const [promptResp, contextResp] = await Promise.all([
+                    fetch('/api/prompt'),
+                    fetch('/api/context')
+                ]);
+                
+                const promptData = await promptResp.json();
+                const contextData = await contextResp.json();
+                
+                document.getElementById('system-prompt').value = promptData.prompt || '';
+                document.getElementById('context-injection').value = contextData.context || '';
+            } catch (e) {
+                console.error('Errore caricamento prompt:', e);
+            }
+        }
+
+        async function savePromptSettings() {
+            const prompt = document.getElementById('system-prompt').value;
+            const context = document.getElementById('context-injection').value;
+            
+            try {
+                await Promise.all([
+                    fetch('/api/prompt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt })
+                    }),
+                    fetch('/api/context', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ context })
+                    })
+                ]);
+                showToast('Prompt salvato', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        // ==================== TTS ====================
+        let elevenLabsVoices = [];
+        let selectedElevenLabsVoice = '';
+        
+        function selectTTS(engine) {
+            selectedTTS = engine;
+            document.querySelectorAll('.tts-option').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`[data-engine="${engine}"]`)?.classList.add('selected');
+            
+            // Mostra/nascondi pannello ElevenLabs
+            const elevenLabsConfig = document.getElementById('elevenlabs-config');
+            if (engine === 'elevenlabs') {
+                elevenLabsConfig.style.display = 'block';
+                loadElevenLabsVoices();
+            } else {
+                elevenLabsConfig.style.display = 'none';
+            }
+        }
+        
+        function updateElevenLabsSlider(type) {
+            const slider = document.getElementById(`elevenlabs-${type}`);
+            const valueDisplay = document.getElementById(`${type}-value`);
+            valueDisplay.textContent = `${slider.value}%`;
+            saveElevenLabsSettings();
+        }
+        
+        async function saveElevenLabsKey() {
+            const key = document.getElementById('elevenlabs-key').value;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ elevenlabs_api_key: key })
+                });
+                showToast('API Key ElevenLabs salvata', 'success');
+                loadElevenLabsVoices();
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+        
+        async function loadElevenLabsVoices() {
+            const container = document.getElementById('elevenlabs-voices');
+            container.innerHTML = '<div class="loading"></div>';
+            
+            try {
+                const resp = await fetch('/api/elevenlabs/voices');
+                const data = await resp.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<div style="color: var(--warning);">${data.error}</div>`;
+                    return;
+                }
+                
+                elevenLabsVoices = data.voices || [];
+                renderElevenLabsVoices(elevenLabsVoices);
+            } catch (e) {
+                container.innerHTML = '<div style="color: var(--danger);">Errore caricamento voci</div>';
+            }
+        }
+        
+        function renderElevenLabsVoices(voices) {
+            const container = document.getElementById('elevenlabs-voices');
+            if (voices.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessuna voce trovata</div>';
+                return;
+            }
+            
+            container.innerHTML = voices.map(v => `
+                <div class="voice-item ${v.voice_id === selectedElevenLabsVoice ? 'selected' : ''}" 
+                     onclick="selectElevenLabsVoice('${v.voice_id}', this)">
+                    <span class="voice-icon">${getVoiceIcon(v.labels)}</span>
+                    <div class="voice-info">
+                        <div class="voice-name">${escapeHtml(v.name)}</div>
+                        <div class="voice-labels">${formatVoiceLabels(v.labels)}</div>
+                    </div>
+                    ${v.preview_url ? `<button class="voice-preview" onclick="event.stopPropagation(); playVoicePreview('${v.preview_url}')">▶️</button>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function getVoiceIcon(labels) {
+            if (!labels) return '🎤';
+            const gender = labels.gender?.toLowerCase();
+            const accent = labels.accent?.toLowerCase() || '';
+            
+            if (accent.includes('italian') || accent.includes('italian')) return '🇮🇹';
+            if (accent.includes('british')) return '🇬🇧';
+            if (accent.includes('american')) return '🇺🇸';
+            if (gender === 'female') return '👩';
+            if (gender === 'male') return '👨';
+            return '🎤';
+        }
+        
+        function formatVoiceLabels(labels) {
+            if (!labels) return '';
+            const parts = [];
+            if (labels.gender) parts.push(labels.gender);
+            if (labels.accent) parts.push(labels.accent);
+            if (labels.age) parts.push(labels.age);
+            return parts.join(' • ');
+        }
+        
+        function searchElevenLabsVoices() {
+            const search = document.getElementById('elevenlabs-voice-search').value.toLowerCase();
+            const filtered = elevenLabsVoices.filter(v => 
+                v.name.toLowerCase().includes(search) ||
+                (v.labels?.accent || '').toLowerCase().includes(search) ||
+                (v.labels?.gender || '').toLowerCase().includes(search)
+            );
+            renderElevenLabsVoices(filtered);
+        }
+        
+        function selectElevenLabsVoice(voiceId, element) {
+            selectedElevenLabsVoice = voiceId;
+            document.querySelectorAll('.voice-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            saveElevenLabsSettings();
+            
+            const voice = elevenLabsVoices.find(v => v.voice_id === voiceId);
+            showToast(`Voce "${voice?.name}" selezionata`, 'success');
+        }
+        
+        function playVoicePreview(url) {
+            const audio = new Audio(url);
+            audio.play();
+        }
+        
+        async function saveElevenLabsSettings() {
+            const settings = {
+                elevenlabs_model: document.getElementById('elevenlabs-model').value,
+                elevenlabs_voice: selectedElevenLabsVoice,
+                elevenlabs_stability: document.getElementById('elevenlabs-stability').value,
+                elevenlabs_similarity: document.getElementById('elevenlabs-similarity').value,
+                elevenlabs_style: document.getElementById('elevenlabs-style').value,
+                elevenlabs_boost: document.getElementById('elevenlabs-boost').checked ? 'true' : 'false'
+            };
+            
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+            } catch (e) {
+                console.error('Errore salvataggio settings ElevenLabs:', e);
+            }
+        }
+        
+        async function loadElevenLabsSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const data = await resp.json();
+                
+                if (data.elevenlabs_model) {
+                    document.getElementById('elevenlabs-model').value = data.elevenlabs_model;
+                }
+                if (data.elevenlabs_voice) {
+                    selectedElevenLabsVoice = data.elevenlabs_voice;
+                }
+                if (data.elevenlabs_stability) {
+                    document.getElementById('elevenlabs-stability').value = data.elevenlabs_stability;
+                    document.getElementById('stability-value').textContent = `${data.elevenlabs_stability}%`;
+                }
+                if (data.elevenlabs_similarity) {
+                    document.getElementById('elevenlabs-similarity').value = data.elevenlabs_similarity;
+                    document.getElementById('similarity-value').textContent = `${data.elevenlabs_similarity}%`;
+                }
+                if (data.elevenlabs_style) {
+                    document.getElementById('elevenlabs-style').value = data.elevenlabs_style;
+                    document.getElementById('style-value').textContent = `${data.elevenlabs_style}%`;
+                }
+                if (data.elevenlabs_boost === 'true') {
+                    document.getElementById('elevenlabs-boost').checked = true;
+                }
+            } catch (e) {
+                console.error('Errore caricamento settings ElevenLabs:', e);
+            }
+        }
+
+        async function testTTS() {
+            const text = document.getElementById('tts-test-text').value;
+            const status = document.getElementById('tts-test-status');
+            status.innerHTML = '<div class="loading"></div> Generazione audio...';
+            
+            try {
+                const resp = await fetch('/api/tts/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        engine: selectedTTS,
+                        text: text,
+                        language: document.getElementById('tts-language').value
+                    })
+                });
+                
+                if (!resp.ok) throw new Error(await resp.text());
+                
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                status.innerHTML = `<audio controls autoplay src="${url}"></audio>`;
+            } catch (e) {
+                status.innerHTML = `<div style="color: var(--danger);">Errore: ${e.message}</div>`;
+            }
+        }
+
+        // ==================== Stats ====================
+        function startStatsPolling() {
+            fetchStats();
+            setInterval(fetchStats, 2000);
+        }
+
         async function fetchStats() {
             try {
                 const resp = await fetch('/api/timing');
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data.stt && data.stt.time_ms > 0) updateStats('stt', data.stt.time_ms);
-                    if (data.llm && data.llm.time_ms > 0) updateStats('llm', data.llm.time_ms, { ttft: data.llm.ttft_ms });
-                    if (data.tts && data.tts.time_ms > 0) updateStats('tts', data.tts.time_ms, { audio_duration: data.tts.audio_sec });
-                    if (data.latency && data.latency.e2e_ms > 0) {
-                        updateStats('latency', data.latency.e2e_ms);
-                        // Aggiorna dettagli latenza
-                        const latencyDetail = document.getElementById('stat-latency-detail');
-                        if (latencyDetail) {
-                            latencyDetail.textContent = `Ultimo: ${data.latency.e2e_ms}ms | n=${data.latency.count}`;
-                        }
-                    }
-                }
-            } catch (e) {
-                // Silently fail - stats are optional
-            }
-        }
-
-        // Refresh TTS status
-        async function refreshTTSStatus() {
-            try {
-                const resp = await fetch('/api/tts/current');
+                if (!resp.ok) return;
                 const data = await resp.json();
                 
-                document.getElementById('tts-active-engine').textContent = data.engine?.toUpperCase() || '--';
-                document.getElementById('tts-active-lang').textContent = data.language?.toUpperCase() || '--';
-                document.getElementById('tts-active-voice').textContent = data.voice || 'auto';
-                
-                const statusEl = document.getElementById('tts-active-default');
-                if (data.source === 'file') {
-                    statusEl.textContent = '✅ Configurato (da file)';
-                    statusEl.className = 'value success';
-                } else if (data.is_default) {
-                    statusEl.textContent = '⚠️ Default (env)';
-                    statusEl.className = 'value warning';
-                } else {
-                    statusEl.textContent = '✅ Personalizzato';
-                    statusEl.className = 'value success';
-                }
-                
-            } catch (e) {
-                console.error('Errore refresh TTS status:', e);
-            }
+                if (data.stt?.time_ms > 0) updateStat('stt', data.stt.time_ms, data.stt.count);
+                if (data.llm?.time_ms > 0) updateStat('llm', data.llm.time_ms, data.llm.count, data.llm.ttft_ms);
+                if (data.tts?.time_ms > 0) updateStat('tts', data.tts.time_ms, data.tts.count, null, data.tts.audio_sec);
+                if (data.latency?.e2e_ms > 0) updateStat('latency', data.latency.e2e_ms, data.latency.count);
+            } catch (e) {}
         }
 
-        // Applica selezione TTS al server
-        async function applyTTSSelection() {
-            const engine = localStorage.getItem('tts_engine') || 'edge';
+        function updateStat(type, value, count, ttft = null, audioSec = null) {
+            stats[type].values.push(value);
+            if (stats[type].values.length > 20) stats[type].values.shift();
+            stats[type].avg = Math.round(stats[type].values.reduce((a, b) => a + b, 0) / stats[type].values.length);
+            stats[type].last = value;
+            stats[type].count = count;
             
-            // Prepara payload in base al TTS engine
-            let payload = { engine: engine };
+            document.getElementById(`stat-${type}`).textContent = stats[type].avg;
             
-            if (engine === 'vibevoice') {
-                payload.language = localStorage.getItem('vibevoice_language') || 'it';
-                payload.speaker = localStorage.getItem('vibevoice_speaker') || 'speaker_1';
-                payload.speed = parseFloat(localStorage.getItem('vibevoice_speed') || '1.0');
-            } else if (engine === 'chatterbox') {
-                payload.language = localStorage.getItem('chatterbox_language') || 'it';
-                payload.model = localStorage.getItem('chatterbox_model') || 'multilingual';
-                payload.device = localStorage.getItem('chatterbox_device') || 'auto';
-                const exaggeration = localStorage.getItem('chatterbox_exaggeration');
-                if (exaggeration) payload.exaggeration = parseFloat(exaggeration);
-                const audioPromptPath = localStorage.getItem('chatterbox_audio_prompt_path');
-                if (audioPromptPath) payload.audio_prompt_path = audioPromptPath;
-            } else {
-                // Per altri engine, usa lingua di default
-                payload.language = localStorage.getItem('vibevoice_language') || 'it';
-            }
-            
-            // Mostra stato "salvando..."
-            const statusEl = document.getElementById('tts-active-default');
-            statusEl.textContent = '⏳ Salvando...';
-            statusEl.className = 'value';
-            
+            let detail = `Ultimo: ${value}ms | n=${count}`;
+            if (ttft) detail += ` | TTFT: ${ttft}ms`;
+            if (audioSec) detail += ` | Audio: ${audioSec}s`;
+            document.getElementById(`stat-${type}-detail`).textContent = detail;
+        }
+
+        async function resetStats() {
             try {
-                const resp = await fetch('/api/tts/current', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                await fetch('/api/timing/reset', { method: 'POST' });
+                ['stt', 'llm', 'tts', 'latency'].forEach(type => {
+                    stats[type] = { values: [], avg: 0, last: 0, count: 0 };
+                    document.getElementById(`stat-${type}`).textContent = '--';
+                    document.getElementById(`stat-${type}-detail`).textContent = 'In attesa...';
                 });
-                
-                if (resp.ok) {
-                    const data = await resp.json();
-                    // Mostra conferma
-                    statusEl.textContent = '✅ Salvato! Riavvia agent per applicare';
-                    statusEl.className = 'value success';
-                    
-                    // Aggiorna display
-                    document.getElementById('tts-active-engine').textContent = engine;
-                    document.getElementById('tts-active-lang').textContent = language;
-                    
-                    // Mostra messaggio breve
-                    showNotification(`✅ TTS ${engine.toUpperCase()} (${language}) salvato!`, 'success');
-                } else {
-                    statusEl.textContent = '❌ Errore';
-                    statusEl.className = 'value warning';
-                    showNotification('❌ Errore salvataggio TTS', 'error');
-                }
+                showToast('Stats resettate', 'success');
             } catch (e) {
-                statusEl.textContent = '❌ Errore';
-                statusEl.className = 'value warning';
-                showNotification('❌ Errore: ' + e.message, 'error');
+                showToast('Errore reset', 'error');
             }
         }
 
-        // Mostra notifica toast
-        function showNotification(message, type) {
-            // Crea elemento notifica
-            const notif = document.createElement('div');
-            notif.className = 'toast-notification ' + type;
-            notif.textContent = message;
-            notif.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 12px 20px;
-                background: ${type === 'success' ? '#10b981' : '#ef4444'};
-                color: white;
-                border-radius: 8px;
-                z-index: 9999;
-                font-weight: 500;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                animation: slideIn 0.3s ease;
-            `;
-            document.body.appendChild(notif);
-            
-            // Rimuovi dopo 3 secondi
-            setTimeout(() => {
-                notif.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
+        // ==================== Utils ====================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
         }
 
-        // Init
-        checkServices();
-        loadConfig();
-        loadVibeVoiceSettings();
-        refreshTTSStatus();
-        setInterval(checkServices, 15000);
-        setInterval(fetchStats, 2000); // Poll timing stats every 2s
-        setInterval(refreshTTSStatus, 5000); // Aggiorna stato TTS ogni 5s
-        
-        // Carica TTS salvato
-        const savedTTS = localStorage.getItem('tts_engine');
-        if (savedTTS) {
-            selectTTS(savedTTS);
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return 'N/A';
+            const gb = bytes / (1024 * 1024 * 1024);
+            if (gb >= 1) return `${gb.toFixed(1)} GB`;
+            const mb = bytes / (1024 * 1024);
+            return `${mb.toFixed(0)} MB`;
         }
     </script>
 </body>
 </html>
-
