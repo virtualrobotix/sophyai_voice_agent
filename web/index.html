@@ -454,6 +454,170 @@
             border-color: var(--accent);
         }
 
+        /* Video Container */
+        .video-container {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .video-wrapper {
+            flex: 1;
+            min-width: 300px;
+            max-width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .video-placeholder svg {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .video-placeholder .placeholder-text {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 12px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: var(--bg-secondary);
+        }
+
+        .video-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .video-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .video-btn {
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .video-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .video-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .video-analysis-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .video-analysis-panel h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .analysis-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .analysis-type-select {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .analysis-type-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .analyze-btn {
+            padding: 10px 20px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .analyze-btn:hover {
+            background: #9f73fa;
+            transform: translateY(-2px);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .video-hidden {
+            display: none;
+        }
+
         /* Connect Overlay */
         .connect-overlay {
             position: fixed;
@@ -861,6 +1025,78 @@
     </header>
 
     <main>
+        <!-- Video Container -->
+        <div class="video-container" id="video-container">
+            <div class="video-wrapper">
+                <video id="local-video" autoplay muted playsinline></video>
+                <div class="video-label">Tu</div>
+            </div>
+            <div class="video-wrapper">
+                <video id="remote-video" autoplay playsinline style="display: none;"></video>
+                <div id="remote-video-placeholder" class="video-placeholder">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Sfondo cerchio -->
+                        <circle cx="100" cy="100" r="95" fill="#667eea"/>
+                        <!-- Capelli -->
+                        <ellipse cx="100" cy="70" rx="55" ry="50" fill="#4a3728"/>
+                        <ellipse cx="100" cy="95" rx="60" ry="45" fill="#4a3728"/>
+                        <!-- Viso -->
+                        <ellipse cx="100" cy="95" rx="45" ry="50" fill="#fdbcb4"/>
+                        <!-- Occhi -->
+                        <ellipse cx="82" cy="90" rx="8" ry="5" fill="white"/>
+                        <ellipse cx="118" cy="90" rx="8" ry="5" fill="white"/>
+                        <circle cx="82" cy="90" r="4" fill="#4a3728"/>
+                        <circle cx="118" cy="90" r="4" fill="#4a3728"/>
+                        <!-- Sopracciglia -->
+                        <path d="M72 80 Q82 76 92 80" stroke="#4a3728" stroke-width="2" fill="none"/>
+                        <path d="M108 80 Q118 76 128 80" stroke="#4a3728" stroke-width="2" fill="none"/>
+                        <!-- Naso -->
+                        <path d="M100 95 Q103 105 100 110" stroke="#e8a090" stroke-width="2" fill="none"/>
+                        <!-- Sorriso -->
+                        <path d="M85 120 Q100 135 115 120" stroke="#c76b6b" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <!-- Labbra -->
+                        <ellipse cx="100" cy="122" rx="12" ry="5" fill="#e57373"/>
+                        <!-- Orecchini -->
+                        <circle cx="52" cy="105" r="4" fill="#ffd700"/>
+                        <circle cx="148" cy="105" r="4" fill="#ffd700"/>
+                        <!-- Capelli laterali -->
+                        <path d="M50 80 Q40 100 45 140" stroke="#4a3728" stroke-width="15" fill="none" stroke-linecap="round"/>
+                        <path d="M150 80 Q160 100 155 140" stroke="#4a3728" stroke-width="15" fill="none" stroke-linecap="round"/>
+                        <!-- Corpo/spalle -->
+                        <ellipse cx="100" cy="185" rx="50" ry="30" fill="#667eea"/>
+                    </svg>
+                    <span class="placeholder-text">Sophy AI</span>
+                </div>
+                <div class="video-label">Sophy</div>
+            </div>
+        </div>
+
+        <!-- Video Controls -->
+        <div class="video-controls" id="video-controls">
+            <button class="video-btn" id="video-toggle-btn" onclick="toggleVideo()">
+                📹 Webcam
+            </button>
+            <button class="video-btn" id="screen-share-btn" onclick="toggleScreenShare()">
+                🖥️ Condividi Schermo
+            </button>
+        </div>
+
+        <!-- Video Analysis Panel -->
+        <div class="video-analysis-panel" id="video-analysis-panel">
+            <h3>Analisi Video</h3>
+            <div class="analysis-controls">
+                <select class="analysis-type-select" id="analysis-type-select">
+                    <option value="generic">Analisi Generica</option>
+                    <option value="document">Estrazione Documento</option>
+                    <option value="age">Stima Età</option>
+                    <option value="environment">Descrizione Ambiente</option>
+                </select>
+                <button class="analyze-btn" id="analyze-btn" onclick="requestVideoAnalysis()">
+                    🔍 Analizza Video
+                </button>
+            </div>
+        </div>
+
         <div class="chat-container">
             <div class="messages" id="messages">
                 <div class="messages-empty" id="messages-empty">
@@ -975,7 +1211,12 @@
             room: null,
             connected: false,
             micActive: false,
-            speaking: false
+            speaking: false,
+            videoActive: false,
+            screenShareActive: false,
+            localVideoTrack: null,
+            remoteVideoTrack: null,
+            screenShareTrack: null
         };
 
         // Elements
@@ -994,8 +1235,28 @@
             svcLlm: document.getElementById('svc-llm'),
             svcTts: document.getElementById('svc-tts'),
             textInput: document.getElementById('text-input'),
-            sendBtn: document.getElementById('send-btn')
+            sendBtn: document.getElementById('send-btn'),
+            videoContainer: document.getElementById('video-container'),
+            videoControls: document.getElementById('video-controls'),
+            videoAnalysisPanel: document.getElementById('video-analysis-panel'),
+            localVideo: document.getElementById('local-video'),
+            remoteVideo: document.getElementById('remote-video'),
+            videoToggleBtn: document.getElementById('video-toggle-btn'),
+            screenShareBtn: document.getElementById('screen-share-btn'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            analysisTypeSelect: document.getElementById('analysis-type-select')
         };
+
+        // Nascondi video container inizialmente
+        if (elements.videoContainer) {
+            elements.videoContainer.classList.add('video-hidden');
+        }
+        if (elements.videoControls) {
+            elements.videoControls.classList.add('video-hidden');
+        }
+        if (elements.videoAnalysisPanel) {
+            elements.videoAnalysisPanel.classList.add('video-hidden');
+        }
 
         // Check services on load
         async function checkServices() {
@@ -1155,16 +1416,55 @@
                         const audio = track.attach();
                         audio.autoplay = true;
                         document.body.appendChild(audio);
+                    } else if (track.kind === 'video') {
+                        // Gestisci video track remoto
+                        const videoElement = track.attach();
+                        videoElement.autoplay = true;
+                        videoElement.playsInline = true;
+                        
+                        if (elements.remoteVideo) {
+                            elements.remoteVideo.srcObject = new MediaStream([track.mediaStreamTrack]);
+                            elements.remoteVideo.style.display = 'block';
+                            state.remoteVideoTrack = track;
+                            
+                            // Nascondi placeholder
+                            const placeholder = document.getElementById('remote-video-placeholder');
+                            if (placeholder) placeholder.style.display = 'none';
+                            
+                            // Mostra video container se non già visibile
+                            if (elements.videoContainer) {
+                                elements.videoContainer.classList.remove('video-hidden');
+                            }
+                            if (elements.videoControls) {
+                                elements.videoControls.classList.remove('video-hidden');
+                            }
+                            if (elements.videoAnalysisPanel) {
+                                elements.videoAnalysisPanel.classList.remove('video-hidden');
+                            }
+                        }
                     }
                 });
 
                 state.room.on('dataReceived', (data, participant) => {
                     try {
                         const msg = JSON.parse(new TextDecoder().decode(data));
+                        // #region agent log
+                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Messaggio ricevuto',data:{type:msg.type,role:msg.role,textPreview:msg.text?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-FRONTEND'})}).catch(()=>{});
+                        // #endregion
                         if (msg.type === 'transcript') {
                             addMessage(msg.text, msg.role);
                         } else if (msg.type === 'status') {
                             elements.voiceStatus.textContent = msg.text;
+                        } else if (msg.type === 'video_analysis_result') {
+                            // Mostra risultato analisi video
+                            const analysisType = msg.analysis_type || 'generica';
+                            const result = msg.result || 'Nessun risultato';
+                            addMessage(`Analisi ${analysisType}: ${result}`, 'assistant');
+
+                            if (elements.analyzeBtn) {
+                                elements.analyzeBtn.disabled = false;
+                                elements.analyzeBtn.textContent = '🔍 Analizza Video';
+                            }
                         }
                     } catch (e) {}
                 });
@@ -1205,6 +1505,14 @@
                 elements.statusText.textContent = 'Connesso';
                 initModal.hide();
                 elements.voiceStatus.textContent = 'Parla con Sophy...';
+                
+                // Mostra controlli video dopo la connessione
+                if (elements.videoControls) {
+                    elements.videoControls.classList.remove('video-hidden');
+                }
+                if (elements.videoAnalysisPanel) {
+                    elements.videoAnalysisPanel.classList.remove('video-hidden');
+                }
 
             } catch (e) {
                 console.error('Connection error:', e);
@@ -1301,6 +1609,151 @@
             // Pulisci input
             elements.textInput.value = '';
             elements.voiceStatus.textContent = '💭 Elaborando...';
+        }
+
+        // Toggle video (webcam)
+        async function toggleVideo() {
+            if (!state.connected) return;
+            
+            try {
+                if (state.videoActive) {
+                    // Disattiva video
+                    if (state.localVideoTrack) {
+                        await state.room.localParticipant.unpublishTrack(state.localVideoTrack);
+                        state.localVideoTrack.stop();
+                        state.localVideoTrack = null;
+                    }
+                    if (elements.localVideo) {
+                        elements.localVideo.srcObject = null;
+                    }
+                    state.videoActive = false;
+                    if (elements.videoToggleBtn) {
+                        elements.videoToggleBtn.classList.remove('active');
+                        elements.videoToggleBtn.textContent = '📹 Webcam';
+                    }
+                } else {
+                    // Attiva video
+                    state.localVideoTrack = await LivekitClient.createLocalVideoTrack({
+                        resolution: { width: 1280, height: 720 },
+                        facingMode: 'user'
+                    });
+                    
+                    await state.room.localParticipant.publishTrack(state.localVideoTrack);
+                    
+                    if (elements.localVideo && state.localVideoTrack) {
+                        elements.localVideo.srcObject = new MediaStream([state.localVideoTrack.mediaStreamTrack]);
+                    }
+                    
+                    state.videoActive = true;
+                    if (elements.videoToggleBtn) {
+                        elements.videoToggleBtn.classList.add('active');
+                        elements.videoToggleBtn.textContent = '📹 Webcam ON';
+                    }
+                    
+                    // Mostra video container
+                    if (elements.videoContainer) {
+                        elements.videoContainer.classList.remove('video-hidden');
+                    }
+                    if (elements.videoControls) {
+                        elements.videoControls.classList.remove('video-hidden');
+                    }
+                    if (elements.videoAnalysisPanel) {
+                        elements.videoAnalysisPanel.classList.remove('video-hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Errore toggle video:', error);
+                alert('Errore accesso webcam: ' + error.message);
+            }
+        }
+
+        // Toggle screen sharing
+        async function toggleScreenShare() {
+            if (!state.connected) return;
+            
+            try {
+                if (state.screenShareActive) {
+                    // Disattiva screen sharing
+                    if (state.screenShareTrack) {
+                        await state.room.localParticipant.unpublishTrack(state.screenShareTrack);
+                        state.screenShareTrack.stop();
+                        state.screenShareTrack = null;
+                    }
+                    state.screenShareActive = false;
+                    if (elements.screenShareBtn) {
+                        elements.screenShareBtn.classList.remove('active');
+                        elements.screenShareBtn.textContent = '🖥️ Condividi Schermo';
+                    }
+                } else {
+                    // Attiva screen sharing
+                    state.screenShareTrack = await LivekitClient.createLocalScreenTracks({
+                        resolution: { width: 1920, height: 1080 }
+                    });
+                    
+                    if (state.screenShareTrack && state.screenShareTrack.length > 0) {
+                        const videoTrack = state.screenShareTrack.find(t => t.kind === 'video');
+                        if (videoTrack) {
+                            await state.room.localParticipant.publishTrack(videoTrack);
+                            state.screenShareTrack = videoTrack;
+                            
+                            if (elements.localVideo) {
+                                elements.localVideo.srcObject = new MediaStream([videoTrack.mediaStreamTrack]);
+                            }
+                        }
+                    }
+                    
+                    state.screenShareActive = true;
+                    if (elements.screenShareBtn) {
+                        elements.screenShareBtn.classList.add('active');
+                        elements.screenShareBtn.textContent = '🖥️ Stop Condivisione';
+                    }
+                    
+                    // Mostra video container se non già visibile
+                    if (elements.videoContainer) {
+                        elements.videoContainer.classList.remove('video-hidden');
+                    }
+                    if (elements.videoControls) {
+                        elements.videoControls.classList.remove('video-hidden');
+                    }
+                    if (elements.videoAnalysisPanel) {
+                        elements.videoAnalysisPanel.classList.remove('video-hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Errore screen sharing:', error);
+                alert('Errore condivisione schermo: ' + error.message);
+            }
+        }
+
+        // Request video analysis
+        async function requestVideoAnalysis() {
+            if (!state.connected) return;
+            
+            const analysisType = elements.analysisTypeSelect ? elements.analysisTypeSelect.value : 'generic';
+            
+            if (elements.analyzeBtn) {
+                elements.analyzeBtn.disabled = true;
+                elements.analyzeBtn.textContent = '⏳ Analisi...';
+            }
+            
+            try {
+                const data = new TextEncoder().encode(JSON.stringify({
+                    type: 'video_analysis',
+                    analysis_type: analysisType
+                }));
+                
+                await state.room.localParticipant.publishData(data, { reliable: true });
+                
+                addMessage(`Richiesta analisi video: ${analysisType}`, 'user');
+            } catch (error) {
+                console.error('Errore richiesta analisi:', error);
+                alert('Errore invio richiesta analisi: ' + error.message);
+            } finally {
+                if (elements.analyzeBtn) {
+                    elements.analyzeBtn.disabled = false;
+                    elements.analyzeBtn.textContent = '🔍 Analizza Video';
+                }
+            }
         }
 
         // ==================== Sidebar Toggle ====================

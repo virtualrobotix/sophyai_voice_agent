@@ -193,9 +193,25 @@
         .model-item.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
 
         .model-info { flex: 1; }
-        .model-name { font-weight: 600; }
-        .model-desc { font-size: 0.85rem; color: var(--text-muted); }
-        .model-cost { font-size: 0.85rem; color: var(--success); font-family: 'JetBrains Mono', monospace; }
+        .model-name { font-weight: 600; margin-bottom: 4px; }
+        .model-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+        .badge-vision { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #60a5fa; }
+        .badge-tools { background: rgba(249, 115, 22, 0.2); border-color: #f97316; color: #fb923c; }
+        .badge-json { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+        .badge-context { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #a78bfa; }
+        .model-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+        .model-cost { font-size: 0.8rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
 
         /* Provider Toggle */
         .provider-toggle {
@@ -1152,13 +1168,27 @@
                 <div class="model-item ${m.id === savedModel ? 'selected' : ''}" onclick="selectOpenRouterModelByIndex(${idx}, this)">
                     <div class="model-info">
                         <div class="model-name">${escapeHtml(m.name)} ${m.id === savedModel ? '✓' : ''}</div>
-                        <div class="model-desc">${escapeHtml(m.description?.substring(0, 80) || '')}</div>
+                        <div class="model-badges">
+                            ${m.supports_vision ? '<span class="badge badge-vision">👁️ Vision</span>' : ''}
+                            ${m.supports_tools ? '<span class="badge badge-tools">🔧 Tools</span>' : ''}
+                            ${m.supports_json_mode ? '<span class="badge badge-json">📋 JSON</span>' : ''}
+                            <span class="badge badge-context">📝 ${formatContextLength(m.context_length)}</span>
+                        </div>
+                        <div class="model-desc">${escapeHtml(m.description?.substring(0, 100) || '')}</div>
                         <div class="model-cost" style="color: ${m.total_cost === 0 ? '#10b981' : 'var(--text-muted)'}">
                             ${m.total_cost === 0 ? '🆓 Gratuito' : '$' + m.total_cost.toFixed(4) + '/1M tokens'}
+                            ${m.modality ? ' • ' + m.modality : ''}
                         </div>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function formatContextLength(tokens) {
+            if (!tokens) return '?';
+            if (tokens >= 1000000) return (tokens / 1000000).toFixed(1) + 'M';
+            if (tokens >= 1000) return Math.round(tokens / 1000) + 'K';
+            return tokens.toString();
         }
 
         function searchOpenRouterModels() {
@@ -1192,17 +1222,31 @@
             }
 
             try {
+                // Passa tutti i dettagli del modello al backend
                 const resp = await fetch('/api/openrouter/select', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: model.id })
+                    body: JSON.stringify({
+                        model: model.id,
+                        name: model.name,
+                        context_length: model.context_length,
+                        supports_vision: model.supports_vision,
+                        supports_tools: model.supports_tools,
+                        supports_json_mode: model.supports_json_mode,
+                        modality: model.modality,
+                        prompt_cost: model.prompt_cost,
+                        completion_cost: model.completion_cost
+                    })
                 });
                 if (!resp.ok) throw new Error('Errore API');
 
                 // Salva modello selezionato
                 window.savedOpenRouterModel = model.id;
                 
-                showToast(`Modello ${model.name} selezionato`, 'success');
+                // Mostra toast con dettagli
+                const visionText = model.supports_vision ? ' (Vision ✓)' : '';
+                const toolsText = model.supports_tools ? ' (Tools ✓)' : '';
+                showToast(`${model.name}${visionText}${toolsText} - ${formatContextLength(model.context_length)} context`, 'success');
 
                 document.querySelectorAll('#openrouter-models .model-item').forEach(el => el.classList.remove('selected'));
                 element.classList.add('selected');

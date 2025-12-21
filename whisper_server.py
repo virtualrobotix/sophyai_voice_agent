@@ -160,14 +160,17 @@ async def transcribe(
             if USE_OPENAI_WHISPER:
                 # openai-whisper (supporto MPS)
                 # Se lang è None, Whisper rileverà automaticamente
+                # fp16=True causa NaN su MPS, usare solo per CUDA
+                device = detect_device()
+                use_fp16 = (device == "cuda")  # Solo CUDA supporta fp16 correttamente
                 result = model.transcribe(
                     tmp_path,
                     language=lang,
-                    fp16=(detect_device() != "cpu")
+                    fp16=use_fp16
                 )
                 text = result["text"].strip()
                 detected_lang = result.get("language", lang or "it")
-                
+
                 # Calcola durata dall'audio
                 import librosa
                 duration = librosa.get_duration(path=tmp_path)
@@ -248,14 +251,17 @@ async def transcribe_raw(
         try:
             if USE_OPENAI_WHISPER:
                 # openai-whisper (supporto MPS)
+                # fp16=True causa NaN su MPS, usare solo per CUDA
+                device = detect_device()
+                use_fp16 = (device == "cuda")  # Solo CUDA supporta fp16 correttamente
                 result = model.transcribe(
                     tmp_path,
                     language=lang,
-                    fp16=(detect_device() != "cpu")
+                    fp16=use_fp16
                 )
                 text = result["text"].strip()
                 duration = len(audio_array) / sample_rate
-                
+
                 logger.info(f"📝 [MPS] Trascritto raw: {text[:100]}...")
                 
                 return {

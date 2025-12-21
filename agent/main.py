@@ -43,8 +43,13 @@ from livekit.agents import (
 )
 from livekit.agents.utils import AudioBuffer
 from livekit.agents.voice import Agent, AgentSession
+from livekit.agents.llm import function_tool
+from livekit.agents import RunContext
 from livekit.plugins import silero, openai
 from livekit import rtc
+import base64
+import io
+from PIL import Image
 
 from .config import config
 
@@ -55,10 +60,45 @@ _last_user_message = ""  # Per evitare duplicati STT
 _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
 _last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
 
+# Variabili globali per pattern matching comandi video (fallback per modelli senza function calling)
+_video_analysis_callback = None  # Callback per analisi video
+_agent_session_global = None  # Sessione agent per TTS
+
 def set_transcript_callback(callback):
     global _send_transcript_callback, _sent_messages
     _send_transcript_callback = callback
     _sent_messages.clear()  # Reset quando si connette
+
+def set_video_analysis_callback(callback, session):
+    """Imposta callback per gestire comandi video vocali (fallback per modelli senza function calling)"""
+    global _video_analysis_callback, _agent_session_global
+    _video_analysis_callback = callback
+    _agent_session_global = session
+
+def detect_video_command(text: str) -> str | None:
+    """Rileva se il testo è un comando di analisi video. Ritorna il tipo o None."""
+    text_lower = text.lower().strip()
+    
+    # Comandi per analisi generica
+    if any(p in text_lower for p in ["cosa vedi", "che cosa vedi", "descrivi cosa vedi", "analizza il video", 
+                                      "guarda il video", "cosa c'è nel video", "dimmi cosa vedi"]):
+        return "generic"
+    
+    # Comandi per documenti
+    if any(p in text_lower for p in ["leggi il documento", "analizza documento", "leggi la carta",
+                                      "carta d'identità", "patente", "estrai i dati"]):
+        return "document"
+    
+    # Comandi per età
+    if any(p in text_lower for p in ["quanti anni", "età", "stima l'età", "che età ha"]):
+        return "age"
+    
+    # Comandi per ambiente
+    if any(p in text_lower for p in ["descrivi l'ambiente", "dove sono", "cosa c'è intorno",
+                                      "descrivi la stanza", "descrivi il luogo"]):
+        return "environment"
+    
+    return None
 
 async def send_timing_to_server(timing_type: str, data: dict):
     """Invia timing stats al web server"""
@@ -1042,12 +1082,29 @@ class WhisperSTT(stt.STT):
         
         logger.info(f"🎤 [STT] Tempo: {stt_time_ms:.0f}ms | Lingua: {detected_lang} | Trascritto: \"{text}\"")
         
+        # #region agent log
+        debug_log("H4-STT", "main.py:_recognize_impl", "STT completato", {"text": text[:100] if text else "", "lang": detected_lang, "time_ms": int(stt_time_ms)})
+        # #endregion
+        
         # Invia timing stats al server
         asyncio.create_task(send_timing_to_server("stt", {"time_ms": int(stt_time_ms)}))
         
         # Invia trascrizione utente al frontend
         if text:
             asyncio.create_task(send_transcript(text, "user"))
+        
+        # Intercetta comandi video vocali (fallback per modelli senza function calling come Gemma 3)
+        if text and _video_analysis_callback:
+            video_cmd = detect_video_command(text)
+            if video_cmd:
+                logger.info(f"📹 Comando video vocale rilevato: {video_cmd} - Gestione diretta")
+                # Esegui analisi video in background (include TTS del risultato)
+                asyncio.create_task(_video_analysis_callback(video_cmd))
+                # Restituisci testo vuoto per evitare che l'LLM risponda
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
         
         return stt.SpeechEvent(
             type=stt.SpeechEventType.FINAL_TRANSCRIPT,
@@ -1204,6 +1261,531 @@ def create_chatterbox_livekit_wrapper(
                 raise
     
     return ChatterboxLiveKit()
+
+
+class MultimodalLLM:
+    """Wrapper per LLM multimodale che supporta analisi immagini/video"""
+    
+    def __init__(self, base_llm, llm_provider: str, db_settings: dict):
+        """
+        Inizializza MultimodalLLM.
+        
+        Args:
+            base_llm: LLM base (OpenAI-compatible)
+            llm_provider: "openrouter" o "ollama"
+            db_settings: Settings dal database
+        """
+        self.base_llm = base_llm
+        self.llm_provider = llm_provider
+        self.db_settings = db_settings
+        self.ollama_host = config.ollama.host if hasattr(config, 'ollama') else "http://localhost:11434"
+        
+        # Verifica se il modello supporta vision
+        self.supports_vision = self._check_vision_support()
+        logger.info(f"🔍 MultimodalLLM: provider={llm_provider}, supports_vision={self.supports_vision}")
+    
+    def _check_vision_support(self) -> bool:
+        """Verifica se il modello corrente supporta vision usando info dal database"""
+        if self.llm_provider == "openrouter":
+            # Prima controlla se abbiamo l'info salvata dal database (da API OpenRouter)
+            db_vision_support = self.db_settings.get("openrouter_supports_vision", "")
+            if db_vision_support:
+                return db_vision_support.lower() == "true"
+            
+            # Fallback: controlla nome modello
+            model = self.db_settings.get("openrouter_model", "")
+            vision_models = [
+                "gpt-4-vision", "gpt-4o", "gpt-4-turbo",
+                "claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "claude-3.5",
+                "gemma-3", "gemma3", "gemma-2", "gemma2",
+                "gemini-pro-vision", "gemini-1.5", "gemini-2",
+                "pixtral", "llava", "qwen-vl", "qwen2-vl"
+            ]
+            return any(vm in model.lower().replace("_", "-") for vm in vision_models)
+        elif self.llm_provider == "ollama":
+            model = self.db_settings.get("ollama_model", config.ollama.model)
+            vision_models = ["llava", "bakllava", "moondream", "gemma3", "gemma-3", "llama3.2-vision", "minicpm-v"]
+            return any(vm in model.lower() for vm in vision_models)
+        return False
+    
+    async def analyze_image(self, image_base64: str, prompt: str) -> str:
+        """
+        Analizza un'immagine usando LLM vision.
+        
+        Args:
+            image_base64: Immagine in base64
+            prompt: Prompt per l'analisi
+        
+        Returns:
+            Risposta del LLM
+        """
+        if not self.supports_vision:
+            return "Errore: Il modello LLM configurato non supporta l'analisi di immagini. Usa un modello vision (es. GPT-4 Vision, Claude 3, o llava per Ollama)."
+        
+        try:
+            if self.llm_provider == "openrouter":
+                return await self._analyze_with_openrouter(image_base64, prompt)
+            elif self.llm_provider == "ollama":
+                return await self._analyze_with_ollama(image_base64, prompt)
+            else:
+                return "Errore: Provider LLM non supportato per vision"
+        except Exception as e:
+            logger.error(f"Errore analisi immagine: {e}")
+            import traceback
+            traceback.print_exc()
+            return f"Errore durante l'analisi: {str(e)}"
+    
+    async def _analyze_with_openrouter(self, image_base64: str, prompt: str) -> str:
+        """Analizza con OpenRouter usando formato OpenAI vision API"""
+        import aiohttp
+        
+        model = self.db_settings.get("openrouter_model", "openai/gpt-4-vision-preview")
+        api_key = self.db_settings.get("openrouter_api_key", "")
+        
+        if not api_key:
+            return "Errore: OpenRouter API key non configurata"
+        
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_base64}"
+                        }
+                    }
+                ]
+            }
+        ]
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://sophyai.local",
+                    "X-Title": "SophyAi Voice Agent"
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": 1000
+                },
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    logger.error(f"OpenRouter error: {resp.status} - {error_text}")
+                    return f"Errore API OpenRouter: {resp.status}"
+                
+                data = await resp.json()
+                return data["choices"][0]["message"]["content"]
+    
+    async def _analyze_with_ollama(self, image_base64: str, prompt: str) -> str:
+        """Analizza con Ollama usando modelli vision"""
+        try:
+            import ollama
+            from ollama import AsyncClient
+            
+            model = self.db_settings.get("ollama_model", config.ollama.model)
+            client = AsyncClient(host=self.ollama_host)
+            
+            # Decodifica base64
+            image_bytes = base64.b64decode(image_base64)
+            
+            # Ollama API per modelli vision
+            response = await client.generate(
+                model=model,
+                prompt=prompt,
+                images=[image_bytes],
+                stream=False
+            )
+            
+            if hasattr(response, 'response'):
+                return response.response
+            elif isinstance(response, dict):
+                return response.get('response', '')
+            else:
+                return str(response)
+                
+        except Exception as e:
+            logger.error(f"Errore Ollama vision: {e}")
+            # Fallback: prova con API chat se disponibile
+            try:
+                client = AsyncClient(host=self.ollama_host)
+                image_bytes = base64.b64decode(image_base64)
+                
+                response = await client.chat(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt,
+                            "images": [image_bytes]
+                        }
+                    ]
+                )
+                
+                if hasattr(response, 'message') and hasattr(response.message, 'content'):
+                    return response.message.content
+                elif isinstance(response, dict):
+                    return response.get('message', {}).get('content', '')
+                return str(response)
+            except Exception as e2:
+                logger.error(f"Errore fallback Ollama: {e2}")
+                return f"Errore analisi Ollama: {str(e)}"
+
+
+class VideoFrameExtractor:
+    """Estrae frame dai video tracks LiveKit per analisi"""
+    
+    def __init__(self, max_rate: float = None):
+        self.video_tracks = {}  # {participant_identity: track}
+        self.last_frame_time = {}  # Rate limiting
+        self.frame_buffer = {}  # Ultimi frame estratti
+        self.max_rate = max_rate or (config.vision.max_frame_rate if hasattr(config, 'vision') else 1.0)
+    
+    def register_video_track(self, participant_identity: str, track: rtc.VideoTrack):
+        """Registra un video track per l'estrazione frame"""
+        self.video_tracks[participant_identity] = track
+        logger.info(f"📹 Video track registrato per {participant_identity}")
+    
+    def unregister_video_track(self, participant_identity: str):
+        """Rimuove un video track"""
+        if participant_identity in self.video_tracks:
+            del self.video_tracks[participant_identity]
+        if participant_identity in self.frame_buffer:
+            del self.frame_buffer[participant_identity]
+        if participant_identity in self.last_frame_time:
+            del self.last_frame_time[participant_identity]
+        logger.info(f"📹 Video track rimosso per {participant_identity}")
+    
+    async def extract_frame(self, participant_identity: str = None, max_rate: float = None) -> Optional[bytes]:
+        """
+        Estrae un frame dal video track usando rtc.VideoStream.
+        
+        Args:
+            participant_identity: Identità del partecipante (None = primo disponibile)
+            max_rate: Massimo frame al secondo (rate limiting)
+        
+        Returns:
+            Frame come bytes (PNG) o None se non disponibile
+        """
+        import time
+        
+        # Seleziona track
+        track = None
+        identity_key = participant_identity
+        if participant_identity:
+            track = self.video_tracks.get(participant_identity)
+        else:
+            # Prendi il primo track disponibile
+            if self.video_tracks:
+                identity_key = list(self.video_tracks.keys())[0]
+                track = list(self.video_tracks.values())[0]
+        
+        if not track:
+            logger.warning("Nessun video track disponibile")
+            return None
+        
+        # Rate limiting
+        rate_limit = max_rate or self.max_rate
+        now = time.time()
+        last_time = self.last_frame_time.get(identity_key, 0)
+        if now - last_time < 1.0 / rate_limit:
+            # Usa frame bufferizzato se disponibile
+            if identity_key in self.frame_buffer:
+                logger.info("📹 Usando frame bufferizzato")
+                return self.frame_buffer[identity_key]
+            return None
+        
+        try:
+            logger.info(f"📹 Estrazione frame da track: {type(track).__name__}")
+            
+            # Usa VideoStream per estrarre frame (API corretta di livekit-agents)
+            video_stream = rtc.VideoStream(track)
+            frame_data = None
+            
+            try:
+                # Ottieni il primo frame disponibile con timeout
+                async def get_first_frame():
+                    async for frame_event in video_stream:
+                        return frame_event.frame
+                    return None
+                
+                frame = await asyncio.wait_for(get_first_frame(), timeout=3.0)
+                
+                if frame:
+                    logger.info(f"📹 Frame ricevuto: {frame.width}x{frame.height}")
+                    
+                    # Converti VideoFrame in ARGB buffer
+                    argb_frame = frame.convert(rtc.VideoBufferType.RGBA)
+                    
+                    # Crea immagine PIL dai dati RGBA
+                    img = Image.frombytes(
+                        'RGBA',
+                        (argb_frame.width, argb_frame.height),
+                        argb_frame.data
+                    )
+                    
+                    # Converti in RGB per rimuovere alpha
+                    img = img.convert('RGB')
+                    
+                    # Converti in PNG bytes
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='PNG', optimize=True)
+                    frame_data = buffer.getvalue()
+                    
+                    logger.info(f"📹 Frame convertito: {len(frame_data)} bytes")
+                    
+            except asyncio.TimeoutError:
+                logger.warning("📹 Timeout attesa frame video")
+            finally:
+                await video_stream.aclose()
+            
+            if frame_data:
+                # Salva nel buffer
+                self.frame_buffer[identity_key] = frame_data
+                self.last_frame_time[identity_key] = now
+                return frame_data
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Errore estrazione frame: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def frame_to_base64(self, frame_bytes: bytes) -> str:
+        """Converte frame bytes in base64 string per LLM"""
+        return base64.b64encode(frame_bytes).decode('utf-8')
+
+
+class VisionAgent(Agent):
+    """
+    Agent con capacità vision. Sottoclasse di Agent che aggiunge
+    funzioni tool per l'analisi di immagini/video.
+    """
+    
+    # Variabili di classe per le dipendenze (impostate dopo l'inizializzazione)
+    _frame_extractor: Optional[VideoFrameExtractor] = None
+    _multimodal_llm: Optional[MultimodalLLM] = None
+    _db_settings: dict = {}
+    _base_llm = None
+    
+    @classmethod
+    def set_vision_dependencies(cls, frame_extractor: VideoFrameExtractor, base_llm, db_settings: dict):
+        """Imposta le dipendenze per le funzioni vision (metodo di classe)"""
+        cls._frame_extractor = frame_extractor
+        cls._db_settings = db_settings
+        cls._base_llm = base_llm
+        # Crea MultimodalLLM
+        llm_provider = db_settings.get("llm_provider", "ollama")
+        cls._multimodal_llm = MultimodalLLM(base_llm, llm_provider, db_settings)
+        logger.info(f"📹 VisionAgent: dipendenze vision impostate, provider={llm_provider}")
+    
+    def _has_video(self) -> bool:
+        """Verifica se c'è un video track disponibile"""
+        return self._frame_extractor is not None and bool(self._frame_extractor.video_tracks)
+    
+    async def _analyze_with_prompt(self, prompt: str) -> str:
+        """Esegue analisi con il prompt specificato"""
+        if not self._has_video():
+            return "Non vedo nessun video attivo. Attiva la webcam o condividi lo schermo prima."
+        
+        if self._multimodal_llm is None:
+            return "Il sistema di analisi immagini non è configurato."
+        
+        try:
+            # Estrai frame
+            frame_bytes = await self._frame_extractor.extract_frame()
+            if not frame_bytes:
+                return "Non sono riuscito a catturare un frame dal video."
+            
+            # Converti in base64
+            image_base64 = self._frame_extractor.frame_to_base64(frame_bytes)
+            
+            # Analizza con LLM multimodale
+            result = await self._multimodal_llm.analyze_image(image_base64, prompt)
+            
+            # Pulisci il risultato da caratteri markdown
+            result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
+            result = result.replace("\n\n", ". ").replace("\n", ". ")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Errore analisi vision: {e}")
+            return f"Si è verificato un errore durante l'analisi: {str(e)}"
+    
+    @function_tool(description="Analizza cosa è visibile nel video o nella webcam. Usa questa funzione quando l'utente chiede di vedere, guardare, o descrivere cosa c'è nel video.")
+    async def analyze_video(self, context: RunContext) -> str:
+        """Analizza il video/immagine dalla webcam o screen sharing.
+        
+        Args:
+            context: Contesto di esecuzione dell'agent.
+        """
+        logger.info(f"📹 FUNCTION TOOL analyze_video CHIAMATO: has_video={self._has_video()}")
+        prompt = """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
+Sii conciso, usa 2-3 frasi al massimo.
+Non usare elenchi puntati, asterischi, o formattazione markdown.
+Rispondi come se stessi parlando direttamente a qualcuno."""
+        
+        result = await self._analyze_with_prompt(prompt)
+        logger.info(f"📹 analyze_video risultato: {len(result)} chars")
+        return result
+    
+    @function_tool(description="Leggi e estrai dati da documenti come carte d'identità, patenti, o altri documenti. Usa quando l'utente mostra un documento e chiede di leggerlo.")
+    async def analyze_document(self, context: RunContext) -> str:
+        """Leggi e estrai dati da documenti.
+        
+        Args:
+            context: Contesto di esecuzione dell'agent.
+        """
+        prompt = """Analizza questo documento e leggi i dati visibili.
+Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
+Per esempio: Il nome è Mario Rossi, nato il 15 marzo 1985, numero documento AB123456.
+Non usare formattazione JSON o markdown. Sii conversazionale."""
+        
+        return await self._analyze_with_prompt(prompt)
+    
+    @function_tool(description="Stima l'età approssimativa della persona visibile nel video. Usa quando l'utente chiede quanti anni ha qualcuno.")
+    async def estimate_age(self, context: RunContext) -> str:
+        """Stima l'età della persona visibile.
+        
+        Args:
+            context: Contesto di esecuzione dell'agent.
+        """
+        prompt = """Osserva la persona in questa immagine e stima la sua età approssimativa.
+Rispondi in modo naturale, per esempio: Direi che ha circa 30-35 anni, basandomi sui lineamenti del viso.
+Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve."""
+        
+        return await self._analyze_with_prompt(prompt)
+    
+    @function_tool(description="Descrivi l'ambiente, la stanza o il luogo visibile nel video. Usa quando l'utente chiede dove si trova o cosa c'è intorno.")
+    async def describe_environment(self, context: RunContext) -> str:
+        """Descrivi l'ambiente/stanza visibile.
+        
+        Args:
+            context: Contesto di esecuzione dell'agent.
+        """
+        prompt = """Descrivi l'ambiente o la stanza che vedi in questa immagine.
+Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
+Sii conciso e conversazionale, come se stessi descrivendo a voce. 2-3 frasi massimo."""
+        
+        return await self._analyze_with_prompt(prompt)
+
+
+async def handle_video_analysis(
+    analysis_type: str,
+    frame_extractor: VideoFrameExtractor,
+    send_callback,
+    base_llm,
+    db_settings: dict,
+    session: AgentSession = None
+):
+    """Gestisce richiesta analisi video e pronuncia il risultato via TTS"""
+    try:
+        logger.info(f"📹 Inizio analisi video: {analysis_type}")
+        
+        # Estrai frame
+        frame_bytes = await frame_extractor.extract_frame()
+        if not frame_bytes:
+            result = "Nessun video disponibile per l'analisi. Assicurati che la webcam o lo screen sharing sia attivo."
+            await send_callback(json.dumps({
+                "type": "video_analysis_result",
+                "analysis_type": analysis_type,
+                "result": result
+            }), "system")
+            return
+        
+        # Converti in base64
+        image_base64 = frame_extractor.frame_to_base64(frame_bytes)
+        
+        # Seleziona prompt in base al tipo
+        prompts = {
+            "document": """Analizza questa immagine di un documento d'identità o patente.
+Estrai i seguenti dati in formato JSON:
+- Nome completo
+- Data di nascita
+- Numero documento
+- Data scadenza
+- Altri dati rilevanti
+
+Rispondi SOLO con un JSON valido, senza testo aggiuntivo.""",
+            
+            "age": """Analizza questa immagine e stima l'età approssimativa della persona visibile.
+Rispondi con un range di età (es. "25-30 anni") e una breve descrizione delle caratteristiche che ti hanno portato a questa stima.
+Se non vedi una persona, indica "Nessuna persona visibile".""",
+            
+            "environment": """Descrivi dettagliatamente l'ambiente visibile in questa immagine.
+Includi: tipo di ambiente (casa, ufficio, esterno, ecc.), illuminazione, arredamento, oggetti visibili, contesto generale.
+Sii specifico e descrittivo.""",
+            
+            "generic": """Descrivi ciò che vedi in questa immagine in modo dettagliato.
+Includi persone, oggetti, ambiente e qualsiasi dettaglio rilevante."""
+        }
+        
+        prompt = prompts.get(analysis_type, prompts["generic"])
+        
+        # Crea MultimodalLLM
+        llm_provider = db_settings.get("llm_provider", "ollama")
+        multimodal_llm = MultimodalLLM(base_llm, llm_provider, db_settings)
+        
+        # Analizza
+        result = await multimodal_llm.analyze_image(image_base64, prompt)
+        
+        logger.info(f"📹 Analisi completata: {result[:100]}...")
+        
+        # Pulisci il risultato da caratteri markdown per TTS
+        tts_result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
+        tts_result = tts_result.replace("\n\n", ". ").replace("\n", ". ")
+        
+        # Invia risultato al frontend
+        await send_callback(json.dumps({
+            "type": "video_analysis_result",
+            "analysis_type": analysis_type,
+            "result": result
+        }), "system")
+        
+        # Pronuncia il risultato via TTS
+        if session:
+            try:
+                speech_handle = session.say(tts_result, allow_interruptions=True)
+                # Attendi che il TTS finisca
+                await speech_handle
+                logger.info(f"📹 Risultato pronunciato via TTS")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS analisi video: {tts_error}")
+        
+    except Exception as e:
+        logger.error(f"Errore analisi video: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        error_msg = f"Mi dispiace, si è verificato un errore durante l'analisi."
+        await send_callback(json.dumps({
+            "type": "video_analysis_result",
+            "analysis_type": analysis_type,
+            "result": f"Errore durante l'analisi: {str(e)}"
+        }), "system")
+        
+        # Pronuncia errore via TTS
+        if session:
+            try:
+                speech_handle = session.say(error_msg, allow_interruptions=True)
+                await speech_handle
+            except:
+                pass
 
 
 async def load_settings_from_server() -> dict:
@@ -1513,6 +2095,14 @@ REGOLE FONDAMENTALI:
 2. VAI DRITTO AL PUNTO: niente preamboli, saluti inutili o ripetizioni
 3. LINGUA: rispondi nella stessa lingua dell'utente
 
+CAPACITÀ VISION:
+Hai accesso a webcam e screen sharing. Quando l'utente ti chiede di:
+- Vedere, guardare, o descrivere cosa c'è nel video: usa analyze_video
+- Leggere documenti, carte d'identità, patenti: usa analyze_document
+- Stimare l'età di qualcuno: usa estimate_age
+- Descrivere l'ambiente o la stanza: usa describe_environment
+Usa sempre le funzioni appropriate quando l'utente fa richieste visive.
+
 STILE:
 - Rispondi come un amico esperto: diretto, chiaro, utile
 - Se non sai qualcosa, dillo in 5 parole
@@ -1537,9 +2127,12 @@ FORMATO TTS:
     
     logger.info(f"📝 System prompt: {len(system_prompt)} caratteri")
     
-    # Crea l'agent con le istruzioni - risposte ULTRA-BREVI e ottimizzate per velocità
-    # Include rilevamento automatico della lingua
-    agent = Agent(
+    # Inizializza VideoFrameExtractor PRIMA dell'Agent
+    frame_extractor = VideoFrameExtractor()
+    logger.info("📹 VideoFrameExtractor inizializzato")
+    
+    # Crea l'agent con capacità vision (sottoclasse di Agent con function tools)
+    agent = VisionAgent(
         instructions=system_prompt,
         vad=vad,
         stt=my_stt,
@@ -1551,7 +2144,13 @@ FORMATO TTS:
     debug_log("C", "main.py:1151", "Agent creato, verifico TTS passato", {"agent_tts_type": type(agent.tts).__name__ if hasattr(agent, 'tts') else "no_tts_attr"})
     # #endregion
     
-    logger.info("Agent creato, creo AgentSession...")
+    # Verifica tools registrati
+    if hasattr(agent, '_tools') and agent._tools:
+        logger.info(f"📹 Tools registrati: {len(agent._tools)} funzioni")
+    else:
+        logger.warning("⚠️ Nessun tool registrato nell'agent!")
+    
+    logger.info("VisionAgent creato con function tools, creo AgentSession...")
     
     # Crea sessione
     session = AgentSession()
@@ -1563,11 +2162,41 @@ FORMATO TTS:
     
     logger.info("AgentSession avviata!")
     
+    # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings)
+    VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings)
+    logger.info("📹 VisionAgent dipendenze vision impostate")
+    
+    # Imposta callback per comandi video vocali (fallback per modelli senza function calling)
+    async def video_analysis_callback(analysis_type: str):
+        """Callback per gestire comandi video vocali"""
+        await handle_video_analysis(analysis_type, frame_extractor, send_to_frontend, base_llm, db_settings, session)
+    
+    set_video_analysis_callback(video_analysis_callback, session)
+    logger.info("📹 Callback analisi video vocale impostato")
+    
+    # Handler per video tracks
+    @ctx.room.on("track_subscribed")
+    def on_track_subscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
+        if track.kind == rtc.TrackKind.KIND_VIDEO:
+            logger.info(f"📹 Video track ricevuto da {participant.identity}")
+            frame_extractor.register_video_track(participant.identity, track)
+            logger.info(f"📹 Video tracks attivi: {len(frame_extractor.video_tracks)}")
+    
+    @ctx.room.on("track_unsubscribed")
+    def on_track_unsubscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
+        if track.kind == rtc.TrackKind.KIND_VIDEO:
+            logger.info(f"📹 Video track rimosso da {participant.identity}")
+            frame_extractor.unregister_video_track(participant.identity)
+    
     # Imposta callback per inviare trascrizioni al frontend
     async def send_to_frontend(text: str, role: str):
         """Invia trascrizione al frontend via data channel"""
         try:
-            data = json.dumps({"type": "transcript", "text": text, "role": role})
+            # Se il testo è già un JSON raw (es. video_analysis_result), invialo direttamente
+            if text.startswith('{') and '"type":' in text:
+                data = text
+            else:
+                data = json.dumps({"type": "transcript", "text": text, "role": role})
             await ctx.room.local_participant.publish_data(data.encode(), reliable=True)
             logger.info(f"📤 [FRONTEND] {role}: {text[:50]}...")
         except Exception as e:
@@ -1593,14 +2222,28 @@ FORMATO TTS:
                     logger.info(f"📝 Messaggio testuale ricevuto: {text}")
                     # Processa come se fosse stato detto vocalmente
                     asyncio.create_task(handle_text_message(session, text, send_to_frontend))
+            
+            elif msg_type == "video_analysis":
+                # Richiesta analisi video
+                analysis_type = msg.get("analysis_type", "generic")
+                logger.info(f"📹 Richiesta analisi video: {analysis_type}")
+                asyncio.create_task(handle_video_analysis(analysis_type, frame_extractor, send_to_frontend, base_llm, db_settings, session))
                     
         except Exception as e:
             logger.error(f"Errore parsing messaggio frontend: {e}")
-    
+
     async def handle_text_message(session: AgentSession, user_text: str, send_callback):
         """Gestisce un messaggio testuale - chiama LLM e pronuncia risposta"""
         try:
+            # #region agent log
+            import json as _json
+            with open("/Users/robertonavoni/Desktop/Lavoro/Progetti-2025/Progetti Software/livekit-test/.cursor/debug.log", "a") as _f:
+                _f.write(_json.dumps({"location":"main.py:handle_text_message","message":"Messaggio ricevuto","data":{"text":user_text[:100]},"timestamp":int(__import__("time").time()*1000),"sessionId":"debug-session","hypothesisId":"H1-STT"}) + "\n")
+            # #endregion
             logger.info(f"💬 Elaboro messaggio testuale: {user_text}")
+            
+            # Nota: l'analisi video è ora gestita via function calling dall'LLM
+            # Non serve più pattern matching manuale
             
             # Crea chat context con il messaggio utente
             chat_ctx = llm.ChatContext()

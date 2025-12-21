@@ -511,7 +511,7 @@ async def synthesize_chatterbox(
         from agent.tts.chatterbox_tts import ChatterboxTTS
         
         chatterbox = ChatterboxTTS(
-            model=model or "multilingual",
+            model=model or "turbo",
             language=language,
             device=device or "auto",
             exaggeration=exaggeration,
@@ -587,6 +587,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

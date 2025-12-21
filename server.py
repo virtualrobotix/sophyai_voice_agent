@@ -483,6 +483,21 @@ async def get_openrouter_models(search: str = None, sort_by: str = "name"):
                 prompt_cost = float(pricing.get("prompt", 0)) * 1000000  # Per 1M tokens
                 completion_cost = float(pricing.get("completion", 0)) * 1000000
                 
+                # Estrai info architettura e capabilities
+                architecture = m.get("architecture", {})
+                modality = architecture.get("modality", "text->text")
+                input_modalities = architecture.get("input_modalities", ["text"])
+                output_modalities = architecture.get("output_modalities", ["text"])
+                tokenizer = architecture.get("tokenizer", "unknown")
+                
+                # Determina se supporta vision
+                supports_vision = "image" in input_modalities or "image" in modality.lower()
+                
+                # Parametri supportati
+                supported_params = m.get("supported_parameters", [])
+                supports_tools = "tools" in supported_params
+                supports_json_mode = "response_format" in supported_params
+                
                 model_info = {
                     "id": m["id"],
                     "name": m.get("name", m["id"]),
@@ -492,6 +507,16 @@ async def get_openrouter_models(search: str = None, sort_by: str = "name"):
                     "completion_cost": completion_cost,
                     "total_cost": prompt_cost + completion_cost,
                     "top_provider": m.get("top_provider", {}).get("max_completion_tokens"),
+                    # Nuovi campi
+                    "supports_vision": supports_vision,
+                    "supports_tools": supports_tools,
+                    "supports_json_mode": supports_json_mode,
+                    "modality": modality,
+                    "input_modalities": input_modalities,
+                    "output_modalities": output_modalities,
+                    "tokenizer": tokenizer,
+                    "supported_parameters": supported_params,
+                    "created": m.get("created"),
                 }
                 
                 # Filtro per ricerca
@@ -505,6 +530,14 @@ async def get_openrouter_models(search: str = None, sort_by: str = "name"):
             # Filtro gratuiti o ordinamento
             if sort_by == "free":
                 models = [m for m in models if m["total_cost"] == 0]
+                models.sort(key=lambda x: x["name"].lower())
+            elif sort_by == "vision":
+                # Solo modelli con supporto vision
+                models = [m for m in models if m["supports_vision"]]
+                models.sort(key=lambda x: x["name"].lower())
+            elif sort_by == "tools":
+                # Solo modelli con supporto function calling
+                models = [m for m in models if m["supports_tools"]]
                 models.sort(key=lambda x: x["name"].lower())
             elif sort_by == "cost":
                 models.sort(key=lambda x: x["total_cost"])
@@ -545,21 +578,92 @@ async def save_openrouter_key(request: OpenRouterKeyRequest):
 class OpenRouterSelectRequest(BaseModel):
     """Select OpenRouter model request."""
     model: str
+    # Dettagli opzionali del modello
+    name: str = None
+    context_length: int = None
+    supports_vision: bool = None
+    supports_tools: bool = None
+    supports_json_mode: bool = None
+    modality: str = None
+    prompt_cost: float = None
+    completion_cost: float = None
 
 
 @app.post("/api/openrouter/select")
 async def select_openrouter_model(request: OpenRouterSelectRequest):
-    """Select an OpenRouter model and save to settings."""
+    """Select an OpenRouter model and save to settings with full details."""
     db = await get_database()
     
     if db:
         try:
             await db.set_setting("llm_provider", "openrouter")
             await db.set_setting("openrouter_model", request.model)
+            
+            # Salva dettagli del modello se forniti
+            if request.name:
+                await db.set_setting("openrouter_model_name", request.name)
+            if request.context_length is not None:
+                await db.set_setting("openrouter_context_length", str(request.context_length))
+            if request.supports_vision is not None:
+                await db.set_setting("openrouter_supports_vision", str(request.supports_vision).lower())
+            if request.supports_tools is not None:
+                await db.set_setting("openrouter_supports_tools", str(request.supports_tools).lower())
+            if request.supports_json_mode is not None:
+                await db.set_setting("openrouter_supports_json_mode", str(request.supports_json_mode).lower())
+            if request.modality:
+                await db.set_setting("openrouter_modality", request.modality)
+            if request.prompt_cost is not None:
+                await db.set_setting("openrouter_prompt_cost", str(request.prompt_cost))
+            if request.completion_cost is not None:
+                await db.set_setting("openrouter_completion_cost", str(request.completion_cost))
+                
         except Exception as e:
             logger.warning(f"Errore salvataggio in DB: {e}")
     
-    return {"status": "ok", "model": request.model, "provider": "openrouter"}
+    return {
+        "status": "ok", 
+        "model": request.model, 
+        "provider": "openrouter",
+        "details": {
+            "name": request.name,
+            "context_length": request.context_length,
+            "supports_vision": request.supports_vision,
+            "supports_tools": request.supports_tools,
+            "modality": request.modality
+        }
+    }
+
+
+@app.get("/api/openrouter/selected")
+async def get_selected_openrouter_model():
+    """Get details of the currently selected OpenRouter model."""
+    db = await get_database()
+    if db is None:
+        return {"model": None, "details": None}
+    
+    try:
+        model_id = await db.get_setting("openrouter_model")
+        if not model_id:
+            return {"model": None, "details": None}
+        
+        # Recupera tutti i dettagli salvati
+        details = {
+            "id": model_id,
+            "name": await db.get_setting("openrouter_model_name") or model_id,
+            "context_length": int(await db.get_setting("openrouter_context_length") or 0),
+            "supports_vision": (await db.get_setting("openrouter_supports_vision") or "false") == "true",
+            "supports_tools": (await db.get_setting("openrouter_supports_tools") or "false") == "true",
+            "supports_json_mode": (await db.get_setting("openrouter_supports_json_mode") or "false") == "true",
+            "modality": await db.get_setting("openrouter_modality") or "text->text",
+            "prompt_cost": float(await db.get_setting("openrouter_prompt_cost") or 0),
+            "completion_cost": float(await db.get_setting("openrouter_completion_cost") or 0),
+        }
+        
+        return {"model": model_id, "details": details}
+        
+    except Exception as e:
+        logger.error(f"Errore recupero modello selezionato: {e}")
+        return {"model": None, "details": None, "error": str(e)}
 
 
 # ==================== ElevenLabs API ====================

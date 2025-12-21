@@ -71,6 +71,22 @@ class TTSConfig:
 
 
 @dataclass
+class VisionConfig:
+    """Configurazione per modelli vision LLM"""
+    # Abilita/disabilita analisi video
+    enabled: bool = field(default_factory=lambda: os.getenv("VIDEO_ANALYSIS_ENABLED", "true").lower() in ("true", "1", "yes"))
+    
+    # Modelli vision per OpenRouter
+    openrouter_vision_model: str = field(default_factory=lambda: os.getenv("OPENROUTER_VISION_MODEL", "openai/gpt-4-vision-preview"))
+    
+    # Modelli vision per Ollama
+    ollama_vision_model: str = field(default_factory=lambda: os.getenv("OLLAMA_VISION_MODEL", "llava"))
+    
+    # Rate limiting per estrazione frame (frame al secondo)
+    max_frame_rate: float = field(default_factory=lambda: float(os.getenv("VIDEO_MAX_FRAME_RATE", "1.0")))
+
+
+@dataclass
 class ServerConfig:
     """Configurazione Server"""
     web_port: int = field(default_factory=lambda: int(os.getenv("WEB_PORT", "8080")))
@@ -84,6 +100,7 @@ class AppConfig:
     ollama: OllamaConfig = field(default_factory=OllamaConfig)
     whisper: WhisperConfig = field(default_factory=WhisperConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
+    vision: VisionConfig = field(default_factory=VisionConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
 
 
@@ -97,6 +114,7 @@ def reload_config() -> AppConfig:
     load_dotenv()
     config = AppConfig()
     return config
+
 
 
 

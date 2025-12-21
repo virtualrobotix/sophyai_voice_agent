@@ -126,6 +126,7 @@ services:
     volumes:
       - ./models:/app/models
       - ./config:/app/config
+      - ./agent:/app/agent:ro
     depends_on:
       postgres:
         condition: service_healthy
