@@ -48,3 +48,4 @@ fastapi>=0.110.0
 websockets>=12.0
 
 
+

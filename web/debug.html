@@ -915,6 +915,31 @@
                 if (settings.llm_provider === 'openrouter') {
                     switchProvider('openrouter');
                 }
+                
+                // Ollama model
+                if (settings.ollama_model) {
+                    window.savedOllamaModel = settings.ollama_model;
+                }
+                
+                // OpenRouter
+                if (settings.openrouter_model) {
+                    window.savedOpenRouterModel = settings.openrouter_model;
+                }
+                if (settings.openrouter_api_key) {
+                    const keyInput = document.getElementById('openrouter-key');
+                    if (keyInput) keyInput.value = settings.openrouter_api_key;
+                }
+                
+                // System prompt e context
+                if (settings.system_prompt) {
+                    const promptInput = document.getElementById('system-prompt');
+                    if (promptInput) promptInput.value = settings.system_prompt;
+                }
+                if (settings.context_injection) {
+                    const contextInput = document.getElementById('context-injection');
+                    if (contextInput) contextInput.value = settings.context_injection;
+                }
+                
             } catch (e) {
                 console.error('Errore caricamento settings:', e);
             }
@@ -1003,13 +1028,14 @@
                 displayedOllamaModels = [];
                 return;
             }
-            
+
             displayedOllamaModels = models;
-            
+            const savedModel = window.savedOllamaModel || '';
+
             container.innerHTML = models.map((m, idx) => `
-                <div class="model-item" onclick="selectOllamaModelByIndex(${idx}, this)">
+                <div class="model-item ${m.name === savedModel || m.id === savedModel ? 'selected' : ''}" onclick="selectOllamaModelByIndex(${idx}, this)">
                     <div class="model-info">
-                        <div class="model-name">${escapeHtml(m.name)}</div>
+                        <div class="model-name">${escapeHtml(m.name)} ${m.name === savedModel || m.id === savedModel ? '✓' : ''}</div>
                         <div class="model-desc">${formatBytes(m.size)}</div>
                     </div>
                 </div>
@@ -1028,19 +1054,25 @@
                 showToast('Errore: modello non trovato', 'error');
                 return;
             }
-            
+
             try {
                 const resp = await fetch('/api/ollama/select', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: model.id })
+                    body: JSON.stringify({ model: model.name || model.id })
                 });
                 if (!resp.ok) throw new Error('Errore API');
+
+                // Salva modello selezionato
+                window.savedOllamaModel = model.name || model.id;
                 
                 showToast(`Modello ${model.name} selezionato`, 'success');
-                
+
                 document.querySelectorAll('#ollama-models .model-item').forEach(el => el.classList.remove('selected'));
                 element.classList.add('selected');
+                
+                // Aggiorna check nei nomi
+                renderOllamaModels(displayedOllamaModels);
             } catch (e) {
                 console.error('Errore selezione Ollama:', e);
                 showToast('Errore selezione modello', 'error');
@@ -1111,14 +1143,15 @@
                 displayedOpenRouterModels = [];
                 return;
             }
-            
+
             // Salva i modelli visualizzati per la selezione
             displayedOpenRouterModels = models.slice(0, 50);
-            
+            const savedModel = window.savedOpenRouterModel || '';
+
             container.innerHTML = displayedOpenRouterModels.map((m, idx) => `
-                <div class="model-item" onclick="selectOpenRouterModelByIndex(${idx}, this)">
+                <div class="model-item ${m.id === savedModel ? 'selected' : ''}" onclick="selectOpenRouterModelByIndex(${idx}, this)">
                     <div class="model-info">
-                        <div class="model-name">${escapeHtml(m.name)}</div>
+                        <div class="model-name">${escapeHtml(m.name)} ${m.id === savedModel ? '✓' : ''}</div>
                         <div class="model-desc">${escapeHtml(m.description?.substring(0, 80) || '')}</div>
                         <div class="model-cost" style="color: ${m.total_cost === 0 ? '#10b981' : 'var(--text-muted)'}">
                             ${m.total_cost === 0 ? '🆓 Gratuito' : '$' + m.total_cost.toFixed(4) + '/1M tokens'}
@@ -1157,7 +1190,7 @@
                 showToast('Errore: modello non trovato', 'error');
                 return;
             }
-            
+
             try {
                 const resp = await fetch('/api/openrouter/select', {
                     method: 'POST',
@@ -1165,11 +1198,17 @@
                     body: JSON.stringify({ model: model.id })
                 });
                 if (!resp.ok) throw new Error('Errore API');
+
+                // Salva modello selezionato
+                window.savedOpenRouterModel = model.id;
                 
                 showToast(`Modello ${model.name} selezionato`, 'success');
-                
+
                 document.querySelectorAll('#openrouter-models .model-item').forEach(el => el.classList.remove('selected'));
                 element.classList.add('selected');
+                
+                // Aggiorna check nei nomi
+                renderOpenRouterModels(displayedOpenRouterModels);
             } catch (e) {
                 console.error('Errore selezione OpenRouter:', e);
                 showToast('Errore selezione modello', 'error');

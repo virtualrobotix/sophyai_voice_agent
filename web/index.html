@@ -1384,11 +1384,16 @@
                 
                 // Pulisci messaggi visualizzati
                 const messagesContainer = document.getElementById('messages');
-                const emptyMsg = document.getElementById('messages-empty');
-                if (messagesContainer && emptyMsg) {
-                    messagesContainer.innerHTML = '';
-                    messagesContainer.appendChild(emptyMsg);
-                    emptyMsg.classList.remove('hidden');
+                if (messagesContainer) {
+                    messagesContainer.innerHTML = `
+                        <div class="messages-empty" id="messages-empty">
+                            <div class="messages-empty-icon">💬</div>
+                            <div>
+                                <p style="font-size: 1.1rem; color: var(--text-secondary);">Inizia una conversazione</p>
+                                <p style="font-size: 0.9rem;">Clicca il microfono per parlare</p>
+                            </div>
+                        </div>
+                    `;
                 }
                 
                 // Reset contesto sul server
@@ -1426,21 +1431,30 @@
                 const data = await resp.json();
                 
                 const messagesContainer = document.getElementById('messages');
-                const emptyMsg = document.getElementById('messages-empty');
                 
                 // Salva messaggi per il contesto LLM
                 chatMessages = data.messages || [];
                 
+                if (!messagesContainer) return;
+                
+                // Pulisci container
+                messagesContainer.innerHTML = '';
+                
                 if (data.messages && data.messages.length > 0) {
-                    emptyMsg.classList.add('hidden');
-                    messagesContainer.innerHTML = '';
                     data.messages.forEach(msg => {
                         addMessageToDOM(msg.content, msg.role);
                     });
                 } else {
-                    messagesContainer.innerHTML = '';
-                    messagesContainer.appendChild(emptyMsg);
-                    emptyMsg.classList.remove('hidden');
+                    // Mostra messaggio vuoto
+                    messagesContainer.innerHTML = `
+                        <div class="messages-empty" id="messages-empty">
+                            <div class="messages-empty-icon">💬</div>
+                            <div>
+                                <p style="font-size: 1.1rem; color: var(--text-secondary);">Inizia una conversazione</p>
+                                <p style="font-size: 0.9rem;">Clicca il microfono per parlare</p>
+                            </div>
+                        </div>
+                    `;
                 }
                 
                 // Invia contesto al server per l'agent
@@ -1483,11 +1497,16 @@
                     
                     // Pulisci UI
                     const messagesContainer = document.getElementById('messages');
-                    const emptyMsg = document.getElementById('messages-empty');
-                    if (messagesContainer && emptyMsg) {
-                        messagesContainer.innerHTML = '';
-                        messagesContainer.appendChild(emptyMsg);
-                        emptyMsg.classList.remove('hidden');
+                    if (messagesContainer) {
+                        messagesContainer.innerHTML = `
+                            <div class="messages-empty" id="messages-empty">
+                                <div class="messages-empty-icon">💬</div>
+                                <div>
+                                    <p style="font-size: 1.1rem; color: var(--text-secondary);">Inizia una conversazione</p>
+                                    <p style="font-size: 0.9rem;">Clicca il microfono per parlare</p>
+                                </div>
+                            </div>
+                        `;
                     }
                     
                     // Reset contesto server
@@ -1505,6 +1524,12 @@
 
         function addMessageToDOM(text, role) {
             const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer) return;
+            
+            // Rimuovi messaggio vuoto se presente
+            const emptyMsg = messagesContainer.querySelector('.messages-empty');
+            if (emptyMsg) emptyMsg.remove();
+            
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}`;
             msgDiv.innerHTML = `

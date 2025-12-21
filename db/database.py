@@ -241,3 +241,4 @@ async def close_db():
     if _db_instance:
         await _db_instance.disconnect()
         _db_instance = None
+
