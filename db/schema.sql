@@ -90,3 +90,4 @@ CREATE TRIGGER update_chats_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 
+
