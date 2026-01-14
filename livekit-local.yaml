@@ -17,6 +17,9 @@ redis:
 keys:
   devkey: secret_dev_key_change_in_production
 
+# CORS configuration per permettere connessioni dal browser
+development: true
+
 logging:
   level: info
   pion_level: info

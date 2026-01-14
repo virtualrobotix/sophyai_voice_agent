@@ -1736,6 +1736,9 @@
                 initModal.setStepStatus('init-step-room', 'active');
                 initModal.setMessage('Connessione alla room in corso...');
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:'voice-room',userName:userName,protocol:window.location.protocol,host:window.location.host},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 const resp = await fetch('/api/token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1744,6 +1747,10 @@
                         participant_name: userName
                     })
                 });
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenResponse',message:'Token response received',data:{status:resp.status,statusText:resp.statusText,ok:resp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
                 
                 // Gestione errore 409 - nome utente duplicato
                 if (resp.status === 409) {
@@ -1757,6 +1764,10 @@
                 }
                 
                 const data = await resp.json();
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenData',message:'Token data parsed',data:{url:data.url,tokenLength:data.token?.length||0,tokenPreview:data.token?.substring(0,30)+'...'||'missing',urlProtocol:data.url?.substring(0,data.url.indexOf('://'))||'unknown'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 
                 // Connect to room
                 state.room = new LivekitClient.Room();
@@ -1943,7 +1954,20 @@
                     }
                 });
 
-                await state.room.connect(data.url, data.token);
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeConnect',message:'Before room.connect',data:{url:data.url,tokenExists:!!data.token,roomExists:!!state.room},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
+                try {
+                    await state.room.connect(data.url, data.token);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:afterConnect',message:'Room.connect succeeded',data:{connected:state.room.state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                    // #endregion
+                } catch (connectError) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:connectError',message:'Room.connect failed',data:{errorMessage:connectError.message,errorName:connectError.name,errorStack:connectError.stack?.substring(0,200),url:data.url},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                    // #endregion
+                    throw connectError;
+                }
                 
                 // Inizializza partecipanti esistenti (incluso se stesso)
                 const myIdentity = state.room.localParticipant.identity;

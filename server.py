@@ -5,6 +5,7 @@ Supporta HTTPS per l'accesso al microfono.
 """
 
 import asyncio
+import json
 import os
 import sys
 import subprocess
@@ -53,6 +54,11 @@ def get_server_ip() -> str:
 
 def get_livekit_url_for_client(request: Request) -> str:
     """Costruisce l'URL LiveKit appropriato per il client"""
+    # #region agent log
+    try:
+        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Entry", "data": {"configured_url": config.livekit.url, "request_scheme": str(request.url.scheme), "x_forwarded_proto": request.headers.get("x-forwarded-proto"), "origin": request.headers.get("origin"), "host": request.headers.get("host")}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
+    except Exception: pass
+    # #endregion
     # Se LIVEKIT_URL è configurato con un IP specifico (non localhost/0.0.0.0), usalo
     configured_url = config.livekit.url
     
@@ -95,11 +101,23 @@ def get_livekit_url_for_client(request: Request) -> str:
         request.headers.get("origin", "").startswith("https://")
     )
     
+    # #region agent log
+    try:
+        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Before HTTPS check", "data": {"is_https": is_https, "proto_before": proto, "host": host, "port_before": port}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
+    except Exception: pass
+    # #endregion
+    
     if is_https:
         proto = "wss"
         port = "7443"  # Porta del proxy TLS per LiveKit
     
-    return f"{proto}://{host}:{port}"
+    final_url = f"{proto}://{host}:{port}"
+    # #region agent log
+    try:
+        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Exit", "data": {"final_url": final_url, "proto": proto, "host": host, "port": port}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
+    except Exception: pass
+    # #endregion
+    return final_url
 
 
 # Configura logging
@@ -1047,8 +1065,20 @@ async def get_token(request: TokenRequest, http_request: Request):
         
         jwt_token = token.to_jwt()
         
+        # #region agent log
+        try:
+            log_data = {"location": "server.py:get_token", "message": "Token generated", "data": {"token_length": len(jwt_token), "token_preview": jwt_token[:50] + "..." if len(jwt_token) > 50 else jwt_token, "room_name": request.room_name, "participant_name": request.participant_name}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "B"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
+        except Exception: pass
+        # #endregion
+        
         # URL WebSocket per il client - costruito dinamicamente
         ws_url = get_livekit_url_for_client(http_request)
+        
+        # #region agent log
+        try:
+            log_data = {"location": "server.py:get_token", "message": "URL generated", "data": {"ws_url": ws_url, "room_name": request.room_name}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
+        except Exception: pass
+        # #endregion
         
         # Crea la room se non esiste e dispatcha l'agent SOLO se non ce n'è già uno
         # Usa un lock per evitare race condition quando più utenti si connettono simultaneamente

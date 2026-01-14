@@ -20,9 +20,20 @@ class DatabaseService:
             "postgresql://voiceagent:voiceagent_pwd@localhost:5432/voiceagent"
         )
         self.pool: Optional[asyncpg.Pool] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
     
     async def connect(self):
         """Initialize connection pool."""
+        current_loop = asyncio.get_running_loop()
+        # Se il pool esiste ma è legato a un loop diverso, chiudilo
+        if self.pool is not None and self._loop != current_loop:
+            logger.warning("Event loop changed, recreating database pool")
+            try:
+                await self.pool.close()
+            except Exception:
+                pass
+            self.pool = None
+        
         if self.pool is None:
             try:
                 self.pool = await asyncpg.create_pool(
@@ -31,6 +42,7 @@ class DatabaseService:
                     max_size=10,
                     command_timeout=60
                 )
+                self._loop = current_loop
                 logger.info("Database connection pool created")
             except Exception as e:
                 logger.error(f"Failed to connect to database: {e}")
@@ -44,8 +56,9 @@ class DatabaseService:
             logger.info("Database connection pool closed")
     
     async def _ensure_connected(self):
-        """Ensure we have an active connection pool."""
-        if self.pool is None:
+        """Ensure we have an active connection pool in the current event loop."""
+        current_loop = asyncio.get_running_loop()
+        if self.pool is None or self._loop != current_loop:
             await self.connect()
     
     # ==================== Settings ====================
@@ -231,7 +244,8 @@ async def get_db() -> DatabaseService:
     global _db_instance
     if _db_instance is None:
         _db_instance = DatabaseService()
-        await _db_instance.connect()
+    # Assicura che la connessione sia attiva nel loop corrente
+    await _db_instance._ensure_connected()
     return _db_instance
 
 
