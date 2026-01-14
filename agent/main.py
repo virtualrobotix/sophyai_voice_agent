@@ -15,20 +15,11 @@ import aiohttp
 from loguru import logger
 
 # #region debug logging
-DEBUG_LOG_PATH = "/Users/robertonavoni/Desktop/Lavoro/Progetti-2025/Progetti Software/livekit-test/.cursor/debug.log"
+# Debug log disabilitato in Docker - usa solo logger
 def debug_log(hypothesis_id, location, message, data=None):
+    """Debug log - ora usa solo il logger standard"""
     try:
-        log_entry = {
-            "sessionId": "debug-session",
-            "runId": "run1",
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data or {},
-            "timestamp": int(time.time() * 1000)
-        }
-        with open(DEBUG_LOG_PATH, "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
+        logger.debug(f"[{hypothesis_id}] {location}: {message} | {data}")
     except Exception:
         pass  # Ignora errori di logging
 # #endregion
@@ -55,19 +46,71 @@ from .config import config
 
 # Callback globale per inviare messaggi al frontend
 _send_transcript_callback = None
-_sent_messages = set()  # Per evitare duplicati
+_sent_messages = set()  # Per evitare duplicati (memorizza message_id)
+_sent_message_ids = set()  # Set di ID messaggi già inviati
 _last_user_message = ""  # Per evitare duplicati STT
 _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
 _last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
+_message_counter = 0  # Contatore progressivo per ID messaggi
+
+# Anti-duplicazione STT avanzata: traccia hash + timestamp degli ultimi messaggi
+_stt_recent_hashes = {}  # hash -> timestamp di quando è stato processato
+_STT_DEDUP_WINDOW_SECONDS = 5.0  # Ignora testi identici entro N secondi
 
 # Variabili globali per pattern matching comandi video (fallback per modelli senza function calling)
 _video_analysis_callback = None  # Callback per analisi video
 _agent_session_global = None  # Sessione agent per TTS
 
+# Variabili globali per gestione multi-utente
+_human_participants_count = 1  # Numero di partecipanti umani (esclude agent)
+_force_agent_response = False  # Se True, l'agent risponde sempre (toggle dal frontend)
+_room_context = None  # Riferimento al contesto della room per contare partecipanti
+
+
+def set_human_participants_count(count: int):
+    """Aggiorna il conteggio dei partecipanti umani"""
+    global _human_participants_count
+    _human_participants_count = count
+    logger.info(f"👥 Partecipanti umani aggiornato: {count}")
+
+
+def set_force_agent_response(force: bool):
+    """Imposta se forzare la risposta dell'agent"""
+    global _force_agent_response
+    _force_agent_response = force
+    logger.info(f"🔔 Forza risposta agent: {force}")
+
+
+def get_should_require_mention() -> bool:
+    """
+    Determina se è richiesta la menzione @sophyai.
+    Ritorna False se:
+    - C'è solo 1 utente umano nella room
+    - Il flag _force_agent_response è True
+    """
+    if _force_agent_response:
+        return False
+    if _human_participants_count <= 1:
+        return False
+    return True
+
 def set_transcript_callback(callback):
-    global _send_transcript_callback, _sent_messages
+    global _send_transcript_callback, _sent_messages, _sent_message_ids, _message_counter, _stt_recent_hashes, _last_user_message
     _send_transcript_callback = callback
     _sent_messages.clear()  # Reset quando si connette
+    _sent_message_ids.clear()  # Reset ID messaggi
+    _message_counter = 0  # Reset contatore
+    _stt_recent_hashes.clear()  # Reset hash STT
+    _last_user_message = ""  # Reset ultimo messaggio
+    logger.info("🔄 Callback transcript impostato, tutti i set di dedup resettati")
+
+
+def generate_message_id() -> str:
+    """Genera un ID univoco per ogni messaggio"""
+    global _message_counter
+    _message_counter += 1
+    # Formato: MSG-{timestamp_ms}-{counter}
+    return f"MSG-{int(time.time() * 1000)}-{_message_counter}"
 
 def set_video_analysis_callback(callback, session):
     """Imposta callback per gestire comandi video vocali (fallback per modelli senza function calling)"""
@@ -100,6 +143,46 @@ def detect_video_command(text: str) -> str | None:
     
     return None
 
+
+def should_agent_respond(text: str) -> tuple[bool, str]:
+    """
+    Verifica se il messaggio contiene @sophyai o varianti.
+    Ritorna (True, testo_pulito) se l'agent deve rispondere, altrimenti (False, testo_originale).
+    Il testo_pulito ha rimosso il trigger per una risposta più naturale.
+    
+    NOTA: Se c'è solo 1 utente o il flag _force_agent_response è attivo,
+    l'agent risponde sempre senza richiedere menzione.
+    """
+    import re
+    
+    # Se non è richiesta la menzione (1 utente o force mode), rispondi sempre
+    if not get_should_require_mention():
+        logger.info(f"🔔 Agent risponde automaticamente (single user o force mode): '{text[:50]}...'")
+        return (True, text)
+    
+    text_lower = text.lower().strip()
+
+    # Trigger per attivare l'agent (in ordine di priorità)
+    triggers = ["@sophyai", "@sophy", "sophy ai", "sofyai", "sofy ai"]
+
+    for trigger in triggers:
+        if trigger in text_lower:
+            # Rimuovi il trigger dal testo per una risposta più naturale
+            cleaned_text = re.sub(re.escape(trigger), '', text, flags=re.IGNORECASE).strip()
+            # Rimuovi eventuali virgole o spazi extra all'inizio
+            cleaned_text = re.sub(r'^[,\s]+', '', cleaned_text).strip()
+            logger.info(f"🔔 Agent attivato con trigger '{trigger}': '{text[:50]}...' -> '{cleaned_text[:50]}...'")
+            return (True, cleaned_text if cleaned_text else text)
+
+    # Controlla anche "sophy" da solo (senza @) ma solo se è una parola intera
+    if re.search(r'\bsophy\b', text_lower):
+        cleaned_text = re.sub(r'\bsophy\b', '', text, flags=re.IGNORECASE).strip()
+        cleaned_text = re.sub(r'^[,\s]+', '', cleaned_text).strip()
+        logger.info(f"🔔 Agent attivato con trigger 'sophy': '{text[:50]}...'")
+        return (True, cleaned_text if cleaned_text else text)
+
+    return (False, text)
+
 async def send_timing_to_server(timing_type: str, data: dict):
     """Invia timing stats al web server"""
     import aiohttp
@@ -124,41 +207,55 @@ async def send_timing_to_server(timing_type: str, data: dict):
         logger.debug(f"Timing send error: {e}")
 
 
-async def send_transcript(text: str, role: str):
-    """Invia trascrizione al frontend (con deduplicazione)"""
-    global _sent_messages, _last_user_message
+async def send_transcript(text: str, role: str, message_id: str = None):
+    """Invia trascrizione al frontend (con deduplicazione basata su ID)"""
+    global _sent_messages, _sent_message_ids, _last_user_message
     
     if not text or not text.strip():
         return
+    
+    # Genera ID se non fornito
+    if not message_id:
+        message_id = generate_message_id()
+    
+    # Controlla se questo ID è già stato inviato (deduplicazione primaria)
+    if message_id in _sent_message_ids:
+        logger.warning(f"⚠️ DUPLICATO ID IGNORATO: {message_id} - {text[:30]}...")
+        return
         
-    # Crea chiave univoca per deduplicazione
+    # Crea chiave univoca per deduplicazione secondaria (testo+ruolo)
     msg_key = f"{role}:{text.strip()}"
     
-    logger.info(f"📨 send_transcript chiamato: role={role}, text='{text[:40]}...', key_in_set={msg_key in _sent_messages}, set_size={len(_sent_messages)}")
+    logger.info(f"📨 send_transcript: id={message_id}, role={role}, text='{text[:40]}...'")
     
-    # Per messaggi utente, controlla anche similarità
+    # Per messaggi utente, controlla anche similarità (anti-doppio STT)
     if role == "user":
         if text.strip() == _last_user_message:
-            logger.warning(f"⚠️ DUPLICATO USER IGNORATO: {text[:30]}...")
+            logger.warning(f"⚠️ DUPLICATO USER (stesso testo) IGNORATO: {text[:30]}...")
             return
         _last_user_message = text.strip()
     
-    # Evita duplicati esatti
+    # Evita duplicati esatti per contenuto (fallback)
     if msg_key in _sent_messages:
-        logger.warning(f"⚠️ DUPLICATO IGNORATO: {text[:30]}...")
+        logger.warning(f"⚠️ DUPLICATO CONTENUTO IGNORATO: {text[:30]}...")
         return
     
+    # Registra come inviato
+    _sent_message_ids.add(message_id)
     _sent_messages.add(msg_key)
-    logger.info(f"✅ Messaggio aggiunto al set: '{text[:30]}...' (set_size={len(_sent_messages)})")
+    logger.info(f"✅ Messaggio {message_id} aggiunto (ids={len(_sent_message_ids)}, keys={len(_sent_messages)})")
     
-    # Limita dimensione del set (evita memory leak)
+    # Limita dimensione dei set (evita memory leak)
     if len(_sent_messages) > 100:
         logger.info("🗑️ Set messaggi troppo grande, reset...")
         _sent_messages.clear()
+    if len(_sent_message_ids) > 100:
+        logger.info("🗑️ Set ID troppo grande, reset...")
+        _sent_message_ids.clear()
     
     if _send_transcript_callback:
         try:
-            await _send_transcript_callback(text, role)
+            await _send_transcript_callback(text, role, message_id)
         except Exception as e:
             logger.error(f"Errore invio trascrizione: {e}")
 
@@ -374,8 +471,11 @@ class ExternalTTSStream(tts.ChunkedStream):
             engine = self._tts_instance.engine
             logger.info(f"🎤 [{engine}] [{timestamp}] Sintesi ({len(self._text)} chars): \"{text_preview}\"")
             
-            # Invia transcript
-            asyncio.create_task(send_transcript(self._text, "assistant"))
+            # Genera ID univoco per questo messaggio TTS
+            tts_message_id = generate_message_id()
+            
+            # Invia transcript con ID
+            asyncio.create_task(send_transcript(self._text, "assistant", tts_message_id))
             
             pcm_data = None
             
@@ -611,8 +711,11 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
             text_preview = self._text[:50] + "..." if len(self._text) > 50 else self._text
             logger.info(f"🎤 [VibeVoice] [{timestamp}] Sintesi ({len(self._text)} chars): \"{text_preview}\"")
             
-            # Invia transcript
-            asyncio.create_task(send_transcript(self._text, "assistant"))
+            # Genera ID univoco per questo messaggio TTS
+            tts_message_id = generate_message_id()
+            
+            # Invia transcript con ID
+            asyncio.create_task(send_transcript(self._text, "assistant", tts_message_id))
             
             pcm_data = None
             
@@ -842,8 +945,11 @@ class EdgeTTSStream(tts.ChunkedStream):
             text_len = len(self._text)
             logger.info(f"🔊 [TTS] [{timestamp}] Ricevuta frase ({text_len} chars): \"{text_preview}\"")
             
-            # Invia risposta agent al frontend
-            asyncio.create_task(send_transcript(self._text, "assistant"))
+            # Genera ID univoco per questo messaggio TTS
+            tts_message_id = generate_message_id()
+            
+            # Invia risposta agent al frontend con ID
+            asyncio.create_task(send_transcript(self._text, "assistant", tts_message_id))
             
             communicate = edge_tts.Communicate(self._text, self._tts_instance.voice)
             
@@ -980,6 +1086,58 @@ class WhisperSTT(stt.STT):
         self.whisper_url = os.environ.get("WHISPER_SERVER_URL", "http://host.docker.internal:8091")
         logger.info(f"WhisperSTT inizializzato: model={model_size}, lang={language}, auto_detect={auto_detect}, server={self.whisper_url}")
     
+    async def transcribe_only(self, audio_bytes: bytes, sample_rate: int = 16000) -> str:
+        """Trascrizione audio SENZA invio al frontend - per uso multi-partecipante"""
+        import aiohttp
+        import io
+        import struct
+        
+        if not audio_bytes or len(audio_bytes) < 1600:  # Almeno 50ms
+            return ""
+        
+        audio_duration_sec = len(audio_bytes) / 2 / sample_rate
+        
+        try:
+            # Crea file WAV in memoria
+            wav_buffer = io.BytesIO()
+            wav_buffer.write(b'RIFF')
+            wav_buffer.write(struct.pack('<I', 36 + len(audio_bytes)))
+            wav_buffer.write(b'WAVE')
+            wav_buffer.write(b'fmt ')
+            wav_buffer.write(struct.pack('<I', 16))
+            wav_buffer.write(struct.pack('<H', 1))
+            wav_buffer.write(struct.pack('<H', 1))
+            wav_buffer.write(struct.pack('<I', sample_rate))
+            wav_buffer.write(struct.pack('<I', sample_rate * 2))
+            wav_buffer.write(struct.pack('<H', 2))
+            wav_buffer.write(struct.pack('<H', 16))
+            wav_buffer.write(b'data')
+            wav_buffer.write(struct.pack('<I', len(audio_bytes)))
+            wav_buffer.write(audio_bytes)
+            wav_data = wav_buffer.getvalue()
+            
+            async with aiohttp.ClientSession() as http_session:
+                form_data = aiohttp.FormData()
+                form_data.add_field('audio', wav_data, filename='audio.wav', content_type='audio/wav')
+                form_data.add_field('language', self.language)
+                
+                async with http_session.post(
+                    f"{self.whisper_url}/transcribe",
+                    data=form_data,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        text = result.get("text", "").strip()
+                        return text
+                    else:
+                        error_text = await response.text()
+                        logger.warning(f"Whisper server error: {response.status} - {error_text[:100]}")
+                        return ""
+        except Exception as e:
+            logger.error(f"Errore transcribe_only: {e}")
+            return ""
+    
     async def _recognize_impl(
         self,
         buffer: AudioBuffer,
@@ -1089,9 +1247,35 @@ class WhisperSTT(stt.STT):
         # Invia timing stats al server
         asyncio.create_task(send_timing_to_server("stt", {"time_ms": int(stt_time_ms)}))
         
-        # Invia trascrizione utente al frontend
+        # Anti-duplicazione STT avanzata: controlla se questo testo è stato processato di recente
         if text:
-            asyncio.create_task(send_transcript(text, "user"))
+            global _stt_recent_hashes
+            import hashlib
+            text_hash = hashlib.md5(text.strip().lower().encode()).hexdigest()
+            current_time = time.time()
+            
+            # Pulisci hash vecchi (oltre la finestra di dedup)
+            expired_hashes = [h for h, t in _stt_recent_hashes.items() if current_time - t > _STT_DEDUP_WINDOW_SECONDS]
+            for h in expired_hashes:
+                del _stt_recent_hashes[h]
+            
+            # Controlla se questo hash è già stato visto di recente
+            if text_hash in _stt_recent_hashes:
+                time_since = current_time - _stt_recent_hashes[text_hash]
+                logger.warning(f"⚠️ DUPLICATO STT IGNORATO (stesso testo {time_since:.1f}s fa): '{text[:30]}...'")
+                # Non inviare al frontend, ma restituisci comunque l'evento per l'LLM
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
+            
+            # Registra questo hash
+            _stt_recent_hashes[text_hash] = current_time
+            logger.info(f"📝 STT hash registrato: {text_hash[:8]}... (totale: {len(_stt_recent_hashes)} hashes)")
+            
+            # Invia trascrizione utente al frontend con ID univoco
+            stt_message_id = generate_message_id()
+            asyncio.create_task(send_transcript(text, "user", stt_message_id))
         
         # Intercetta comandi video vocali (fallback per modelli senza function calling come Gemma 3)
         if text and _video_analysis_callback:
@@ -1104,6 +1288,25 @@ class WhisperSTT(stt.STT):
                 return stt.SpeechEvent(
                     type=stt.SpeechEventType.FINAL_TRANSCRIPT,
                     alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
+        
+        # Verifica se l'agent deve rispondere (cerca @sophyai o varianti)
+        # La trascrizione è già stata inviata al frontend sopra, qui filtriamo solo per l'LLM
+        if text:
+            should_respond, cleaned_text = should_agent_respond(text)
+            if not should_respond:
+                logger.info(f"🔕 Messaggio senza menzione @sophyai, LLM non risponderà: '{text[:50]}...'")
+                # Restituisci testo vuoto all'LLM per evitare che risponda
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
+            else:
+                # L'agent è stato menzionato, passa il testo pulito (senza il trigger)
+                logger.info(f"🔔 Messaggio con menzione @sophyai, LLM risponderà: '{cleaned_text[:50]}...'")
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text=cleaned_text, language=detected_lang)]
                 )
         
         return stt.SpeechEvent(
@@ -1581,17 +1784,19 @@ class VisionAgent(Agent):
     _multimodal_llm: Optional[MultimodalLLM] = None
     _db_settings: dict = {}
     _base_llm = None
+    _session: Optional[AgentSession] = None
     
     @classmethod
-    def set_vision_dependencies(cls, frame_extractor: VideoFrameExtractor, base_llm, db_settings: dict):
+    def set_vision_dependencies(cls, frame_extractor: VideoFrameExtractor, base_llm, db_settings: dict, session: AgentSession = None):
         """Imposta le dipendenze per le funzioni vision (metodo di classe)"""
         cls._frame_extractor = frame_extractor
         cls._db_settings = db_settings
         cls._base_llm = base_llm
+        cls._session = session
         # Crea MultimodalLLM
         llm_provider = db_settings.get("llm_provider", "ollama")
         cls._multimodal_llm = MultimodalLLM(base_llm, llm_provider, db_settings)
-        logger.info(f"📹 VisionAgent: dipendenze vision impostate, provider={llm_provider}")
+        logger.info(f"📹 VisionAgent: dipendenze vision impostate, provider={llm_provider}, session={'presente' if session else 'assente'}")
     
     def _has_video(self) -> bool:
         """Verifica se c'è un video track disponibile"""
@@ -1637,12 +1842,24 @@ class VisionAgent(Agent):
         logger.info(f"📹 FUNCTION TOOL analyze_video CHIAMATO: has_video={self._has_video()}")
         prompt = """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
 Sii conciso, usa 2-3 frasi al massimo.
-Non usare elenchi puntati, asterischi, o formattazione markdown.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce.
 Rispondi come se stessi parlando direttamente a qualcuno."""
         
         result = await self._analyze_with_prompt(prompt)
         logger.info(f"📹 analyze_video risultato: {len(result)} chars")
-        return result
+        
+        # Invia direttamente al TTS senza passare dall'LLM
+        if self._session and result:
+            try:
+                speech_handle = self._session.say(result, allow_interruptions=True)
+                await speech_handle
+                logger.info(f"📹 Risultato analyze_video pronunciato direttamente via TTS")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS analyze_video: {tts_error}")
+        
+        # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
+        return ""
     
     @function_tool(description="Leggi e estrai dati da documenti come carte d'identità, patenti, o altri documenti. Usa quando l'utente mostra un documento e chiede di leggerlo.")
     async def analyze_document(self, context: RunContext) -> str:
@@ -1654,9 +1871,22 @@ Rispondi come se stessi parlando direttamente a qualcuno."""
         prompt = """Analizza questo documento e leggi i dati visibili.
 Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
 Per esempio: Il nome è Mario Rossi, nato il 15 marzo 1985, numero documento AB123456.
-Non usare formattazione JSON o markdown. Sii conversazionale."""
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale."""
         
-        return await self._analyze_with_prompt(prompt)
+        result = await self._analyze_with_prompt(prompt)
+        
+        # Invia direttamente al TTS senza passare dall'LLM
+        if self._session and result:
+            try:
+                speech_handle = self._session.say(result, allow_interruptions=True)
+                await speech_handle
+                logger.info(f"📹 Risultato analyze_document pronunciato direttamente via TTS")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS analyze_document: {tts_error}")
+        
+        # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
+        return ""
     
     @function_tool(description="Stima l'età approssimativa della persona visibile nel video. Usa quando l'utente chiede quanti anni ha qualcuno.")
     async def estimate_age(self, context: RunContext) -> str:
@@ -1666,10 +1896,24 @@ Non usare formattazione JSON o markdown. Sii conversazionale."""
             context: Contesto di esecuzione dell'agent.
         """
         prompt = """Osserva la persona in questa immagine e stima la sua età approssimativa.
-Rispondi in modo naturale, per esempio: Direi che ha circa 30-35 anni, basandomi sui lineamenti del viso.
-Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve."""
+Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
+Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere."""
         
-        return await self._analyze_with_prompt(prompt)
+        result = await self._analyze_with_prompt(prompt)
+        
+        # Invia direttamente al TTS senza passare dall'LLM
+        if self._session and result:
+            try:
+                speech_handle = self._session.say(result, allow_interruptions=True)
+                await speech_handle
+                logger.info(f"📹 Risultato estimate_age pronunciato direttamente via TTS")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS estimate_age: {tts_error}")
+        
+        # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
+        return ""
     
     @function_tool(description="Descrivi l'ambiente, la stanza o il luogo visibile nel video. Usa quando l'utente chiede dove si trova o cosa c'è intorno.")
     async def describe_environment(self, context: RunContext) -> str:
@@ -1680,9 +1924,23 @@ Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve."""
         """
         prompt = """Descrivi l'ambiente o la stanza che vedi in questa immagine.
 Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
-Sii conciso e conversazionale, come se stessi descrivendo a voce. 2-3 frasi massimo."""
+Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo."""
         
-        return await self._analyze_with_prompt(prompt)
+        result = await self._analyze_with_prompt(prompt)
+        
+        # Invia direttamente al TTS senza passare dall'LLM
+        if self._session and result:
+            try:
+                speech_handle = self._session.say(result, allow_interruptions=True)
+                await speech_handle
+                logger.info(f"📹 Risultato describe_environment pronunciato direttamente via TTS")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS describe_environment: {tts_error}")
+        
+        # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
+        return ""
 
 
 async def handle_video_analysis(
@@ -1694,8 +1952,11 @@ async def handle_video_analysis(
     session: AgentSession = None
 ):
     """Gestisce richiesta analisi video e pronuncia il risultato via TTS"""
+    # Genera ID univoco per questa risposta
+    video_analysis_id = generate_message_id()
+    
     try:
-        logger.info(f"📹 Inizio analisi video: {analysis_type}")
+        logger.info(f"📹 Inizio analisi video: {analysis_type} (id={video_analysis_id})")
         
         # Estrai frame
         frame_bytes = await frame_extractor.extract_frame()
@@ -1704,8 +1965,9 @@ async def handle_video_analysis(
             await send_callback(json.dumps({
                 "type": "video_analysis_result",
                 "analysis_type": analysis_type,
-                "result": result
-            }), "system")
+                "result": result,
+                "id": video_analysis_id
+            }), "system", video_analysis_id)
             return
         
         # Converti in base64
@@ -1713,26 +1975,28 @@ async def handle_video_analysis(
         
         # Seleziona prompt in base al tipo
         prompts = {
-            "document": """Analizza questa immagine di un documento d'identità o patente.
-Estrai i seguenti dati in formato JSON:
-- Nome completo
-- Data di nascita
-- Numero documento
-- Data scadenza
-- Altri dati rilevanti
-
-Rispondi SOLO con un JSON valido, senza testo aggiuntivo.""",
+            "document": """Analizza questo documento e leggi i dati visibili.
+Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
+Per esempio: Il nome è Mario Rossi, nato il quindici marzo millenovecentottantacinque, numero documento AB centoventitremilaquattrocentocinquantasei.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale. Scrivi i numeri in lettere.""",
             
-            "age": """Analizza questa immagine e stima l'età approssimativa della persona visibile.
-Rispondi con un range di età (es. "25-30 anni") e una breve descrizione delle caratteristiche che ti hanno portato a questa stima.
-Se non vedi una persona, indica "Nessuna persona visibile".""",
+            "age": """Osserva la persona in questa immagine e stima la sua età approssimativa.
+Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
+Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere.""",
             
-            "environment": """Descrivi dettagliatamente l'ambiente visibile in questa immagine.
-Includi: tipo di ambiente (casa, ufficio, esterno, ecc.), illuminazione, arredamento, oggetti visibili, contesto generale.
-Sii specifico e descrittivo.""",
+            "environment": """Descrivi l'ambiente o la stanza che vedi in questa immagine.
+Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
+Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo.""",
             
-            "generic": """Descrivi ciò che vedi in questa immagine in modo dettagliato.
-Includi persone, oggetti, ambiente e qualsiasi dettaglio rilevante."""
+            "generic": """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
+Sii conciso, usa due o tre frasi al massimo.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         }
         
         prompt = prompts.get(analysis_type, prompts["generic"])
@@ -1750,12 +2014,13 @@ Includi persone, oggetti, ambiente e qualsiasi dettaglio rilevante."""
         tts_result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
         tts_result = tts_result.replace("\n\n", ". ").replace("\n", ". ")
         
-        # Invia risultato al frontend
+        # Invia risultato al frontend con ID
         await send_callback(json.dumps({
             "type": "video_analysis_result",
             "analysis_type": analysis_type,
-            "result": result
-        }), "system")
+            "result": result,
+            "id": video_analysis_id
+        }), "system", video_analysis_id)
         
         # Pronuncia il risultato via TTS
         if session:
@@ -1763,7 +2028,7 @@ Includi persone, oggetti, ambiente e qualsiasi dettaglio rilevante."""
                 speech_handle = session.say(tts_result, allow_interruptions=True)
                 # Attendi che il TTS finisca
                 await speech_handle
-                logger.info(f"📹 Risultato pronunciato via TTS")
+                logger.info(f"📹 Risultato pronunciato via TTS (id={video_analysis_id})")
             except Exception as tts_error:
                 logger.error(f"Errore TTS analisi video: {tts_error}")
         
@@ -1773,11 +2038,123 @@ Includi persone, oggetti, ambiente e qualsiasi dettaglio rilevante."""
         traceback.print_exc()
         
         error_msg = f"Mi dispiace, si è verificato un errore durante l'analisi."
+        error_id = generate_message_id()
         await send_callback(json.dumps({
             "type": "video_analysis_result",
             "analysis_type": analysis_type,
-            "result": f"Errore durante l'analisi: {str(e)}"
-        }), "system")
+            "result": f"Errore durante l'analisi: {str(e)}",
+            "id": error_id
+        }), "system", error_id)
+        
+        # Pronuncia errore via TTS
+        if session:
+            try:
+                speech_handle = session.say(error_msg, allow_interruptions=True)
+                await speech_handle
+            except:
+                pass
+
+
+async def handle_image_analysis(
+    image_base64: str,
+    analysis_type: str,
+    custom_prompt: str,
+    send_callback,
+    base_llm,
+    db_settings: dict,
+    session: AgentSession = None
+):
+    """Gestisce analisi di immagine caricata dall'utente"""
+    # Genera ID univoco per questa risposta
+    image_analysis_id = generate_message_id()
+    
+    try:
+        logger.info(f"🖼️ Inizio analisi immagine caricata: {analysis_type} (id={image_analysis_id})")
+        
+        if not image_base64:
+            result = "Nessuna immagine ricevuta per l'analisi."
+            await send_callback(json.dumps({
+                "type": "image_analysis_result",
+                "analysis_type": analysis_type,
+                "result": result,
+                "id": image_analysis_id
+            }), "system", image_analysis_id)
+            return
+        
+        # Se c'è un prompt personalizzato, usalo (con aggiunta di istruzioni sui caratteri speciali)
+        if custom_prompt and custom_prompt.strip():
+            prompt = custom_prompt.strip() + "\nIMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione. Scrivi solo testo semplice e discorsivo."
+        else:
+            # Seleziona prompt in base al tipo (stessi prompt di handle_video_analysis)
+            prompts = {
+                "document": """Analizza questo documento e leggi i dati visibili.
+Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
+Per esempio: Il nome è Mario Rossi, nato il quindici marzo millenovecentottantacinque, numero documento AB centoventitremilaquattrocentocinquantasei.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale. Scrivi i numeri in lettere.""",
+                
+                "age": """Osserva la persona in questa immagine e stima la sua età approssimativa.
+Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
+Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere.""",
+                
+                "environment": """Descrivi l'ambiente o la stanza che vedi in questa immagine.
+Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
+Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo.""",
+                
+                "generic": """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
+Sii conciso, usa due o tre frasi al massimo.
+IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
+            }
+            prompt = prompts.get(analysis_type, prompts["generic"])
+        
+        # Crea MultimodalLLM
+        llm_provider = db_settings.get("llm_provider", "ollama")
+        multimodal_llm = MultimodalLLM(base_llm, llm_provider, db_settings)
+        
+        # Analizza l'immagine
+        result = await multimodal_llm.analyze_image(image_base64, prompt)
+        
+        logger.info(f"🖼️ Analisi immagine completata: {result[:100]}...")
+        
+        # Pulisci il risultato da caratteri markdown per TTS
+        tts_result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
+        tts_result = tts_result.replace("\n\n", ". ").replace("\n", ". ")
+        
+        # Invia risultato al frontend con ID
+        await send_callback(json.dumps({
+            "type": "image_analysis_result",
+            "analysis_type": analysis_type,
+            "result": result,
+            "id": image_analysis_id
+        }), "system", image_analysis_id)
+        
+        # Pronuncia il risultato via TTS
+        if session:
+            try:
+                speech_handle = session.say(tts_result, allow_interruptions=True)
+                await speech_handle
+                logger.info(f"🖼️ Risultato analisi immagine pronunciato via TTS (id={image_analysis_id})")
+            except Exception as tts_error:
+                logger.error(f"Errore TTS analisi immagine: {tts_error}")
+        
+    except Exception as e:
+        logger.error(f"Errore analisi immagine: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        error_msg = f"Mi dispiace, si è verificato un errore durante l'analisi dell'immagine."
+        error_id = generate_message_id()
+        await send_callback(json.dumps({
+            "type": "image_analysis_result",
+            "analysis_type": analysis_type,
+            "result": f"Errore durante l'analisi: {str(e)}",
+            "id": error_id
+        }), "system", error_id)
         
         # Pronuncia errore via TTS
         if session:
@@ -2090,6 +2467,11 @@ async def entrypoint(ctx: JobContext):
     # Costruisci il prompt usando quello dal database (se disponibile)
     default_prompt = """Sei Sophy, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
 
+ATTIVAZIONE:
+IMPORTANTE: Rispondi SOLO quando vieni menzionata esplicitamente con "@sophyai", "@sophy", "Sophy" o varianti simili.
+Se il messaggio NON contiene il tuo nome o una menzione diretta a te, NON rispondere affatto.
+Quando sei menzionata, rispondi in modo utile e conciso.
+
 REGOLE FONDAMENTALI:
 1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai più di 30 parole
 2. VAI DRITTO AL PUNTO: niente preamboli, saluti inutili o ripetizioni
@@ -2157,13 +2539,24 @@ FORMATO TTS:
     
     logger.info("AgentSession creata, avvio...")
     
-    # Avvia la sessione
-    await session.start(agent, room=ctx.room)
+    # Import RoomOptions per configurazione avanzata (API moderna)
+    from livekit.agents.voice.room_io import RoomOptions
+    
+    # Configura room options: 
+    # - NON chiudere la sessione quando un partecipante si disconnette
+    # - DISABILITA audio input automatico per gestire manualmente TUTTI i partecipanti
+    room_opts = RoomOptions(
+        close_on_disconnect=False,
+        audio_input=False  # Disabilita per gestire manualmente tutti i partecipanti
+    )
+    
+    # Avvia la sessione con le opzioni configurate
+    await session.start(agent, room=ctx.room, room_options=room_opts)
     
     logger.info("AgentSession avviata!")
     
-    # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings)
-    VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings)
+    # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings, session)
+    VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings, session)
     logger.info("📹 VisionAgent dipendenze vision impostate")
     
     # Imposta callback per comandi video vocali (fallback per modelli senza function calling)
@@ -2174,31 +2567,145 @@ FORMATO TTS:
     set_video_analysis_callback(video_analysis_callback, session)
     logger.info("📹 Callback analisi video vocale impostato")
     
-    # Handler per video tracks
+    # === GESTIONE AUDIO MULTI-PARTECIPANTE ===
+    # Dizionario per tracciare i task audio attivi per ogni partecipante
+    audio_processing_tasks: dict[str, asyncio.Task] = {}
+    
+    async def process_participant_audio(participant_identity: str, track: rtc.Track):
+        """Processa l'audio di un singolo partecipante con STT"""
+        logger.info(f"🎤 [MULTI-AUDIO] Avvio processing audio per {participant_identity}")
+        
+        try:
+            # Crea AudioStream per questa traccia
+            audio_stream = rtc.AudioStream(
+                track,
+                sample_rate=16000,  # Whisper usa 16kHz
+                num_channels=1
+            )
+            
+            # Buffer per accumulare audio (Voice Activity Detection semplice)
+            audio_buffer = bytearray()
+            silence_frames = 0
+            speech_frames = 0
+            MIN_SPEECH_FRAMES = 10  # ~500ms di speech prima di trascrivere
+            SILENCE_THRESHOLD = 30  # ~1.5s di silenzio per terminare
+            
+            async for event in audio_stream:
+                if not isinstance(event, rtc.AudioFrameEvent):
+                    continue
+                    
+                frame = event.frame
+                audio_data = bytes(frame.data)
+                
+                # Calcola energia audio per VAD semplice
+                samples = [int.from_bytes(audio_data[i:i+2], 'little', signed=True) 
+                          for i in range(0, len(audio_data), 2)]
+                if samples:
+                    energy = sum(abs(s) for s in samples) / len(samples)
+                else:
+                    energy = 0
+                
+                # Soglia energia per rilevare speech
+                ENERGY_THRESHOLD = 500
+                
+                if energy > ENERGY_THRESHOLD:
+                    # Speech rilevato
+                    audio_buffer.extend(audio_data)
+                    speech_frames += 1
+                    silence_frames = 0
+                elif len(audio_buffer) > 0:
+                    # Silenzio dopo speech
+                    audio_buffer.extend(audio_data)
+                    silence_frames += 1
+                    
+                    if silence_frames >= SILENCE_THRESHOLD and speech_frames >= MIN_SPEECH_FRAMES:
+                        # Fine utterance - trascrivi
+                        audio_bytes = bytes(audio_buffer)
+                        audio_buffer.clear()
+                        silence_frames = 0
+                        speech_frames = 0
+                        
+                        if len(audio_bytes) > 3200:  # Almeno 100ms di audio
+                            logger.info(f"🎤 [MULTI-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere")
+                            
+                            # Trascrivi con WhisperSTT (metodo dedicato senza invio automatico)
+                            try:
+                                text = await my_stt.transcribe_only(audio_bytes, 16000)
+                                
+                                if text and len(text) > 1:
+                                    logger.info(f"🎤 [MULTI-AUDIO] {participant_identity} dice: {text}")
+                                    
+                                    # Invia al frontend con il nome del partecipante
+                                    msg_id = generate_message_id()
+                                    await send_to_frontend(text, "user", msg_id, participant_identity)
+                                    
+                                    # Verifica se l'agent deve rispondere
+                                    should_respond, cleaned_text = should_agent_respond(text)
+                                    if should_respond:
+                                        # Rispondi direttamente senza re-broadcast
+                                        await handle_agent_response_only(session, text, send_to_frontend, participant_identity)
+                            except Exception as e:
+                                logger.error(f"🎤 [MULTI-AUDIO] Errore STT per {participant_identity}: {e}")
+                                
+        except asyncio.CancelledError:
+            logger.info(f"🎤 [MULTI-AUDIO] Processing audio cancellato per {participant_identity}")
+        except Exception as e:
+            logger.error(f"🎤 [MULTI-AUDIO] Errore processing audio per {participant_identity}: {e}")
+    
+    # Handler per video E audio tracks
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
         if track.kind == rtc.TrackKind.KIND_VIDEO:
             logger.info(f"📹 Video track ricevuto da {participant.identity}")
             frame_extractor.register_video_track(participant.identity, track)
             logger.info(f"📹 Video tracks attivi: {len(frame_extractor.video_tracks)}")
+        
+        elif track.kind == rtc.TrackKind.KIND_AUDIO:
+            # Avvia processing audio per questo partecipante
+            participant_id = participant.identity
+            if participant_id not in audio_processing_tasks:
+                logger.info(f"🎤 [MULTI-AUDIO] Nuova traccia audio da {participant_id}")
+                task = asyncio.create_task(process_participant_audio(participant_id, track))
+                audio_processing_tasks[participant_id] = task
     
     @ctx.room.on("track_unsubscribed")
     def on_track_unsubscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
         if track.kind == rtc.TrackKind.KIND_VIDEO:
             logger.info(f"📹 Video track rimosso da {participant.identity}")
             frame_extractor.unregister_video_track(participant.identity)
+        
+        elif track.kind == rtc.TrackKind.KIND_AUDIO:
+            # Cancella processing audio per questo partecipante
+            participant_id = participant.identity
+            if participant_id in audio_processing_tasks:
+                logger.info(f"🎤 [MULTI-AUDIO] Rimuovo traccia audio da {participant_id}")
+                audio_processing_tasks[participant_id].cancel()
+                del audio_processing_tasks[participant_id]
     
     # Imposta callback per inviare trascrizioni al frontend
-    async def send_to_frontend(text: str, role: str):
-        """Invia trascrizione al frontend via data channel"""
+    async def send_to_frontend(text: str, role: str, message_id: str = None, sender: str = None):
+        """Invia trascrizione al frontend via data channel con ID univoco"""
         try:
-            # Se il testo è già un JSON raw (es. video_analysis_result), invialo direttamente
+            # Genera ID se non fornito
+            if not message_id:
+                message_id = generate_message_id()
+            
+            # Se il testo è già un JSON raw (es. video_analysis_result), aggiungi ID se mancante
             if text.startswith('{') and '"type":' in text:
-                data = text
+                try:
+                    obj = json.loads(text)
+                    if 'id' not in obj:
+                        obj['id'] = message_id
+                    data = json.dumps(obj)
+                except:
+                    data = text
             else:
-                data = json.dumps({"type": "transcript", "text": text, "role": role})
+                # Includi sender per identificare chi ha inviato il messaggio
+                # Per agent usa sempre "SophyAI", per user usa il sender passato
+                sender_name = "SophyAI" if role == "assistant" else sender
+                data = json.dumps({"type": "transcript", "text": text, "role": role, "id": message_id, "sender": sender_name})
             await ctx.room.local_participant.publish_data(data.encode(), reliable=True)
-            logger.info(f"📤 [FRONTEND] {role}: {text[:50]}...")
+            logger.info(f"📤 [FRONTEND] id={message_id} {role} (sender={sender_name}): {text[:50]}...")
         except Exception as e:
             logger.error(f"Errore invio al frontend: {e}")
     
@@ -2218,37 +2725,69 @@ FORMATO TTS:
             elif msg_type == "text_message":
                 # Messaggio testuale dall'utente
                 text = msg.get("text", "").strip()
+                sender_identity = msg.get("sender") or (data.participant.identity if hasattr(data, 'participant') and data.participant else None)
                 if text:
-                    logger.info(f"📝 Messaggio testuale ricevuto: {text}")
+                    logger.info(f"📝 Messaggio testuale ricevuto da {sender_identity}: {text}")
                     # Processa come se fosse stato detto vocalmente
-                    asyncio.create_task(handle_text_message(session, text, send_to_frontend))
+                    asyncio.create_task(handle_text_message(session, text, send_to_frontend, sender_identity))
             
             elif msg_type == "video_analysis":
                 # Richiesta analisi video
                 analysis_type = msg.get("analysis_type", "generic")
                 logger.info(f"📹 Richiesta analisi video: {analysis_type}")
                 asyncio.create_task(handle_video_analysis(analysis_type, frame_extractor, send_to_frontend, base_llm, db_settings, session))
-                    
+
+            elif msg_type == "image_analysis":
+                # Richiesta analisi immagine caricata
+                image_base64 = msg.get("image_base64", "")
+                analysis_type = msg.get("analysis_type", "generic")
+                custom_prompt = msg.get("custom_prompt", "")
+                logger.info(f"🖼️ Richiesta analisi immagine caricata: {analysis_type}")
+                asyncio.create_task(handle_image_analysis(image_base64, analysis_type, custom_prompt, send_to_frontend, base_llm, db_settings, session))
+            
+            elif msg_type == "participants_count":
+                # Aggiornamento conteggio partecipanti umani
+                count = msg.get("count", 1)
+                set_human_participants_count(count)
+            
+            elif msg_type == "force_agent_response":
+                # Toggle per forzare risposta agent (bottone "Parla con Sophy")
+                force = msg.get("force", False)
+                set_force_agent_response(force)
+
         except Exception as e:
             logger.error(f"Errore parsing messaggio frontend: {e}")
 
-    async def handle_text_message(session: AgentSession, user_text: str, send_callback):
-        """Gestisce un messaggio testuale - chiama LLM e pronuncia risposta"""
+    async def handle_text_message(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
+        """Gestisce un messaggio testuale - broadcast a tutti, chiama LLM solo se menzionato con @sophyai"""
+        # Genera ID univoco per il messaggio utente
+        user_message_id = generate_message_id()
+        
+        # SEMPRE invia il messaggio utente a tutti i partecipanti (broadcast)
+        logger.info(f"💬 Broadcast messaggio utente: {user_text[:50]}... (sender={sender_identity})")
+        await send_callback(user_text, "user", user_message_id, sender_identity)
+        
+        # Verifica se l'agent deve rispondere (cerca @sophyai o varianti)
+        should_respond, cleaned_text = should_agent_respond(user_text)
+        
+        if not should_respond:
+            # L'agent non è stato menzionato, il messaggio è stato già inviato a tutti ma non risponde
+            logger.info(f"💬 Messaggio senza menzione @sophyai, non rispondo: {user_text[:50]}...")
+            return
+        
+        # Genera ID univoco per la risposta dell'agent
+        text_response_id = generate_message_id()
+        
         try:
-            # #region agent log
-            import json as _json
-            with open("/Users/robertonavoni/Desktop/Lavoro/Progetti-2025/Progetti Software/livekit-test/.cursor/debug.log", "a") as _f:
-                _f.write(_json.dumps({"location":"main.py:handle_text_message","message":"Messaggio ricevuto","data":{"text":user_text[:100]},"timestamp":int(__import__("time").time()*1000),"sessionId":"debug-session","hypothesisId":"H1-STT"}) + "\n")
-            # #endregion
-            logger.info(f"💬 Elaboro messaggio testuale: {user_text}")
+            logger.info(f"💬 Elaboro messaggio testuale (menzionato @sophyai): {cleaned_text} (response_id={text_response_id})")
             
             # Nota: l'analisi video è ora gestita via function calling dall'LLM
             # Non serve più pattern matching manuale
             
-            # Crea chat context con il messaggio utente
+            # Crea chat context con il messaggio utente (usa il testo pulito senza il trigger)
             chat_ctx = llm.ChatContext()
-            chat_ctx.append(text=agent._instructions, role="system")
-            chat_ctx.append(text=user_text, role="user")
+            chat_ctx.add_message(role="system", content=agent._instructions)
+            chat_ctx.add_message(role="user", content=cleaned_text)
             
             # Chiama LLM
             t_start = time.time()
@@ -2257,19 +2796,61 @@ FORMATO TTS:
             
             async for chunk in stream:
                 if hasattr(chunk, 'delta') and chunk.delta:
-                    response_text += chunk.delta
+                    # chunk.delta è un ChoiceDelta, il testo è in .content
+                    content = chunk.delta.content if hasattr(chunk.delta, 'content') else str(chunk.delta)
+                    if content:
+                        response_text += content
             
             t_llm = time.time()
             logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
             
-            # Invia risposta al frontend
-            await send_callback(response_text, "assistant")
+            # Invia risposta al frontend con ID
+            await send_callback(response_text, "assistant", text_response_id)
             
             # Pronuncia la risposta
             await session.say(response_text, allow_interruptions=True)
             
         except Exception as e:
             logger.error(f"Errore gestione messaggio testuale: {e}")
+    
+    async def handle_agent_response_only(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
+        """Gestisce solo la risposta dell'agent (messaggio user già inviato da multi-audio)"""
+        # Rimuovi @sophyai dal testo
+        _, cleaned_text = should_agent_respond(user_text)
+        
+        # Genera ID univoco per la risposta dell'agent
+        text_response_id = generate_message_id()
+        
+        try:
+            logger.info(f"🤖 [MULTI-AUDIO] Genero risposta per {sender_identity}: {cleaned_text[:50]}...")
+            
+            # Crea chat context
+            chat_ctx = llm.ChatContext()
+            chat_ctx.add_message(role="system", content=agent._instructions)
+            chat_ctx.add_message(role="user", content=cleaned_text)
+            
+            # Chiama LLM
+            t_start = time.time()
+            response_text = ""
+            stream = my_llm.chat(chat_ctx=chat_ctx)
+            
+            async for chunk in stream:
+                if hasattr(chunk, 'delta') and chunk.delta:
+                    content = chunk.delta.content if hasattr(chunk.delta, 'content') else str(chunk.delta)
+                    if content:
+                        response_text += content
+            
+            t_llm = time.time()
+            logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
+            
+            # Invia risposta al frontend
+            await send_callback(response_text, "assistant", text_response_id)
+            
+            # Pronuncia la risposta
+            await session.say(response_text, allow_interruptions=True)
+            
+        except Exception as e:
+            logger.error(f"Errore gestione risposta agent: {e}")
     
     # Messaggio di benvenuto
     # #region debug log - welcome message

@@ -1,5 +1,10 @@
 # LiveKit Server Configuration (host network mode)
 port: 7880
+bind_addresses:
+  - "0.0.0.0"
+
+keys:
+  devkey: secret_dev_key_change_in_production
 
 rtc:
   port_range_start: 50000
@@ -19,6 +24,8 @@ room:
   auto_create: true
   empty_timeout: 300
   max_participants: 100
+
+
 
 
 

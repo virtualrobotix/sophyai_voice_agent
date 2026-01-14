@@ -120,6 +120,108 @@
             50% { opacity: 0.4; }
         }
 
+        /* Participants list */
+        .participants-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .participants-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        .participants-list {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+            max-width: 200px;
+        }
+
+        .participant-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .participant-badge.is-agent {
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            color: white;
+            border: none;
+        }
+
+        .participant-badge.is-me {
+            border-color: var(--accent);
+        }
+
+        .participant-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .participant-count {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Agent Toggle Button */
+        .agent-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .agent-toggle-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .agent-toggle-btn.active {
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        .agent-toggle-btn .toggle-icon {
+            font-size: 1rem;
+        }
+
+        .agent-toggle-btn .toggle-text {
+            white-space: nowrap;
+        }
+
+        @media (max-width: 500px) {
+            .agent-toggle-btn .toggle-text {
+                display: none;
+            }
+        }
+
         .btn-icon {
             width: 42px;
             height: 42px;
@@ -145,33 +247,52 @@
         main {
             flex: 1;
             display: flex;
-            flex-direction: column;
-            max-width: 800px;
+            flex-direction: row;
+            gap: 24px;
+            max-width: 1400px;
             width: 100%;
             margin: 0 auto;
             padding: 24px;
             padding-bottom: 140px; /* Spazio per la barra fissa */
             position: relative;
             z-index: 10;
-            overflow: hidden;
+            overflow: visible;
+            min-height: 0; /* Importante per flex */
         }
 
-        /* Chat Container */
+        /* Video Section (left side) */
+        .video-section {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0;
+            overflow-y: auto;
+        }
+
+        /* Chat Container (right side) */
         .chat-container {
             flex: 1;
+            min-width: 350px;
+            max-width: 450px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            height: 100%;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            min-height: 400px;
+            max-height: calc(100vh - 200px);
         }
 
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 0;
+            padding: 16px;
             display: flex;
             flex-direction: column-reverse; /* Messaggi recenti in alto */
             gap: 16px;
+            min-height: 200px;
         }
 
         .message {
@@ -391,6 +512,149 @@
         @keyframes mic-pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
             50% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+        }
+
+        /* Upload Button */
+        .upload-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            transition: all 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        /* Image Preview Modal */
+        .image-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .image-preview-modal.hidden {
+            display: none;
+        }
+
+        .image-preview-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .image-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .image-preview-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .image-preview-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .image-preview-close:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        .image-preview-container {
+            width: 100%;
+            max-height: 300px;
+            overflow: hidden;
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .image-preview-container img {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+        }
+
+        .image-preview-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .image-preview-options .input-group {
+            text-align: left;
+        }
+
+        .image-preview-options .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .image-preview-options .text-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .image-preview-options .text-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .image-preview-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
         }
 
         .voice-status {
@@ -1016,6 +1280,13 @@
             </div>
         </div>
         <div class="header-actions">
+            <div class="participants-container" id="participants-container" style="display: none;">
+                <span class="participants-label">👥</span>
+                <div class="participants-list" id="participants-list">
+                    <!-- Participant badges will be added here dynamically -->
+                </div>
+                <span class="participant-count" id="participant-count">0</span>
+            </div>
             <div class="status-pill" id="status-pill">
                 <span class="status-dot" id="status-dot"></span>
                 <span id="status-text">Disconnesso</span>
@@ -1025,8 +1296,10 @@
     </header>
 
     <main>
-        <!-- Video Container -->
-        <div class="video-container" id="video-container">
+        <!-- Video Section (left side) -->
+        <div class="video-section">
+            <!-- Video Container -->
+            <div class="video-container" id="video-container">
             <div class="video-wrapper">
                 <video id="local-video" autoplay muted playsinline></video>
                 <div class="video-label">Tu</div>
@@ -1096,7 +1369,9 @@
                 </button>
             </div>
         </div>
+        </div> <!-- Fine video-section -->
 
+        <!-- Chat Container (right side) -->
         <div class="chat-container">
             <div class="messages" id="messages">
                 <div class="messages-empty" id="messages-empty">
@@ -1119,6 +1394,18 @@
                 <button class="mic-button muted" id="mic-button" onclick="toggleMic()">
                     🎙️
                 </button>
+                
+                <!-- Agent toggle button - forza comunicazione con Sophy -->
+                <button class="agent-toggle-btn" id="agent-toggle-btn" onclick="toggleAgentMode()" title="Attiva per parlare direttamente con Sophy">
+                    <span class="toggle-icon">🤖</span>
+                    <span class="toggle-text">Sophy</span>
+                </button>
+
+                <!-- Upload image button -->
+                <button class="upload-btn" id="upload-btn" onclick="document.getElementById('image-input').click()" title="Carica immagine">
+                    📷
+                </button>
+                <input type="file" id="image-input" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
                 
                 <!-- Text input -->
                 <div class="text-input-wrapper">
@@ -1204,6 +1491,41 @@
         </div>
     </div>
 
+    <!-- Image Preview Modal -->
+    <div class="image-preview-modal hidden" id="image-preview-modal">
+        <div class="image-preview-card">
+            <div class="image-preview-header">
+                <h3>Analizza Immagine</h3>
+                <button class="image-preview-close" onclick="closeImagePreview()">&times;</button>
+            </div>
+            <div class="image-preview-container">
+                <img id="image-preview-img" src="" alt="Anteprima immagine">
+            </div>
+            <div class="image-preview-options">
+                <div class="input-group">
+                    <label for="image-analysis-type">Tipo di analisi</label>
+                    <select id="image-analysis-type" class="analysis-type-select">
+                        <option value="generic">Analisi Generica</option>
+                        <option value="document">Estrazione Documento</option>
+                        <option value="age">Stima Eta</option>
+                        <option value="environment">Descrizione Ambiente</option>
+                        <option value="custom">Domanda Personalizzata</option>
+                    </select>
+                </div>
+                <div class="input-group" id="custom-prompt-group" style="display: none;">
+                    <label for="image-custom-prompt">La tua domanda</label>
+                    <input type="text" id="image-custom-prompt" class="text-input" placeholder="Cosa vuoi sapere su questa immagine?">
+                </div>
+            </div>
+            <div class="image-preview-actions">
+                <button class="btn-secondary" onclick="closeImagePreview()">Annulla</button>
+                <button class="analyze-btn" id="analyze-image-btn" onclick="analyzeUploadedImage()">
+                    🔍 Analizza
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script>
         // State
@@ -1213,10 +1535,14 @@
             micActive: false,
             speaking: false,
             videoActive: false,
+            participants: new Map(),  // Map<identity, {name, isAgent}>
+            agentModeActive: false,   // Toggle per forzare comunicazione con Sophy
             screenShareActive: false,
             localVideoTrack: null,
             remoteVideoTrack: null,
-            screenShareTrack: null
+            screenShareTrack: null,
+            uploadedImageBase64: null,  // Immagine caricata in base64
+            receivedMessageIds: new Set()  // Set per tracciare ID messaggi ricevuti (anti-duplicati)
         };
 
         // Elements
@@ -1243,8 +1569,21 @@
             remoteVideo: document.getElementById('remote-video'),
             videoToggleBtn: document.getElementById('video-toggle-btn'),
             screenShareBtn: document.getElementById('screen-share-btn'),
+            // Image upload elements
+            imagePreviewModal: document.getElementById('image-preview-modal'),
+            imagePreviewImg: document.getElementById('image-preview-img'),
+            imageAnalysisType: document.getElementById('image-analysis-type'),
+            imageCustomPrompt: document.getElementById('image-custom-prompt'),
+            customPromptGroup: document.getElementById('custom-prompt-group'),
+            analyzeImageBtn: document.getElementById('analyze-image-btn'),
             analyzeBtn: document.getElementById('analyze-btn'),
-            analysisTypeSelect: document.getElementById('analysis-type-select')
+            analysisTypeSelect: document.getElementById('analysis-type-select'),
+            // Participants elements
+            participantsContainer: document.getElementById('participants-container'),
+            participantsList: document.getElementById('participants-list'),
+            participantCount: document.getElementById('participant-count'),
+            // Agent toggle
+            agentToggleBtn: document.getElementById('agent-toggle-btn')
         };
 
         // Nascondi video container inizialmente
@@ -1406,41 +1745,95 @@
                     })
                 });
                 
+                // Gestione errore 409 - nome utente duplicato
+                if (resp.status === 409) {
+                    const errorData = await resp.json();
+                    throw new Error(errorData.detail || 'Nome utente già in uso. Scegli un nome diverso.');
+                }
+                
+                if (!resp.ok) {
+                    const errorData = await resp.json();
+                    throw new Error(errorData.detail || 'Errore durante la connessione');
+                }
+                
                 const data = await resp.json();
                 
                 // Connect to room
                 state.room = new LivekitClient.Room();
                 
                 state.room.on('trackSubscribed', (track, publication, participant) => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:trackSubscribed',message:'Track ricevuto',data:{trackKind:track.kind,participantIdentity:participant.identity,participantName:participant.name,isLocal:participant.identity===state.room?.localParticipant?.identity},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-A'})}).catch(()=>{});
+                    // #endregion
                     if (track.kind === 'audio') {
                         const audio = track.attach();
                         audio.autoplay = true;
                         document.body.appendChild(audio);
                     } else if (track.kind === 'video') {
-                        // Gestisci video track remoto
-                        const videoElement = track.attach();
-                        videoElement.autoplay = true;
-                        videoElement.playsInline = true;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:videoTrack',message:'Video track gestito',data:{participantIdentity:participant.identity,participantName:participant.name,localIdentity:state.room?.localParticipant?.identity},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-B'})}).catch(()=>{});
+                        // #endregion
                         
-                        if (elements.remoteVideo) {
-                            elements.remoteVideo.srcObject = new MediaStream([track.mediaStreamTrack]);
-                            elements.remoteVideo.style.display = 'block';
-                            state.remoteVideoTrack = track;
+                        // Crea o aggiorna video box dinamico per ogni partecipante remoto
+                        const participantId = participant.identity;
+                        const displayName = participant.name || participant.identity;
+                        const isAgent = participantId.startsWith('agent-');
+                        
+                        // Cerca se esiste già un wrapper per questo partecipante
+                        let wrapper = document.getElementById(`video-wrapper-${participantId}`);
+                        
+                        if (!wrapper) {
+                            // Crea nuovo wrapper
+                            wrapper = document.createElement('div');
+                            wrapper.className = 'video-wrapper';
+                            wrapper.id = `video-wrapper-${participantId}`;
                             
-                            // Nascondi placeholder
-                            const placeholder = document.getElementById('remote-video-placeholder');
-                            if (placeholder) placeholder.style.display = 'none';
+                            const video = document.createElement('video');
+                            video.id = `video-${participantId}`;
+                            video.autoplay = true;
+                            video.playsInline = true;
                             
-                            // Mostra video container se non già visibile
+                            const label = document.createElement('div');
+                            label.className = 'video-label';
+                            label.textContent = isAgent ? 'SophyAI' : displayName;
+                            
+                            wrapper.appendChild(video);
+                            wrapper.appendChild(label);
+                            
+                            // Aggiungi al container
                             if (elements.videoContainer) {
-                                elements.videoContainer.classList.remove('video-hidden');
+                                elements.videoContainer.appendChild(wrapper);
                             }
-                            if (elements.videoControls) {
-                                elements.videoControls.classList.remove('video-hidden');
+                        }
+                        
+                        // Assegna il track al video element
+                        const videoEl = document.getElementById(`video-${participantId}`);
+                        if (videoEl) {
+                            videoEl.srcObject = new MediaStream([track.mediaStreamTrack]);
+                            
+                            // Salva reference se è l'agent (per analisi video)
+                            if (isAgent) {
+                                state.remoteVideoTrack = track;
                             }
-                            if (elements.videoAnalysisPanel) {
-                                elements.videoAnalysisPanel.classList.remove('video-hidden');
-                            }
+                        }
+                        
+                        // Nascondi placeholder originale
+                        const placeholder = document.getElementById('remote-video-placeholder');
+                        if (placeholder) placeholder.style.display = 'none';
+                        // Nascondi video originale se esiste
+                        if (elements.remoteVideo) {
+                            elements.remoteVideo.style.display = 'none';
+                        }
+                        
+                        // Mostra video container
+                        if (elements.videoContainer) {
+                            elements.videoContainer.classList.remove('video-hidden');
+                        }
+                        if (elements.videoControls) {
+                            elements.videoControls.classList.remove('video-hidden');
+                        }
+                        if (elements.videoAnalysisPanel) {
+                            elements.videoAnalysisPanel.classList.remove('video-hidden');
                         }
                     }
                 });
@@ -1448,22 +1841,68 @@
                 state.room.on('dataReceived', (data, participant) => {
                     try {
                         const msg = JSON.parse(new TextDecoder().decode(data));
+                        const messageId = msg.id || null;
+                        
                         // #region agent log
-                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Messaggio ricevuto',data:{type:msg.type,role:msg.role,textPreview:msg.text?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-FRONTEND'})}).catch(()=>{});
+                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Messaggio ricevuto',data:{type:msg.type,role:msg.role,id:messageId,textPreview:msg.text?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-FRONTEND'})}).catch(()=>{});
                         // #endregion
+                        
+                        // Deduplicazione: se abbiamo già visto questo ID, ignora
+                        if (messageId) {
+                            if (state.receivedMessageIds.has(messageId)) {
+                                console.warn(`⚠️ DUPLICATO IGNORATO: ${messageId}`);
+                                return;
+                            }
+                            state.receivedMessageIds.add(messageId);
+                            
+                            // Limita dimensione set (evita memory leak)
+                            if (state.receivedMessageIds.size > 200) {
+                                const idsArray = Array.from(state.receivedMessageIds);
+                                state.receivedMessageIds = new Set(idsArray.slice(-100));
+                            }
+                        }
+                        
                         if (msg.type === 'transcript') {
-                            addMessage(msg.text, msg.role);
+                            // #region agent log
+                            fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Transcript ricevuto',data:{role:msg.role,sender:msg.sender,senderName:msg.senderName,textPreview:msg.text?.substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-A'})}).catch(()=>{});
+                            // #endregion
+                            // Determina il sender:
+                            // - Per agent: usa msg.sender (dovrebbe essere "SophyAI")
+                            // - Per user con sender: usa msg.sender
+                            // - Per user senza sender (audio STT): non sappiamo chi parla, mostra "Partecipante"
+                            let senderName;
+                            if (msg.sender) {
+                                senderName = msg.sender;
+                            } else if (msg.role === 'assistant') {
+                                senderName = 'SophyAI';
+                            } else {
+                                // Messaggio vocale - non sappiamo chi sta parlando
+                                senderName = 'Partecipante';
+                            }
+                            addMessage(msg.text, msg.role, messageId, senderName);
                         } else if (msg.type === 'status') {
                             elements.voiceStatus.textContent = msg.text;
                         } else if (msg.type === 'video_analysis_result') {
                             // Mostra risultato analisi video
                             const analysisType = msg.analysis_type || 'generica';
                             const result = msg.result || 'Nessun risultato';
-                            addMessage(`Analisi ${analysisType}: ${result}`, 'assistant');
+                            addMessage(`Analisi ${analysisType}: ${result}`, 'assistant', messageId);
 
                             if (elements.analyzeBtn) {
                                 elements.analyzeBtn.disabled = false;
                                 elements.analyzeBtn.textContent = '🔍 Analizza Video';
+                            }
+                        } else if (msg.type === 'image_analysis_result') {
+                            // Mostra risultato analisi immagine caricata
+                            const analysisType = msg.analysis_type || 'generica';
+                            const result = msg.result || 'Nessun risultato';
+                            addMessage(result, 'assistant', messageId);
+                            
+                            elements.voiceStatus.textContent = 'Parla con Sophy...';
+                            
+                            if (elements.analyzeImageBtn) {
+                                elements.analyzeImageBtn.disabled = false;
+                                elements.analyzeImageBtn.textContent = '🔍 Analizza';
                             }
                         }
                     } catch (e) {}
@@ -1474,17 +1913,65 @@
                     elements.statusDot.className = 'status-dot';
                     elements.statusText.textContent = 'Disconnesso';
                     elements.connectOverlay.classList.remove('hidden');
+                    // Reset participants
+                    state.participants.clear();
+                    updateParticipantsUI();
+                });
+                
+                // Participant events
+                state.room.on('participantConnected', (participant) => {
+                    console.log('Partecipante connesso:', participant.identity);
+                    const isAgent = participant.identity.toLowerCase().includes('agent') || 
+                                   participant.identity.toLowerCase().includes('sophy');
+                    state.participants.set(participant.identity, {
+                        name: participant.name || participant.identity,
+                        isAgent: isAgent
+                    });
+                    updateParticipantsUI();
+                });
+                
+                state.room.on('participantDisconnected', (participant) => {
+                    console.log('Partecipante disconnesso:', participant.identity);
+                    state.participants.delete(participant.identity);
+                    updateParticipantsUI();
+                    
+                    // Rimuovi video wrapper del partecipante
+                    const wrapper = document.getElementById(`video-wrapper-${participant.identity}`);
+                    if (wrapper) {
+                        wrapper.remove();
+                        console.log(`Video rimosso per ${participant.identity}`);
+                    }
                 });
 
                 await state.room.connect(data.url, data.token);
                 
+                // Inizializza partecipanti esistenti (incluso se stesso)
+                const myIdentity = state.room.localParticipant.identity;
+                state.participants.set(myIdentity, {
+                    name: state.room.localParticipant.name || myIdentity,
+                    isAgent: false,
+                    isMe: true
+                });
+                
+                // Aggiungi partecipanti remoti già presenti
+                state.room.remoteParticipants.forEach((participant) => {
+                    const isAgent = participant.identity.toLowerCase().includes('agent') || 
+                                   participant.identity.toLowerCase().includes('sophy');
+                    state.participants.set(participant.identity, {
+                        name: participant.name || participant.identity,
+                        isAgent: isAgent,
+                        isMe: false
+                    });
+                });
+                updateParticipantsUI();
+
                 initModal.setStepStatus('init-step-room', 'done');
                 initModal.setProgress(75);
-                
+
                 // Step 4: Avvio assistente
                 initModal.setStepStatus('init-step-agent', 'active');
                 initModal.setMessage('Avvio dell\'assistente vocale...');
-                
+
                 // Microfono parte DISATTIVATO - l'utente deve attivarlo
                 await state.room.localParticipant.setMicrophoneEnabled(false);
                 state.micActive = false;
@@ -1517,9 +2004,12 @@
             } catch (e) {
                 console.error('Connection error:', e);
                 
-                initModal.setTitle('Errore');
+                // Verifica se è un errore di nome duplicato
+                const isNameConflict = e.message && e.message.includes('già in uso');
+
+                initModal.setTitle(isNameConflict ? 'Nome non disponibile' : 'Errore');
                 initModal.setMessage(e.message);
-                
+
                 // Mostra quale step ha fallito
                 ['init-step-services', 'init-step-tts', 'init-step-room', 'init-step-agent'].forEach(step => {
                     const el = document.getElementById(step);
@@ -1527,35 +2017,76 @@
                         initModal.setStepStatus(step, 'error');
                     }
                 });
-                
-                // Nascondi dopo 3 secondi
-                await new Promise(r => setTimeout(r, 3000));
+
+                // Nascondi dopo 3 secondi (o 4 per errore nome)
+                await new Promise(r => setTimeout(r, isNameConflict ? 4000 : 3000));
                 initModal.hide();
-                
+
                 elements.connectBtn.disabled = false;
-                elements.connectBtn.textContent = '🚀 Riprova';
+                elements.connectBtn.textContent = isNameConflict ? '🔄 Cambia nome e riprova' : '🚀 Riprova';
                 elements.statusDot.className = 'status-dot';
-                elements.statusText.textContent = 'Errore';
+                elements.statusText.textContent = isNameConflict ? 'Nome in uso' : 'Errore';
                 elements.connectOverlay.classList.remove('hidden');
+                
+                // Se errore nome, focus sul campo nome
+                if (isNameConflict && elements.userName) {
+                    elements.userName.focus();
+                    elements.userName.select();
+                }
             }
         }
 
         // Add message to chat (newest on top with column-reverse)
-        function addMessage(text, role) {
+        // Tiene traccia anche degli ID già visualizzati nel DOM
+        const displayedMessageIds = new Set();
+        
+        function addMessage(text, role, messageId = null, senderName = null) {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:addMessage',message:'Aggiunta messaggio',data:{role:role,senderName:senderName,textPreview:text?.substring(0,30),hasMessageId:!!messageId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-B'})}).catch(()=>{});
+            // #endregion
+            // Genera ID locale se non fornito
+            if (!messageId) {
+                messageId = `LOCAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+
+            // Deduplicazione lato DOM: evita di aggiungere lo stesso messaggio due volte
+            if (displayedMessageIds.has(messageId)) {
+                console.warn(`⚠️ Messaggio già visualizzato: ${messageId}`);
+                return;
+            }
+            displayedMessageIds.add(messageId);
+            
+            // Limita dimensione set (evita memory leak)
+            if (displayedMessageIds.size > 200) {
+                const idsArray = Array.from(displayedMessageIds);
+                displayedMessageIds.clear();
+                idsArray.slice(-100).forEach(id => displayedMessageIds.add(id));
+            }
+            
             if (elements.messagesEmpty) {
                 elements.messagesEmpty.remove();
             }
 
             const msg = document.createElement('div');
             msg.className = 'message ' + role;
+            msg.dataset.messageId = messageId;  // Salva ID nel DOM per debug
+            
+            // Mostra sender name (se disponibile) e ID debug
+            const shortId = messageId.length > 20 ? messageId.substring(messageId.length - 15) : messageId;
+            const displayName = senderName || (role === 'user' ? 'Tu' : 'SophyAI');
             msg.innerHTML = `
                 <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
-                <div class="message-bubble">${text}</div>
+                <div class="message-bubble">
+                    <span class="message-sender" style="font-size: 0.75rem; font-weight: 600; color: ${role === 'user' ? '#667eea' : '#00d4aa'}; display: block; margin-bottom: 4px;">${displayName}</span>
+                    ${text}
+                </div>
             `;
             // Inserisci all'inizio per column-reverse (nuovi messaggi in alto)
             elements.messages.insertBefore(msg, elements.messages.firstChild);
             // Scroll verso l'alto per vedere i nuovi messaggi
             elements.messages.scrollTop = 0;
+            
+            console.log(`✅ Messaggio visualizzato: ${messageId} (${role})`);
         }
 
         // Toggle mic - mute/unmute effettivo
@@ -1596,13 +2127,17 @@
             const text = elements.textInput.value.trim();
             if (!text) return;
             
-            // Mostra messaggio utente nella chat
-            addMessage(text, 'user');
+            // Genera ID univoco per questo messaggio utente
+            const messageId = `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
-            // Invia al server/agent
+            // Mostra messaggio utente nella chat
+            addMessage(text, 'user', messageId);
+            
+            // Invia al server/agent con ID
             const data = new TextEncoder().encode(JSON.stringify({ 
                 type: 'text_message', 
-                text: text 
+                text: text,
+                id: messageId
             }));
             await state.room.localParticipant.publishData(data, { reliable: true });
             
@@ -1737,24 +2272,235 @@
             }
             
             try {
+                // Genera ID univoco per questa richiesta
+                const messageId = `VIDREQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
                 const data = new TextEncoder().encode(JSON.stringify({
                     type: 'video_analysis',
-                    analysis_type: analysisType
+                    analysis_type: analysisType,
+                    id: messageId
                 }));
                 
                 await state.room.localParticipant.publishData(data, { reliable: true });
                 
-                addMessage(`Richiesta analisi video: ${analysisType}`, 'user');
+                addMessage(`Richiesta analisi video: ${analysisType}`, 'user', messageId);
             } catch (error) {
                 console.error('Errore richiesta analisi:', error);
                 alert('Errore invio richiesta analisi: ' + error.message);
-            } finally {
+            }             finally {
                 if (elements.analyzeBtn) {
                     elements.analyzeBtn.disabled = false;
                     elements.analyzeBtn.textContent = '🔍 Analizza Video';
                 }
             }
         }
+
+        // ==================== Image Upload ====================
+        
+        // Gestisce il caricamento di un'immagine
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Verifica che sia un'immagine
+            if (!file.type.startsWith('image/')) {
+                alert('Per favore seleziona un file immagine valido.');
+                return;
+            }
+            
+            // Verifica dimensione (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('L\'immagine e troppo grande. Dimensione massima: 10MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Comprimi e ridimensiona l'immagine per stare sotto i 64KB del DataChannel
+                    const compressedBase64 = compressImage(img, 800, 0.7);
+                    
+                    // Salva l'immagine compressa (senza prefisso data:image/...;base64,)
+                    state.uploadedImageBase64 = compressedBase64.split(',')[1];
+                    
+                    console.log('Immagine compressa:', Math.round(state.uploadedImageBase64.length / 1024), 'KB');
+                    
+                    // Mostra preview (usa immagine compressa)
+                    if (elements.imagePreviewImg) {
+                        elements.imagePreviewImg.src = compressedBase64;
+                    }
+                    
+                    // Mostra modale
+                    if (elements.imagePreviewModal) {
+                        elements.imagePreviewModal.classList.remove('hidden');
+                    }
+                    
+                    // Reset select e input
+                    if (elements.imageAnalysisType) {
+                        elements.imageAnalysisType.value = 'generic';
+                    }
+                    if (elements.imageCustomPrompt) {
+                        elements.imageCustomPrompt.value = '';
+                    }
+                    if (elements.customPromptGroup) {
+                        elements.customPromptGroup.style.display = 'none';
+                    }
+                };
+                img.src = e.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+            
+            // Reset input file per permettere di ricaricare lo stesso file
+            event.target.value = '';
+        }
+        
+        // Funzione per comprimere e ridimensionare un'immagine
+        function compressImage(img, maxSize, quality) {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Ridimensiona mantenendo le proporzioni
+            if (width > height) {
+                if (width > maxSize) {
+                    height = Math.round(height * maxSize / width);
+                    width = maxSize;
+                }
+            } else {
+                if (height > maxSize) {
+                    width = Math.round(width * maxSize / height);
+                    height = maxSize;
+                }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Converti in JPEG con qualità specificata
+            let result = canvas.toDataURL('image/jpeg', quality);
+            
+            // Se ancora troppo grande, riduci ulteriormente
+            let attempts = 0;
+            while (result.length > 45000 && attempts < 5) {  // Target ~45KB per lasciare margine per il JSON
+                quality -= 0.1;
+                maxSize = Math.round(maxSize * 0.8);
+                
+                // Ricalcola dimensioni
+                width = img.width;
+                height = img.height;
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round(height * maxSize / width);
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round(width * maxSize / height);
+                        height = maxSize;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                result = canvas.toDataURL('image/jpeg', Math.max(0.3, quality));
+                attempts++;
+                console.log('Compressione tentativo', attempts, ':', Math.round(result.length / 1024), 'KB');
+            }
+            
+            return result;
+        }
+        
+        // Chiude il modale preview immagine
+        function closeImagePreview() {
+            if (elements.imagePreviewModal) {
+                elements.imagePreviewModal.classList.add('hidden');
+            }
+            state.uploadedImageBase64 = null;
+        }
+        
+        // Invia l'immagine caricata per l'analisi
+        async function analyzeUploadedImage() {
+            if (!state.connected) {
+                alert('Connettiti prima di analizzare le immagini.');
+                return;
+            }
+            
+            if (!state.uploadedImageBase64) {
+                alert('Nessuna immagine caricata.');
+                return;
+            }
+            
+            const analysisType = elements.imageAnalysisType ? elements.imageAnalysisType.value : 'generic';
+            const customPrompt = elements.imageCustomPrompt ? elements.imageCustomPrompt.value.trim() : '';
+            
+            // Disabilita pulsante durante analisi
+            if (elements.analyzeImageBtn) {
+                elements.analyzeImageBtn.disabled = true;
+                elements.analyzeImageBtn.textContent = '⏳ Analisi...';
+            }
+            
+            try {
+                // Genera ID univoco per questa richiesta
+                const messageId = `IMGREQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Invia messaggio via DataChannel
+                const data = new TextEncoder().encode(JSON.stringify({
+                    type: 'image_analysis',
+                    image_base64: state.uploadedImageBase64,
+                    analysis_type: analysisType,
+                    custom_prompt: customPrompt,
+                    id: messageId
+                }));
+                
+                await state.room.localParticipant.publishData(data, { reliable: true });
+                
+                // Mostra messaggio nella chat
+                const analysisLabels = {
+                    'generic': 'Analisi generica',
+                    'document': 'Estrazione documento',
+                    'age': 'Stima eta',
+                    'environment': 'Descrizione ambiente',
+                    'custom': customPrompt || 'Domanda personalizzata'
+                };
+                addMessage(`[Immagine caricata] ${analysisLabels[analysisType] || analysisType}`, 'user', messageId);
+                
+                // Chiudi modale
+                closeImagePreview();
+                
+                elements.voiceStatus.textContent = '🔍 Analisi immagine in corso...';
+                
+            } catch (error) {
+                console.error('Errore invio analisi immagine:', error);
+                alert('Errore durante l\'invio dell\'immagine: ' + error.message);
+            } finally {
+                if (elements.analyzeImageBtn) {
+                    elements.analyzeImageBtn.disabled = false;
+                    elements.analyzeImageBtn.textContent = '🔍 Analizza';
+                }
+            }
+        }
+        
+        // Listener per mostrare/nascondere campo custom prompt
+        document.addEventListener('DOMContentLoaded', function() {
+            const analysisTypeSelect = document.getElementById('image-analysis-type');
+            const customPromptGroup = document.getElementById('custom-prompt-group');
+            
+            if (analysisTypeSelect && customPromptGroup) {
+                analysisTypeSelect.addEventListener('change', function() {
+                    if (this.value === 'custom') {
+                        customPromptGroup.style.display = 'block';
+                    } else {
+                        customPromptGroup.style.display = 'none';
+                    }
+                });
+            }
+        });
 
         // ==================== Sidebar Toggle ====================
         let sidebarVisible = true;
@@ -1975,25 +2721,47 @@
             }
         }
 
-        function addMessageToDOM(text, role) {
+        function addMessageToDOM(text, role, messageId = null) {
             const messagesContainer = document.getElementById('messages');
             if (!messagesContainer) return;
+            
+            // Genera ID locale se non fornito
+            if (!messageId) {
+                messageId = `DB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
             
             // Rimuovi messaggio vuoto se presente
             const emptyMsg = messagesContainer.querySelector('.messages-empty');
             if (emptyMsg) emptyMsg.remove();
             
+            const shortId = messageId.length > 20 ? messageId.substring(messageId.length - 15) : messageId;
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}`;
+            msgDiv.dataset.messageId = messageId;
             msgDiv.innerHTML = `
                 <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
-                <div class="message-bubble">${escapeHtml(text)}</div>
+                <div class="message-bubble">
+                    <span class="message-id-debug" style="font-size: 0.65rem; color: #666; opacity: 0.6; display: block; margin-bottom: 4px;">[${shortId}]</span>
+                    ${escapeHtml(text)}
+                </div>
             `;
             messagesContainer.insertBefore(msgDiv, messagesContainer.firstChild);
         }
 
         // Salva messaggi nel database quando aggiunti alla chat
-        async function saveMessageToDB(text, role) {
+        // Tiene traccia dei messaggi già salvati per evitare duplicati nel DB
+        const savedMessageIds = new Set();
+        
+        async function saveMessageToDB(text, role, messageId = null) {
+            // Evita di salvare lo stesso messaggio due volte
+            if (messageId && savedMessageIds.has(messageId)) {
+                console.log(`📝 Messaggio ${messageId} già salvato nel DB, skip`);
+                return;
+            }
+            if (messageId) {
+                savedMessageIds.add(messageId);
+            }
+            
             if (!currentChatId) {
                 // Crea nuova chat se non esiste
                 try {
@@ -2016,11 +2784,11 @@
                 await fetch(`/api/chats/${currentChatId}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ role, content: text })
+                    body: JSON.stringify({ role, content: text, message_id: messageId })
                 });
                 
                 // Aggiungi al contesto locale e aggiorna il server
-                chatMessages.push({ role, content: text });
+                chatMessages.push({ role, content: text, message_id: messageId });
                 await updateChatContext();
                 
             } catch (e) {
@@ -2041,10 +2809,118 @@
 
         // Override addMessage per salvare anche in DB
         const originalAddMessage = addMessage;
-        addMessage = function(text, role) {
-            originalAddMessage(text, role);
-            saveMessageToDB(text, role);
+        addMessage = function(text, role, messageId = null) {
+            originalAddMessage(text, role, messageId);
+            saveMessageToDB(text, role, messageId);
         };
+
+        // ==================== Agent Mode Toggle ====================
+        
+        async function toggleAgentMode() {
+            if (!state.connected) return;
+            
+            state.agentModeActive = !state.agentModeActive;
+            
+            // Aggiorna UI del bottone
+            if (elements.agentToggleBtn) {
+                if (state.agentModeActive) {
+                    elements.agentToggleBtn.classList.add('active');
+                    elements.agentToggleBtn.title = 'Modalità Sophy attiva - clicca per disattivare';
+                } else {
+                    elements.agentToggleBtn.classList.remove('active');
+                    elements.agentToggleBtn.title = 'Attiva per parlare direttamente con Sophy';
+                }
+            }
+            
+            // Invia al server
+            try {
+                const data = new TextEncoder().encode(JSON.stringify({
+                    type: 'force_agent_response',
+                    force: state.agentModeActive
+                }));
+                await state.room.localParticipant.publishData(data, { reliable: true });
+                
+                console.log('Agent mode:', state.agentModeActive ? 'ATTIVO' : 'DISATTIVO');
+                
+                // Mostra feedback
+                if (state.agentModeActive) {
+                    elements.voiceStatus.textContent = '🤖 Modalità Sophy attiva - parla liberamente';
+                } else {
+                    elements.voiceStatus.textContent = '🎤 Usa @sophyai per parlare con Sophy';
+                }
+            } catch (e) {
+                console.error('Errore invio toggle agent:', e);
+            }
+        }
+        
+        async function sendParticipantsCount() {
+            if (!state.connected || !state.room) return;
+            
+            // Conta solo partecipanti umani (esclude agent)
+            let humanCount = 0;
+            state.participants.forEach((info) => {
+                if (!info.isAgent) {
+                    humanCount++;
+                }
+            });
+            
+            try {
+                const data = new TextEncoder().encode(JSON.stringify({
+                    type: 'participants_count',
+                    count: humanCount
+                }));
+                await state.room.localParticipant.publishData(data, { reliable: true });
+                console.log('Partecipanti umani inviato:', humanCount);
+            } catch (e) {
+                console.error('Errore invio conteggio partecipanti:', e);
+            }
+        }
+
+        // ==================== Participants UI ====================
+        
+        function updateParticipantsUI() {
+            if (!elements.participantsContainer || !elements.participantsList) return;
+            
+            const count = state.participants.size;
+            
+            // Mostra container solo se connesso e ci sono partecipanti
+            if (count > 0 && state.connected) {
+                elements.participantsContainer.style.display = 'flex';
+            } else {
+                elements.participantsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Aggiorna contatore
+            if (elements.participantCount) {
+                elements.participantCount.textContent = count;
+            }
+            
+            // Genera badge per ogni partecipante
+            let html = '';
+            state.participants.forEach((info, identity) => {
+                let classes = 'participant-badge';
+                let icon = '';
+                
+                if (info.isAgent) {
+                    classes += ' is-agent';
+                    icon = '🤖 ';
+                } else if (info.isMe) {
+                    classes += ' is-me';
+                    icon = '👤 ';
+                } else {
+                    icon = '👤 ';
+                }
+                
+                const displayName = info.name.length > 12 ? info.name.substring(0, 10) + '...' : info.name;
+                html += `<span class="${classes}" title="${info.name}"><span class="participant-dot"></span>${icon}${escapeHtml(displayName)}</span>`;
+            });
+
+            elements.participantsList.innerHTML = html;
+            
+            // Invia conteggio partecipanti al server
+            sendParticipantsCount();
+        }
 
         // Init
         checkServices();

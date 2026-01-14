@@ -48,15 +48,29 @@ docker-compose up -d --build
 echo ""
 echo "✅ Servizi avviati!"
 echo ""
-echo "📌 Endpoint:"
+
+# Rileva IP della rete locale
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
+
+echo "📌 Endpoint LOCALI (da questo computer):"
 echo "   - Web UI: https://localhost:8080"
 echo "   - Whisper Server: http://localhost:8090"
 echo "   - LiveKit: ws://localhost:7880"
+echo ""
+echo "📌 Endpoint RETE (da altri dispositivi):"
+echo "   - Web UI: https://$LOCAL_IP:8080"
+echo "   - LiveKit: ws://$LOCAL_IP:7880"
+echo ""
+echo "💡 Per connessioni da altri dispositivi nella rete:"
+echo "   1. Assicurati che il firewall permetta le porte 7880, 8080"
+echo "   2. Collegati a https://$LOCAL_IP:8080 dal dispositivo"
 echo ""
 echo "📋 Log:"
 echo "   - docker logs -f voice-agent-web"
 echo "   - docker logs -f voice-agent-worker"
 echo "   - tail -f whisper_server.log"
+
+
 
 
 

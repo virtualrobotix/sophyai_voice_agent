@@ -8,15 +8,17 @@ import asyncio
 import os
 import sys
 import subprocess
+import time
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
+import socket
 from loguru import logger
 from livekit import api
 import httpx
@@ -25,6 +27,80 @@ import httpx
 sys.path.insert(0, str(Path(__file__).parent))
 
 from agent.config import config
+
+
+def get_server_ip() -> str:
+    """Rileva l'IP del server nella rete locale"""
+    # Prima controlla se è impostato esplicitamente
+    server_ip = os.getenv("SERVER_IP", "").strip()
+    if server_ip and server_ip not in ("host.docker.internal", ""):
+        return server_ip
+    
+    # Prova a rilevare automaticamente l'IP
+    try:
+        # Crea un socket UDP e connettiti a un IP esterno per rilevare l'IP locale
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        # Se è un IP interno Docker (172.x.x.x), ritorna localhost
+        if ip.startswith("172."):
+            return "localhost"
+        return ip
+    except Exception:
+        return "localhost"
+
+
+def get_livekit_url_for_client(request: Request) -> str:
+    """Costruisce l'URL LiveKit appropriato per il client"""
+    # Se LIVEKIT_URL è configurato con un IP specifico (non localhost/0.0.0.0), usalo
+    configured_url = config.livekit.url
+    
+    # Estrai host e porta dall'URL configurato
+    # Formato: ws://host:port o wss://host:port
+    if "://" in configured_url:
+        proto, rest = configured_url.split("://", 1)
+        host_port = rest.split("/")[0]
+        if ":" in host_port:
+            host, port = host_port.rsplit(":", 1)
+        else:
+            host = host_port
+            port = "7880"
+    else:
+        proto = "ws"
+        host = "localhost"
+        port = "7880"
+    
+    # Se l'host è localhost, 0.0.0.0 o 127.0.0.1, usa l'host dalla richiesta
+    if host in ("localhost", "0.0.0.0", "127.0.0.1"):
+        # Prova a usare l'host dalla richiesta (es. 192.168.1.100 o localhost)
+        request_host = request.headers.get("host", "").split(":")[0]
+        
+        # IMPORTANTE: Se il client accede da localhost, mantieni localhost
+        # (il certificato è valido solo per localhost)
+        if request_host in ("localhost", "127.0.0.1"):
+            host = "localhost"
+        elif request_host:
+            # Se il client sta accedendo via IP, usa quell'IP
+            host = request_host
+        else:
+            # Altrimenti rileva l'IP del server
+            host = get_server_ip()
+    
+    # IMPORTANTE: Se la richiesta arriva via HTTPS, usa WSS per evitare Mixed Content
+    # Controlla l'header X-Forwarded-Proto o lo schema della richiesta
+    is_https = (
+        request.headers.get("x-forwarded-proto") == "https" or
+        request.url.scheme == "https" or
+        request.headers.get("origin", "").startswith("https://")
+    )
+    
+    if is_https:
+        proto = "wss"
+        port = "7443"  # Porta del proxy TLS per LiveKit
+    
+    return f"{proto}://{host}:{port}"
+
 
 # Configura logging
 logger.remove()
@@ -40,6 +116,9 @@ app = FastAPI(
     description="API per il Voice Agent WebRTC",
     version="1.0.0"
 )
+
+# Lock per evitare race condition nel dispatch degli agent
+_room_dispatch_locks: dict[str, asyncio.Lock] = {}
 
 # CORS
 app.add_middleware(
@@ -912,11 +991,41 @@ async def update_context(request: ContextUpdate):
 
 
 @app.post("/api/token", response_model=TokenResponse)
-async def get_token(request: TokenRequest):
+async def get_token(request: TokenRequest, http_request: Request):
     """
     Genera un token LiveKit per un partecipante e dispatcha l'agent.
+    Verifica che il nome utente sia univoco nella room.
     """
+    import os
+    internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+    
     try:
+        # Crea API client per verifiche e operazioni
+        lk_api = api.LiveKitAPI(
+            url=internal_url,
+            api_key=config.livekit.api_key,
+            api_secret=config.livekit.api_secret
+        )
+        
+        # Verifica se esiste già un utente con lo stesso nome nella room
+        try:
+            participants = await lk_api.room.list_participants(
+                api.ListParticipantsRequest(room=request.room_name)
+            )
+            for p in participants.participants:
+                if p.identity == request.participant_name:
+                    await lk_api.aclose()
+                    logger.warning(f"Nome utente duplicato: {request.participant_name} già presente in {request.room_name}")
+                    raise HTTPException(
+                        status_code=409, 
+                        detail=f"Il nome '{request.participant_name}' è già in uso nella room. Scegli un nome diverso."
+                    )
+        except HTTPException:
+            raise  # Rilancia l'errore 409
+        except Exception as e:
+            # La room potrebbe non esistere ancora, continua
+            logger.debug(f"Room {request.room_name} non esiste ancora o errore verifica: {e}")
+        
         # Crea token
         token = api.AccessToken(
             config.livekit.api_key,
@@ -938,42 +1047,58 @@ async def get_token(request: TokenRequest):
         
         jwt_token = token.to_jwt()
         
-        # URL WebSocket per il client
-        ws_url = config.livekit.url
+        # URL WebSocket per il client - costruito dinamicamente
+        ws_url = get_livekit_url_for_client(http_request)
         
-        # Dispatcha l'agent nella room
-        # Usa host.docker.internal per le chiamate API interne da Docker
-        import os
-        internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
-        try:
-            lk_api = api.LiveKitAPI(
-                url=internal_url,
-                api_key=config.livekit.api_key,
-                api_secret=config.livekit.api_secret
-            )
-            
-            # Crea la room se non esiste
-            await lk_api.room.create_room(
-                api.CreateRoomRequest(name=request.room_name)
-            )
-            
-            # Dispatcha l'agent
-            await lk_api.agent_dispatch.create_dispatch(
-                api.CreateAgentDispatchRequest(
-                    room=request.room_name,
-                    agent_name=""  # Agent di default
+        # Crea la room se non esiste e dispatcha l'agent SOLO se non ce n'è già uno
+        # Usa un lock per evitare race condition quando più utenti si connettono simultaneamente
+        if request.room_name not in _room_dispatch_locks:
+            _room_dispatch_locks[request.room_name] = asyncio.Lock()
+        
+        async with _room_dispatch_locks[request.room_name]:
+            try:
+                # Crea la room se non esiste
+                await lk_api.room.create_room(
+                    api.CreateRoomRequest(name=request.room_name)
                 )
-            )
-            logger.info(f"Agent dispatchato per room {request.room_name}")
-            
-            await lk_api.aclose()
-        except Exception as dispatch_err:
-            logger.warning(f"Agent dispatch fallito (potrebbe essere già attivo): {dispatch_err}")
+                
+                # Verifica se c'è già un agent nella room
+                participants = await lk_api.room.list_participants(
+                    api.ListParticipantsRequest(room=request.room_name)
+                )
+                
+                agent_exists = False
+                for p in participants.participants:
+                    # Gli agent hanno identity che inizia con "agent-"
+                    if p.identity.startswith("agent-"):
+                        agent_exists = True
+                        logger.info(f"Agent già presente nella room {request.room_name}: {p.identity}")
+                        break
+                
+                # Dispatcha l'agent SOLO se non ce n'è già uno
+                if not agent_exists:
+                    await lk_api.agent_dispatch.create_dispatch(
+                        api.CreateAgentDispatchRequest(
+                            room=request.room_name,
+                            agent_name=""  # Agent di default
+                        )
+                    )
+                    logger.info(f"Nuovo agent dispatchato per room {request.room_name}")
+                else:
+                    logger.info(f"Agent già attivo in room {request.room_name}, skip dispatch")
+
+            except Exception as dispatch_err:
+                logger.warning(f"Agent dispatch fallito (potrebbe essere già attivo): {dispatch_err}")
+        
+        await lk_api.aclose()
         
         logger.info(f"Token generato per {request.participant_name} in room {request.room_name}")
+        logger.info(f"🌐 LiveKit URL per client: {ws_url}")
         
         return TokenResponse(token=jwt_token, url=ws_url)
         
+    except HTTPException:
+        raise  # Rilancia errori HTTP (es. 409)
     except Exception as e:
         logger.error(f"Errore generazione token: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1043,10 +1168,16 @@ _current_tts_config = {
 }
 
 @app.get("/api/config")
-async def get_config():
+async def get_config(request: Request):
     """Ritorna la configurazione pubblica"""
+    # Costruisci URL LiveKit dinamicamente in base alla richiesta
+    livekit_url = get_livekit_url_for_client(request)
+    server_ip = get_server_ip()
+    
     return {
-        "livekit_url": config.livekit.url,
+        "livekit_url": livekit_url,
+        "livekit_url_configured": config.livekit.url,
+        "server_ip": server_ip,
         "default_tts": config.tts.default_engine,
         "whisper_model": config.whisper.model,
         "ollama_model": config.ollama.model
@@ -1591,8 +1722,11 @@ if web_dir.exists():
 
 
 def main():
-    """Avvia il server con HTTPS"""
-    port = config.server.web_port
+    """Avvia il server con HTTPS e HTTP"""
+    import threading
+    
+    https_port = config.server.web_port  # 8443
+    http_port = 8080  # Porta HTTP per app che non supportano certificati self-signed
     
     # Percorsi certificati (controlla sia locale che Docker)
     cert_dir = Path(__file__).parent / "certs"
@@ -1609,27 +1743,44 @@ def main():
     # Verifica se i certificati esistono
     use_ssl = ssl_keyfile.exists() and ssl_certfile.exists()
     
+    def run_http_server():
+        """Avvia server HTTP in un thread separato"""
+        import uvicorn
+        logger.info(f"📱 Server HTTP su porta {http_port} (per app mobile)")
+        uvicorn.run(
+            "server:app",
+            host="0.0.0.0",
+            port=http_port,
+            reload=False,
+            log_level="warning"  # Meno verbose per HTTP
+        )
+    
     if use_ssl:
-        logger.info(f"🔒 Avvio server HTTPS su porta {port}...")
-        logger.info(f"📱 Collegati a: https://localhost:{port}")
+        # Avvia HTTP in background per le app mobile
+        http_thread = threading.Thread(target=run_http_server, daemon=True)
+        http_thread.start()
+        
+        logger.info(f"🔒 Avvio server HTTPS su porta {https_port}...")
+        logger.info(f"📱 Collegati a: https://localhost:{https_port}")
+        logger.info(f"📱 HTTP disponibile su: http://localhost:{http_port}")
         
         uvicorn.run(
             "server:app",
             host="0.0.0.0",
-            port=port,
+            port=https_port,
             ssl_keyfile=str(ssl_keyfile),
             ssl_certfile=str(ssl_certfile),
-            reload=False,  # Reload non funziona bene con SSL
+            reload=False,
             log_level=config.server.log_level.lower()
         )
     else:
-        logger.warning("⚠️ Certificati SSL non trovati, avvio in HTTP")
-        logger.info(f"Avvio server HTTP su porta {port}...")
+        logger.warning("⚠️ Certificati SSL non trovati, avvio solo in HTTP")
+        logger.info(f"Avvio server HTTP su porta {http_port}...")
         
         uvicorn.run(
             "server:app",
             host="0.0.0.0",
-            port=port,
+            port=http_port,
             reload=True,
             log_level=config.server.log_level.lower()
         )

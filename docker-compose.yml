@@ -49,12 +49,17 @@ services:
       - "8080:8080"     # HTTP
       - "8443:8443"     # HTTPS
     environment:
-      - LIVEKIT_URL=ws://localhost:7880
+      # LIVEKIT_URL: usa il tuo IP di rete locale per permettere connessioni da altri dispositivi
+      # Esempio: LIVEKIT_URL=ws://192.168.1.100:7880
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://0.0.0.0:7880}
       - LIVEKIT_INTERNAL_URL=ws://host.docker.internal:7880
+      # IP del server per costruire URL dinamicamente
+      # IMPORTANTE: Imposta con il tuo IP di rete locale (es. 192.168.1.100)
+      - SERVER_IP=${SERVER_IP:-host.docker.internal}
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - OLLAMA_MODEL=gpt-oss
+      - OLLAMA_MODEL=devstral-small-2
       - WHISPER_MODEL=small
       - DEFAULT_TTS=edge
       - WEB_PORT=8443
@@ -113,7 +118,7 @@ services:
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - OLLAMA_MODEL=gpt-oss
+      - OLLAMA_MODEL=devstral-small-2
       - WHISPER_MODEL=small
       - WHISPER_LANGUAGE=it
       - WHISPER_SERVER_URL=http://host.docker.internal:8091
