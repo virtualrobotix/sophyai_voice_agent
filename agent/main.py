@@ -2663,6 +2663,10 @@ FORMATO TTS:
         elif track.kind == rtc.TrackKind.KIND_AUDIO:
             # Avvia processing audio per questo partecipante
             participant_id = participant.identity
+            # FILTRO: Ignora audio da altri agent (evita loop di auto-risposta)
+            if participant_id.startswith("agent-"):
+                logger.info(f"🎤 [MULTI-AUDIO] Ignoro traccia audio da agent: {participant_id}")
+                return
             if participant_id not in audio_processing_tasks:
                 logger.info(f"🎤 [MULTI-AUDIO] Nuova traccia audio da {participant_id}")
                 task = asyncio.create_task(process_participant_audio(participant_id, track))
