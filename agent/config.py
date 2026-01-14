@@ -25,7 +25,7 @@ class LiveKitConfig:
 class OllamaConfig:
     """Configurazione Ollama"""
     host: str = field(default_factory=lambda: os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "gpt-oss"))
+    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "devstral-small-2:latest"))
 
 
 @dataclass
