@@ -64,7 +64,17 @@ FORMATO TTS:
     ('elevenlabs_stability', '50'),
     ('elevenlabs_similarity', '75'),
     ('elevenlabs_style', '0'),
-    ('elevenlabs_boost', 'false')
+    ('elevenlabs_boost', 'false'),
+    -- Remote LLM Server settings
+    ('remote_server_url', ''),
+    ('remote_server_token', ''),
+    ('remote_server_collection', ''),
+    -- Voice Activation settings
+    ('wake_timeout_seconds', '20'),
+    ('vad_energy_threshold', '40'),
+    ('speech_energy_threshold', '100'),
+    ('silence_threshold', '30'),
+    ('tts_cooldown_seconds', '5')
 ON CONFLICT (key) DO NOTHING;
 
 -- Function to update updated_at timestamp

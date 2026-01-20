@@ -358,6 +358,34 @@ async def reset_timing():
     return {"status": "ok", "message": "Stats reset"}
 
 
+@app.post("/api/agent/restart")
+async def restart_agent():
+    """Riavvia il container dell'agent per applicare nuovi settings"""
+    import asyncio
+    
+    try:
+        # Esegui docker restart in background
+        process = await asyncio.create_subprocess_exec(
+            "docker", "restart", "voice-agent-worker",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+        
+        if process.returncode == 0:
+            logger.info("🔄 Agent riavviato con successo")
+            return {"status": "ok", "message": "Agent riavviato. I nuovi settings saranno applicati."}
+        else:
+            error_msg = stderr.decode() if stderr else "Errore sconosciuto"
+            logger.error(f"Errore restart agent: {error_msg}")
+            return {"status": "error", "message": f"Errore: {error_msg}"}
+    except asyncio.TimeoutError:
+        return {"status": "error", "message": "Timeout durante il riavvio"}
+    except Exception as e:
+        logger.error(f"Errore restart agent: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 # ==================== Database Connection ====================
 _db = None
 
@@ -378,8 +406,23 @@ async def get_database():
 async def startup_event():
     """Initialize database connection on startup."""
     try:
-        await get_database()
+        db = await get_database()
         logger.info("Database connesso")
+        
+        # Assicura che i nuovi voice settings esistano con valori di default
+        if db:
+            voice_defaults = {
+                "wake_timeout_seconds": "20",
+                "vad_energy_threshold": "40",
+                "speech_energy_threshold": "100",
+                "silence_threshold": "30",
+                "tts_cooldown_seconds": "5"
+            }
+            for key, default_value in voice_defaults.items():
+                existing = await db.get_setting(key)
+                if existing is None:
+                    await db.set_setting(key, default_value)
+                    logger.info(f"📝 Aggiunto setting default: {key}={default_value}")
     except Exception as e:
         logger.warning(f"Database non disponibile all'avvio: {e}")
 
@@ -420,7 +463,16 @@ async def get_settings():
             "tts_engine": os.getenv("DEFAULT_TTS", "edge"),
             "tts_language": "it",
             "system_prompt": "",
-            "context_injection": ""
+            "context_injection": "",
+            "remote_server_url": "",
+            "remote_server_token": "",
+            "remote_server_collection": "",
+            # Voice Activation defaults
+            "wake_timeout_seconds": "20",
+            "vad_energy_threshold": "40",
+            "speech_energy_threshold": "100",
+            "silence_threshold": "30",
+            "tts_cooldown_seconds": "5"
         }
     
     try:
@@ -1743,6 +1795,191 @@ async def _download_vibevoice_model_task(model: str, model_id: str):
 async def get_vibevoice_download_progress():
     """Ritorna lo stato del download in corso"""
     return _vibevoice_download_status
+
+
+# ==================== Remote LLM Server API ====================
+
+class RemoteServerTestRequest(BaseModel):
+    """Test remote server connection request."""
+    server_url: str
+    token: str = ""
+    collection: str = ""
+
+
+@app.post("/api/remote/test")
+async def test_remote_server(request: RemoteServerTestRequest):
+    """
+    Testa la connessione a un server LLM remoto.
+    
+    Invia un messaggio di test e verifica la risposta.
+    """
+    try:
+        # Test diretto senza usare RemoteLLM per evitare dipendenze LiveKit
+        headers = {"Content-Type": "application/json"}
+        if request.token:
+            headers["Authorization"] = f"Bearer {request.token}"
+        
+        test_payload = {
+            "message": "test connection",
+            "collection": request.collection
+        }
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Prova health check
+            try:
+                health_resp = await client.get(
+                    f"{request.server_url}/health",
+                    headers=headers
+                )
+                if health_resp.status_code == 200:
+                    return {
+                        "status": "ok",
+                        "message": "Server raggiungibile",
+                        "endpoint": "/health"
+                    }
+            except:
+                pass
+            
+            # Prova chat endpoint
+            resp = await client.post(
+                f"{request.server_url}/chat",
+                headers=headers,
+                json=test_payload
+            )
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "status": "ok",
+                    "message": "Connessione riuscita",
+                    "endpoint": "/chat",
+                    "response_preview": data.get("response", "")[:100]
+                }
+            elif resp.status_code == 401:
+                return {
+                    "status": "error",
+                    "message": "Token non valido o mancante",
+                    "code": 401
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"Errore HTTP {resp.status_code}",
+                    "code": resp.status_code
+                }
+                
+    except httpx.TimeoutException:
+        return {"status": "error", "message": "Timeout: server non risponde"}
+    except httpx.ConnectError:
+        return {"status": "error", "message": f"Impossibile connettersi a {request.server_url}"}
+    except Exception as e:
+        logger.error(f"Errore test server remoto: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/remote/collections")
+async def get_remote_collections(server_url: str, token: str = ""):
+    """
+    Recupera la lista delle collection disponibili dal server remoto.
+    """
+    try:
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{server_url}/collections",
+                headers=headers
+            )
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                # Supporta vari formati di risposta
+                if isinstance(data, list):
+                    return {"collections": data, "count": len(data)}
+                elif isinstance(data, dict):
+                    collections = data.get("collections", data.get("data", []))
+                    return {"collections": collections, "count": len(collections)}
+                return {"collections": [], "count": 0}
+            else:
+                return {"collections": [], "error": f"HTTP {resp.status_code}"}
+                
+    except Exception as e:
+        logger.error(f"Errore recupero collections: {e}")
+        return {"collections": [], "error": str(e)}
+
+
+class RemoteServerSelectRequest(BaseModel):
+    """Select remote server request."""
+    server_url: str
+    token: str = ""
+    collection: str = ""
+
+
+@app.post("/api/remote/select")
+async def select_remote_server(request: RemoteServerSelectRequest):
+    """
+    Seleziona un server LLM remoto e salva la configurazione.
+    """
+    db = await get_database()
+    
+    if db:
+        try:
+            await db.set_setting("llm_provider", "remote")
+            await db.set_setting("remote_server_url", request.server_url)
+            await db.set_setting("remote_server_token", request.token)
+            await db.set_setting("remote_server_collection", request.collection)
+        except Exception as e:
+            logger.warning(f"Errore salvataggio in DB: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    logger.info(f"🖥️ Server remoto selezionato: {request.server_url}, collection={request.collection}")
+    
+    return {
+        "status": "ok",
+        "provider": "remote",
+        "server_url": request.server_url,
+        "collection": request.collection
+    }
+
+
+@app.get("/api/remote/config")
+async def get_remote_config():
+    """
+    Recupera la configurazione del server remoto salvata.
+    """
+    db = await get_database()
+    
+    if db is None:
+        return {
+            "server_url": "",
+            "token": "",
+            "collection": "",
+            "configured": False
+        }
+    
+    try:
+        server_url = await db.get_setting("remote_server_url") or ""
+        token = await db.get_setting("remote_server_token") or ""
+        collection = await db.get_setting("remote_server_collection") or ""
+        
+        return {
+            "server_url": server_url,
+            "token": token,
+            "collection": collection,
+            "configured": bool(server_url)
+        }
+        
+    except Exception as e:
+        logger.error(f"Errore lettura config remote: {e}")
+        return {
+            "server_url": "",
+            "token": "",
+            "collection": "",
+            "configured": False,
+            "error": str(e)
+        }
 
 
 # Serve file statici

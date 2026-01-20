@@ -672,6 +672,65 @@
             color: var(--text-muted);
         }
 
+        /* Wake Word Indicator */
+        .wake-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.2), rgba(34, 197, 94, 0.15));
+            border: 1px solid rgba(74, 222, 128, 0.4);
+            border-radius: 20px;
+            margin-left: 12px;
+            animation: wake-pulse 2s ease-in-out infinite;
+        }
+
+        .wake-indicator.hidden {
+            display: none;
+        }
+
+        .wake-icon {
+            font-size: 1rem;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        .wake-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4ade80;
+        }
+
+        .wake-countdown {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        @keyframes wake-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+            50% { box-shadow: 0 0 12px 2px rgba(74, 222, 128, 0.3); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+
+        .wake-indicator.expiring {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15));
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+
+        .wake-indicator.expiring .wake-text,
+        .wake-indicator.expiring .wake-countdown {
+            color: #fbbf24;
+        }
+
         .audio-wave {
             display: flex;
             align-items: center;
@@ -1427,6 +1486,12 @@
             <div class="voice-status-bar">
                 <span class="voice-status-text" id="voice-status">🔇 Microfono disattivato</span>
                 <span class="voice-hint" id="voice-hint">Clicca 🎙️ per attivare</span>
+                <!-- Wake Word Status Indicator -->
+                <div class="wake-indicator hidden" id="wake-indicator">
+                    <span class="wake-icon">🎤</span>
+                    <span class="wake-text" id="wake-text">Ascolto attivo</span>
+                    <span class="wake-countdown" id="wake-countdown">20s</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1534,15 +1599,21 @@
             connected: false,
             micActive: false,
             speaking: false,
+            sophySpeaking: false,  // True quando Sophy sta parlando (TTS attivo)
             videoActive: false,
             participants: new Map(),  // Map<identity, {name, isAgent}>
+            voiceInterruptEnabled: true,  // Abilita interruzione vocale automatica
+            audioAnalyser: null,
+            micStream: null,
             agentModeActive: false,   // Toggle per forzare comunicazione con Sophy
             screenShareActive: false,
             localVideoTrack: null,
             remoteVideoTrack: null,
             screenShareTrack: null,
             uploadedImageBase64: null,  // Immagine caricata in base64
-            receivedMessageIds: new Set()  // Set per tracciare ID messaggi ricevuti (anti-duplicati)
+            receivedMessageIds: new Set(),  // Set per tracciare ID messaggi ricevuti (anti-duplicati)
+            wakeSessionActive: false,  // Wake word session attiva
+            wakeCountdown: 0  // Countdown in secondi
         };
 
         // Elements
@@ -1583,7 +1654,11 @@
             participantsList: document.getElementById('participants-list'),
             participantCount: document.getElementById('participant-count'),
             // Agent toggle
-            agentToggleBtn: document.getElementById('agent-toggle-btn')
+            agentToggleBtn: document.getElementById('agent-toggle-btn'),
+            // Wake word elements
+            wakeIndicator: document.getElementById('wake-indicator'),
+            wakeText: document.getElementById('wake-text'),
+            wakeCountdown: document.getElementById('wake-countdown')
         };
 
         // Nascondi video container inizialmente
@@ -1780,6 +1855,24 @@
                         const audio = track.attach();
                         audio.autoplay = true;
                         document.body.appendChild(audio);
+                        
+                        // Traccia quando Sophy sta parlando (per voice interrupt)
+                        const isAgent = participant.identity.toLowerCase().includes('agent') || 
+                                       participant.identity.toLowerCase().includes('sophy');
+                        if (isAgent) {
+                            audio.addEventListener('playing', () => {
+                                state.sophySpeaking = true;
+                                console.log('🔊 Sophy sta parlando...');
+                            });
+                            audio.addEventListener('pause', () => {
+                                state.sophySpeaking = false;
+                                console.log('🔇 Sophy ha finito di parlare');
+                            });
+                            audio.addEventListener('ended', () => {
+                                state.sophySpeaking = false;
+                                console.log('🔇 Sophy ha finito di parlare');
+                            });
+                        }
                     } else if (track.kind === 'video') {
                         // #region agent log
                         fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:videoTrack',message:'Video track gestito',data:{participantIdentity:participant.identity,participantName:participant.name,localIdentity:state.room?.localParticipant?.identity},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-B'})}).catch(()=>{});
@@ -1915,6 +2008,12 @@
                                 elements.analyzeImageBtn.disabled = false;
                                 elements.analyzeImageBtn.textContent = '🔍 Analizza';
                             }
+                        } else if (msg.type === 'wake_status') {
+                            // Gestione stato wake session
+                            handleWakeStatus(msg.active, msg.remaining_seconds || 0);
+                        } else if (msg.type === 'wake_countdown') {
+                            // Aggiornamento countdown wake
+                            handleWakeCountdown(msg.remaining_seconds || 0);
                         }
                     } catch (e) {}
                 });
@@ -2016,6 +2115,9 @@
                 elements.statusText.textContent = 'Connesso';
                 initModal.hide();
                 elements.voiceStatus.textContent = 'Parla con Sophy...';
+                
+                // Inizializza sistema di interruzione vocale automatica
+                setupVoiceInterrupt();
                 
                 // Mostra controlli video dopo la connessione
                 if (elements.videoControls) {
@@ -2142,6 +2244,57 @@
             const data = new TextEncoder().encode(JSON.stringify({ type: 'interrupt' }));
             state.room.localParticipant.publishData(data, { reliable: true });
             elements.voiceStatus.textContent = '✋ Interrotto';
+            state.sophySpeaking = false;
+        }
+        
+        // Setup voice activity detection for auto-interrupt
+        async function setupVoiceInterrupt() {
+            try {
+                // Ottieni accesso al microfono per l'analisi
+                state.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(state.micStream);
+                state.audioAnalyser = audioContext.createAnalyser();
+                state.audioAnalyser.fftSize = 256;
+                source.connect(state.audioAnalyser);
+                
+                // Loop di monitoraggio
+                const dataArray = new Uint8Array(state.audioAnalyser.frequencyBinCount);
+                let lastInterruptTime = 0;
+                
+                function checkVoiceActivity() {
+                    if (!state.connected || !state.voiceInterruptEnabled) {
+                        requestAnimationFrame(checkVoiceActivity);
+                        return;
+                    }
+                    
+                    state.audioAnalyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                    
+                    // Log periodico per debug (ogni 60 frame ~ 1 secondo)
+                    if (Math.random() < 0.016) { // ~1 log al secondo
+                        console.log(`🎤 Voice check: sophySpeaking=${state.sophySpeaking}, avg=${average.toFixed(1)}, micActive=${state.micActive}`);
+                    }
+                    
+                    // Se Sophy sta parlando e l'utente ha un volume significativo
+                    if (state.sophySpeaking && average > 30 && state.micActive) {
+                        const now = Date.now();
+                        // Evita interrupt multipli troppo ravvicinati (debounce 500ms)
+                        if (now - lastInterruptTime > 500) {
+                            console.log('🎤 Voce utente rilevata durante TTS - auto interrupt');
+                            interruptSpeech();
+                            lastInterruptTime = now;
+                        }
+                    }
+                    
+                    requestAnimationFrame(checkVoiceActivity);
+                }
+                
+                checkVoiceActivity();
+                console.log('✅ Voice interrupt system initialized');
+            } catch (e) {
+                console.warn('⚠️ Voice interrupt not available:', e);
+            }
         }
 
         // Send text message to agent
@@ -2837,6 +2990,66 @@
             originalAddMessage(text, role, messageId);
             saveMessageToDB(text, role, messageId);
         };
+
+        // ==================== Wake Word System ====================
+        
+        function handleWakeStatus(active, remainingSeconds) {
+            state.wakeSessionActive = active;
+            state.wakeCountdown = remainingSeconds;
+            
+            if (elements.wakeIndicator) {
+                if (active) {
+                    elements.wakeIndicator.classList.remove('hidden');
+                    elements.wakeIndicator.classList.remove('expiring');
+                    if (elements.wakeText) {
+                        elements.wakeText.textContent = 'Ascolto attivo';
+                    }
+                    if (elements.wakeCountdown) {
+                        elements.wakeCountdown.textContent = `${remainingSeconds}s`;
+                    }
+                    // Aggiorna status bar
+                    if (elements.voiceStatus) {
+                        elements.voiceStatus.textContent = '🎤 Hey Sophy! Sto ascoltando...';
+                    }
+                    console.log(`🎤 Wake session ATTIVATA (${remainingSeconds}s)`);
+                } else {
+                    elements.wakeIndicator.classList.add('hidden');
+                    // Ripristina status bar
+                    if (elements.voiceStatus && state.micActive) {
+                        elements.voiceStatus.textContent = '🎤 Parla con Sophy...';
+                    }
+                    console.log('🎤 Wake session DISATTIVATA');
+                }
+            }
+        }
+        
+        function handleWakeCountdown(remainingSeconds) {
+            state.wakeCountdown = remainingSeconds;
+            
+            if (elements.wakeCountdown) {
+                elements.wakeCountdown.textContent = `${remainingSeconds}s`;
+            }
+            
+            // Aggiungi effetto visivo quando sta per scadere (< 5 secondi)
+            if (elements.wakeIndicator) {
+                if (remainingSeconds <= 5 && remainingSeconds > 0) {
+                    elements.wakeIndicator.classList.add('expiring');
+                    if (elements.wakeText) {
+                        elements.wakeText.textContent = 'In scadenza...';
+                    }
+                } else if (remainingSeconds > 5) {
+                    elements.wakeIndicator.classList.remove('expiring');
+                    if (elements.wakeText) {
+                        elements.wakeText.textContent = 'Ascolto attivo';
+                    }
+                }
+            }
+            
+            // Se countdown arriva a 0, nascondi l'indicatore
+            if (remainingSeconds <= 0 && elements.wakeIndicator) {
+                handleWakeStatus(false, 0);
+            }
+        }
 
         // ==================== Agent Mode Toggle ====================
         

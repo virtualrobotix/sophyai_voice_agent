@@ -73,6 +73,7 @@ services:
       - ./web:/app/web:ro  # Monta directory web per vedere modifiche immediate
       - ./server.py:/app/server.py:ro  # Server con nuove API
       - ./db:/app/db:ro  # Modulo database
+      - /var/run/docker.sock:/var/run/docker.sock  # Per permettere restart agent
     depends_on:
       postgres:
         condition: service_healthy

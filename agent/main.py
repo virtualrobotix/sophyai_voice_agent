@@ -5,10 +5,13 @@ Agent principale che orchestra STT, LLM e TTS per conversazioni vocali.
 
 import asyncio
 import os
+import re
 import sys
 import time
 import uuid
-from typing import Optional
+import threading
+import queue
+from typing import Optional, Callable
 
 import json
 import aiohttp
@@ -43,6 +46,7 @@ import io
 from PIL import Image
 
 from .config import config
+from .llm.remote_llm import RemoteLLM
 
 # Callback globale per inviare messaggi al frontend
 _send_transcript_callback = None
@@ -65,6 +69,321 @@ _agent_session_global = None  # Sessione agent per TTS
 _human_participants_count = 1  # Numero di partecipanti umani (esclude agent)
 _force_agent_response = False  # Se True, l'agent risponde sempre (toggle dal frontend)
 _room_context = None  # Riferimento al contesto della room per contare partecipanti
+
+# ==================== WAKE WORD SYSTEM ====================
+# Struttura per wake session per utente
+# Formato: {participant_id: {"active": bool, "last_activity": float, "expires_at": float}}
+from typing import Dict
+_wake_sessions: Dict[str, dict] = {}
+_wake_countdown_task = None  # Task asincrono per countdown
+_send_wake_callback = None  # Callback per inviare aggiornamenti wake al frontend
+
+# ==================== CONFIGURABLE VOICE SETTINGS ====================
+# Questi valori vengono caricati dal database all'avvio
+# Default values (saranno sovrascritti da load_voice_settings_from_db)
+WAKE_TIMEOUT_SECONDS = 20  # Timeout di silenzio per disattivazione automatica
+VAD_ENERGY_THRESHOLD = 40  # Soglia energia per barge-in VAD
+SPEECH_ENERGY_THRESHOLD = 100  # Soglia energia per rilevamento parlato
+SILENCE_THRESHOLD = 30  # Frames di silenzio prima di terminare ascolto
+
+# Pattern regex fuzzy per riconoscere wake word con varianti Whisper
+# Cattura: "hey sophy", "ehi sophie", "e sofi", "a softie", "soffì", "e i soffi", "safi", ecc.
+WAKE_WORD_PATTERNS = [
+    # Pattern principale: prefisso opzionale + varianti di "sophy/sofi/sophie/safi"
+    r'(hey|ehi|ei|e\s*i?|a|ok|ciao|ge|ghe)\s*,?\s*(soph[yie]+|sof[fìiy]+n?[ie]*|soft[iye]+|isof[iy]|saf[iy])',
+    # Varianti con "e i" separato (Whisper spesso trascrive così)
+    r'e\s+i\s+sof',
+    # Varianti con spazi
+    r'(hey|ehi)\s+soph',
+    r'(hey|ehi)\s+sof',
+    r'(hey|ehi)\s+saf',
+    # Varianti scritte insieme
+    r'(heysoph|ehisoph|eisoph)',
+    r'(heysofi|ehisofi|eisofi)',
+    r'(heysafi|ehisafi)',
+    # Fallback per "sofi/soffi/soffini/safi" isolato con prefisso
+    r'\b(e|a|ei)\s+sof[fiy]+n?[ie]*\b',
+    r'\b(e|a|ei)\s+saf[iy]\b',
+    # Varianti "soffini", "soffin", "soffi" 
+    r'\bsoff[iy]n[ie]?\b',
+    # Varianti russe/cirilliche che Whisper può generare
+    r'офie',
+]
+
+# ==================== TTS INTERRUPT SYSTEM ====================
+# NOTA: Usa FILE come flag invece di variabile globale
+# perché LiveKit agents può isolare le variabili tra processi/task
+_TTS_FLAG_FILE = "/tmp/sophyai_tts_speaking.flag"
+_TTS_END_TIME_FILE = "/tmp/sophyai_tts_end_time.txt"
+TTS_COOLDOWN_SECONDS = 5.0  # Scarta audio per Ns dopo fine TTS (configurabile da DB)
+
+
+def set_tts_speaking(speaking: bool):
+    """Imposta lo stato di speaking del TTS usando un file flag"""
+    import os
+    
+    # #region agent log - H11: traccia chiamate set_tts_speaking
+    import json as _json
+    try:
+        with open("/app/config/debug.log", "a") as _f:
+            _f.write(_json.dumps({"hypothesisId": "H11", "location": "set_tts_speaking", "message": f"SET TTS SPEAKING = {speaking}", "data": {"speaking": speaking, "pid": os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+    except: pass
+    # #endregion
+    
+    try:
+        if speaking:
+            # Crea il file flag
+            with open(_TTS_FLAG_FILE, "w") as f:
+                f.write("1")
+            # Rimuovi il file di end time se esiste
+            if os.path.exists(_TTS_END_TIME_FILE):
+                os.remove(_TTS_END_TIME_FILE)
+            logger.debug("🔊 TTS iniziato (file flag creato)")
+        else:
+            # Rimuovi il file flag
+            if os.path.exists(_TTS_FLAG_FILE):
+                os.remove(_TTS_FLAG_FILE)
+            # Salva il timestamp di fine TTS per il cooldown
+            with open(_TTS_END_TIME_FILE, "w") as f:
+                f.write(str(time.time()))
+            logger.debug("🔊 TTS terminato (file flag rimosso, cooldown iniziato)")
+    except Exception as e:
+        logger.error(f"Errore gestione file flag TTS: {e}")
+
+
+def is_tts_speaking() -> bool:
+    """Ritorna True se il TTS sta parlando (controlla file flag)"""
+    import os
+    result = os.path.exists(_TTS_FLAG_FILE)
+    
+    # #region agent log - H11: traccia lettura flag (solo se True)
+    if result:
+        import json as _json
+        try:
+            with open("/app/config/debug.log", "a") as _f:
+                _f.write(_json.dumps({"hypothesisId": "H11", "location": "is_tts_speaking", "message": "READ TTS FLAG = True (file exists)", "data": {"pid": os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+        except: pass
+    # #endregion
+    
+    return result
+
+
+def is_in_tts_cooldown() -> bool:
+    """Ritorna True se siamo nel periodo di cooldown dopo il TTS"""
+    import os
+    if not os.path.exists(_TTS_END_TIME_FILE):
+        return False
+    try:
+        with open(_TTS_END_TIME_FILE, "r") as f:
+            end_time = float(f.read().strip())
+        elapsed = time.time() - end_time
+        in_cooldown = elapsed < TTS_COOLDOWN_SECONDS
+        
+        # #region agent log - H14: traccia cooldown
+        if in_cooldown:
+            import json as _json
+            try:
+                with open("/app/config/debug.log", "a") as _f:
+                    _f.write(_json.dumps({"hypothesisId": "H14", "location": "is_in_tts_cooldown", "message": "IN TTS COOLDOWN", "data": {"elapsed": round(elapsed, 2), "remaining": round(TTS_COOLDOWN_SECONDS - elapsed, 2)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+            except: pass
+        # #endregion
+        
+        return in_cooldown
+    except:
+        return False
+
+
+async def interrupt_tts_if_speaking():
+    """Interrompe il TTS se sta parlando"""
+    global _agent_session_global
+    
+    if is_tts_speaking() and _agent_session_global:
+        logger.info("✋ Interruzione automatica TTS - utente sta parlando")
+        try:
+            await _agent_session_global.interrupt()
+            set_tts_speaking(False)  # Reset flag
+            return True
+        except Exception as e:
+            logger.error(f"Errore interruzione TTS: {e}")
+    return False
+
+
+async def _async_interrupt_from_vad(session):
+    """
+    Funzione async chiamata dal thread VAD per interrompere il TTS.
+    Questa funzione viene eseguita nel loop asyncio principale.
+    """
+    if not is_tts_speaking():
+        return False
+    
+    logger.info("🎤 [VAD] Esecuzione interrupt dal thread VAD")
+    try:
+        # Interrompi il TTS
+        result = session.interrupt()
+        if asyncio.iscoroutine(result):
+            await result
+        
+        # Reset flag e cancella LLM
+        set_tts_speaking(False)
+        request_cancel_llm()
+        
+        logger.info("🎤 [VAD] Interrupt eseguito con successo")
+        return True
+    except Exception as e:
+        logger.error(f"🎤 [VAD] Errore durante interrupt: {e}")
+        return False
+
+
+# ==================== LLM CANCELLATION SYSTEM ====================
+_cancel_llm_response = False  # Flag per annullare risposte LLM in corso
+
+
+def request_cancel_llm():
+    """Richiede la cancellazione della risposta LLM in corso"""
+    global _cancel_llm_response
+    _cancel_llm_response = True
+    logger.info("🛑 Richiesta cancellazione LLM")
+
+
+def should_cancel_llm() -> bool:
+    """
+    Controlla se la risposta LLM deve essere cancellata.
+    Resetta il flag dopo la lettura (one-shot).
+    """
+    global _cancel_llm_response
+    if _cancel_llm_response:
+        _cancel_llm_response = False
+        return True
+    return False
+
+
+def reset_cancel_llm():
+    """Resetta il flag di cancellazione LLM"""
+    global _cancel_llm_response
+    _cancel_llm_response = False
+
+
+# ==================== VAD MONITOR (Thread Separato per Barge-in) ====================
+class VADMonitor:
+    """
+    Monitora l'audio in un thread separato per rilevare barge-in.
+    Questo thread gira indipendentemente dal loop asyncio principale,
+    permettendo di rilevare la voce dell'utente anche durante il TTS.
+    """
+    
+    def __init__(self, interrupt_callback: Callable[[], None], energy_threshold: float = 150):
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+        self._interrupt_callback = interrupt_callback
+        self._audio_queue: queue.Queue = queue.Queue(maxsize=1000)  # Buffer limitato
+        self._energy_threshold = energy_threshold
+        self._last_interrupt_time = 0
+        self._interrupt_cooldown = 0.5  # Minimo 500ms tra interrupt
+        self._consecutive_speech_frames = 0
+        self._min_speech_frames = 3  # Richiedi almeno 3 frame consecutivi con voce
+    
+    def start(self):
+        """Avvia il thread di monitoraggio VAD"""
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(target=self._monitor_loop, daemon=True, name="VADMonitor")
+        self._thread.start()
+        logger.info("🎤 [VAD] Monitor thread avviato")
+    
+    def stop(self):
+        """Ferma il thread di monitoraggio VAD"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=1.0)
+            self._thread = None
+        logger.info("🎤 [VAD] Monitor thread fermato")
+    
+    def feed_audio(self, audio_data: bytes):
+        """
+        Alimenta il VAD monitor con dati audio.
+        Chiamato dal loop audio principale per ogni frame.
+        Non-blocking: scarta dati se la coda è piena.
+        """
+        if not self._running:
+            return
+        try:
+            self._audio_queue.put_nowait(audio_data)
+        except queue.Full:
+            pass  # Scarta se la coda è piena (non bloccare mai il chiamante)
+    
+    def _calculate_energy(self, audio_data: bytes) -> float:
+        """Calcola l'energia media dell'audio (16-bit PCM)"""
+        try:
+            samples = [int.from_bytes(audio_data[i:i+2], 'little', signed=True) 
+                      for i in range(0, len(audio_data), 2)]
+            if samples:
+                return sum(abs(s) for s in samples) / len(samples)
+        except Exception:
+            pass
+        return 0
+    
+    def _monitor_loop(self):
+        """Loop principale del thread VAD"""
+        logger.info("🎤 [VAD] Loop di monitoraggio avviato")
+        frame_count = 0
+        last_log_time = time.time()
+        
+        while self._running:
+            try:
+                # Attendi audio con timeout breve
+                audio_data = self._audio_queue.get(timeout=0.05)
+                frame_count += 1
+                
+                # Log ogni 2 secondi per debug
+                now = time.time()
+                if now - last_log_time >= 2.0:
+                    tts_state = is_tts_speaking()
+                    logger.info(f"🎤 [VAD] Frames ricevuti: {frame_count} negli ultimi 2s, TTS attivo: {tts_state}")
+                    frame_count = 0
+                    last_log_time = now
+                
+                # Calcola energia
+                energy = self._calculate_energy(audio_data)
+                
+                # Se TTS è attivo e c'è voce significativa
+                if is_tts_speaking() and energy > self._energy_threshold:
+                    self._consecutive_speech_frames += 1
+                    
+                    # Log per debug (ogni 5 frame per non spammare)
+                    if self._consecutive_speech_frames % 5 == 1:
+                        logger.debug(f"🎤 [VAD] Voce rilevata durante TTS: energia={energy:.0f}, frames={self._consecutive_speech_frames}")
+                    
+                    # Se abbastanza frame consecutivi con voce, interrompi
+                    if self._consecutive_speech_frames >= self._min_speech_frames:
+                        current_time = time.time()
+                        if current_time - self._last_interrupt_time > self._interrupt_cooldown:
+                            logger.info(f"🎤 [VAD] BARGE-IN RILEVATO! Energia={energy:.0f}, frames={self._consecutive_speech_frames}")
+                            self._interrupt_callback()
+                            self._last_interrupt_time = current_time
+                            self._consecutive_speech_frames = 0  # Reset
+                else:
+                    # Reset contatore se non c'è voce o TTS non attivo
+                    self._consecutive_speech_frames = 0
+                    
+            except queue.Empty:
+                # Timeout normale, continua
+                self._consecutive_speech_frames = 0
+                continue
+            except Exception as e:
+                logger.error(f"🎤 [VAD] Errore nel loop: {e}")
+                time.sleep(0.1)  # Evita busy loop in caso di errori ripetuti
+        
+        logger.info("🎤 [VAD] Loop di monitoraggio terminato")
+
+
+# Istanza globale del VAD monitor
+_vad_monitor: Optional[VADMonitor] = None
+
+
+def get_vad_monitor() -> Optional[VADMonitor]:
+    """Ritorna l'istanza globale del VAD monitor"""
+    return _vad_monitor
 
 
 def set_human_participants_count(count: int):
@@ -93,6 +412,290 @@ def get_should_require_mention() -> bool:
     if _human_participants_count <= 1:
         return False
     return True
+
+
+# ==================== WAKE SESSION FUNCTIONS ====================
+
+def set_wake_callback(callback):
+    """Imposta il callback per inviare aggiornamenti wake al frontend"""
+    global _send_wake_callback
+    _send_wake_callback = callback
+    logger.info("🎤 Wake callback impostato")
+
+
+def is_wake_trigger(text: str) -> bool:
+    """
+    Verifica se il testo contiene un wake trigger usando pattern fuzzy.
+    Gestisce varianti Whisper come "ehi sophie", "e sofi", "a softie", ecc.
+    """
+    import re
+    
+    # Normalizza: lowercase, rimuovi punteggiatura extra
+    normalized = text.lower().strip()
+    normalized = re.sub(r'[,.\-!?\'"]', ' ', normalized)
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    
+    # Controlla ogni pattern
+    for pattern in WAKE_WORD_PATTERNS:
+        if re.search(pattern, normalized, re.IGNORECASE):
+            logger.info(f"🎤 Wake trigger rilevato con pattern '{pattern}': '{text}'")
+            return True
+    
+    return False
+
+
+def get_wake_session(participant_id: str) -> dict:
+    """Ottiene la wake session per un partecipante"""
+    return _wake_sessions.get(participant_id, {"active": False, "last_activity": 0, "expires_at": 0})
+
+
+def is_wake_active(participant_id: str = None) -> bool:
+    """
+    Verifica se c'è una wake session attiva E con timer partito.
+    Se participant_id è None, controlla se qualsiasi sessione è attiva.
+    NOTA: Una sessione è considerata attiva solo se timer_started=True.
+    """
+    current_time = time.time()
+    
+    if participant_id:
+        session = _wake_sessions.get(participant_id)
+        if (session and 
+            session.get("active") and 
+            session.get("timer_started", False) and 
+            session.get("expires_at", 0) > current_time):
+            return True
+        return False
+    
+    # Controlla tutte le sessioni
+    for pid, session in _wake_sessions.items():
+        if (session.get("active") and 
+            session.get("timer_started", False) and 
+            session.get("expires_at", 0) > current_time):
+            return True
+    return False
+
+
+def activate_wake_session(participant_id: str, start_timer: bool = False):
+    """
+    Attiva una wake session per un partecipante.
+    Se start_timer=False, il timer NON parte subito (deve essere avviato dopo TTS "Dimmi").
+    """
+    global _wake_sessions
+    current_time = time.time()
+    
+    # Se start_timer=False, expires_at è nel futuro lontano (timer non attivo)
+    # Verrà impostato correttamente da start_wake_timer()
+    expires_at = current_time + WAKE_TIMEOUT_SECONDS if start_timer else current_time + 9999
+    
+    _wake_sessions[participant_id] = {
+        "active": True,
+        "last_activity": current_time,
+        "expires_at": expires_at,
+        "timer_started": start_timer
+    }
+    
+    logger.info(f"🎤 Wake session ATTIVATA per {participant_id} (timer_started={start_timer})")
+    
+    # Invia notifica al frontend
+    if _send_wake_callback:
+        remaining = WAKE_TIMEOUT_SECONDS if start_timer else 0
+        asyncio.create_task(_send_wake_callback({
+            "type": "wake_status",
+            "active": True,
+            "participant_id": participant_id,
+            "remaining_seconds": remaining,
+            "waiting_for_dimmi": not start_timer
+        }))
+
+
+def start_wake_timer(participant_id: str):
+    """Avvia il timer per una wake session (da chiamare DOPO TTS 'Dimmi')"""
+    global _wake_sessions
+    
+    if participant_id not in _wake_sessions:
+        return False
+    
+    session = _wake_sessions[participant_id]
+    if not session.get("active"):
+        return False
+    
+    current_time = time.time()
+    session["expires_at"] = current_time + WAKE_TIMEOUT_SECONDS
+    session["timer_started"] = True
+    session["last_activity"] = current_time
+    
+    logger.info(f"🎤 Wake timer AVVIATO per {participant_id} (scade tra {WAKE_TIMEOUT_SECONDS}s)")
+    
+    # Invia notifica al frontend
+    if _send_wake_callback:
+        asyncio.create_task(_send_wake_callback({
+            "type": "wake_status",
+            "active": True,
+            "participant_id": participant_id,
+            "remaining_seconds": WAKE_TIMEOUT_SECONDS,
+            "waiting_for_dimmi": False
+        }))
+    
+    return True
+
+
+async def handle_wake_word_detected(participant_id: str):
+    """
+    Gestisce il rilevamento di un wake word:
+    1. Attiva sessione (senza timer)
+    2. Pronuncia "Dimmi"
+    3. Avvia timer DOPO TTS
+    """
+    global _agent_session_global
+    
+    # Attiva sessione senza timer
+    activate_wake_session(participant_id, start_timer=False)
+    
+    # Pronuncia "Dimmi" se abbiamo la sessione
+    if _agent_session_global:
+        try:
+            set_tts_speaking(True)
+            logger.info(f"🎤 Pronuncio 'Dimmi' per {participant_id}")
+            await _agent_session_global.say("Dimmi")
+            set_tts_speaking(False)
+            
+            # ORA avvia il timer
+            start_wake_timer(participant_id)
+            logger.info(f"🎤 Timer avviato dopo 'Dimmi' per {participant_id}")
+        except Exception as e:
+            set_tts_speaking(False)
+            logger.error(f"Errore pronuncia 'Dimmi': {e}")
+    else:
+        # Fallback: avvia timer subito se non c'è sessione TTS
+        logger.warning("⚠️ Nessuna sessione TTS disponibile, avvio timer subito")
+        start_wake_timer(participant_id)
+
+
+def refresh_wake_session(participant_id: str):
+    """Resetta il timer di una wake session attiva"""
+    global _wake_sessions
+    
+    if participant_id not in _wake_sessions:
+        return False
+    
+    session = _wake_sessions[participant_id]
+    if not session.get("active"):
+        return False
+    
+    current_time = time.time()
+    expires_at = current_time + WAKE_TIMEOUT_SECONDS
+    
+    session["last_activity"] = current_time
+    session["expires_at"] = expires_at
+    
+    logger.debug(f"🎤 Wake session REFRESH per {participant_id} (scade tra {WAKE_TIMEOUT_SECONDS}s)")
+    return True
+
+
+def deactivate_wake_session(participant_id: str):
+    """Disattiva una wake session"""
+    global _wake_sessions
+    
+    if participant_id in _wake_sessions:
+        _wake_sessions[participant_id]["active"] = False
+        logger.info(f"🎤 Wake session DISATTIVATA per {participant_id}")
+        
+        # Invia notifica al frontend
+        if _send_wake_callback:
+            asyncio.create_task(_send_wake_callback({
+                "type": "wake_status",
+                "active": False,
+                "participant_id": participant_id,
+                "remaining_seconds": 0
+            }))
+
+
+def get_any_active_wake_participant() -> str:
+    """Ritorna l'ID del primo partecipante con wake session attiva (timer partito), o None"""
+    current_time = time.time()
+    for pid, session in _wake_sessions.items():
+        if (session.get("active") and 
+            session.get("timer_started", False) and 
+            session.get("expires_at", 0) > current_time):
+            return pid
+    return None
+
+
+async def wake_countdown_loop():
+    """
+    Task asincrono che gestisce il countdown delle wake sessions.
+    Invia aggiornamenti al frontend ogni secondo e disattiva sessioni scadute.
+    NOTA: Solo sessioni con timer_started=True vengono contate e scadono.
+    """
+    global _wake_sessions
+    
+    logger.info("🎤 Wake countdown loop avviato")
+    
+    while True:
+        try:
+            await asyncio.sleep(1)  # Controlla ogni secondo
+            
+            current_time = time.time()
+            sessions_to_deactivate = []
+            
+            for participant_id, session in _wake_sessions.items():
+                if not session.get("active"):
+                    continue
+                
+                # Ignora sessioni che aspettano ancora "Dimmi" (timer non partito)
+                if not session.get("timer_started", False):
+                    continue
+                
+                expires_at = session.get("expires_at", 0)
+                remaining = int(expires_at - current_time)
+                
+                if remaining <= 0:
+                    # Sessione scaduta
+                    sessions_to_deactivate.append(participant_id)
+                else:
+                    # Invia countdown al frontend
+                    if _send_wake_callback:
+                        try:
+                            await _send_wake_callback({
+                                "type": "wake_countdown",
+                                "participant_id": participant_id,
+                                "remaining_seconds": remaining
+                            })
+                        except Exception as e:
+                            logger.debug(f"Errore invio wake_countdown: {e}")
+            
+            # Disattiva sessioni scadute
+            for participant_id in sessions_to_deactivate:
+                logger.info(f"🎤 Wake session SCADUTA per {participant_id} (timeout {WAKE_TIMEOUT_SECONDS}s)")
+                deactivate_wake_session(participant_id)
+                
+        except asyncio.CancelledError:
+            logger.info("🎤 Wake countdown loop cancellato")
+            break
+        except Exception as e:
+            logger.error(f"Errore nel wake countdown loop: {e}")
+            await asyncio.sleep(1)
+
+
+def start_wake_countdown_task():
+    """Avvia il task di countdown wake (se non già avviato)"""
+    global _wake_countdown_task
+    
+    if _wake_countdown_task is None or _wake_countdown_task.done():
+        _wake_countdown_task = asyncio.create_task(wake_countdown_loop())
+        logger.info("🎤 Wake countdown task avviato")
+    
+    return _wake_countdown_task
+
+
+def stop_wake_countdown_task():
+    """Ferma il task di countdown wake"""
+    global _wake_countdown_task
+    
+    if _wake_countdown_task and not _wake_countdown_task.done():
+        _wake_countdown_task.cancel()
+        logger.info("🎤 Wake countdown task fermato")
+
 
 def set_transcript_callback(callback):
     global _send_transcript_callback, _sent_messages, _sent_message_ids, _message_counter, _stt_recent_hashes, _last_user_message
@@ -144,44 +747,106 @@ def detect_video_command(text: str) -> str | None:
     return None
 
 
-def should_agent_respond(text: str) -> tuple[bool, str]:
+def should_agent_respond(text: str, participant_id: str = "default") -> tuple[bool, str, bool]:
     """
-    Verifica se il messaggio contiene @sophyai o varianti.
-    Ritorna (True, testo_pulito) se l'agent deve rispondere, altrimenti (False, testo_originale).
-    Il testo_pulito ha rimosso il trigger per una risposta più naturale.
+    Verifica se il messaggio deve attivare una risposta dell'agent.
+    Ritorna (should_respond, testo_pulito, is_wake_trigger).
     
-    NOTA: Se c'è solo 1 utente o il flag _force_agent_response è attivo,
-    l'agent risponde sempre senza richiedere menzione.
+    Il sistema supporta:
+    1. Wake word "Hey Sophy" - attiva sessione di ascolto per 20s
+    2. Sessione wake attiva - risponde a tutto finché non scade
+    3. Trigger espliciti (@sophyai, sophy, ecc.)
+    4. Single user mode / force mode - risponde sempre
+    
+    is_wake_trigger è True solo se è stato rilevato un wake word (per non rispondere al wake stesso)
     """
     import re
     
-    # Se non è richiesta la menzione (1 utente o force mode), rispondi sempre
-    if not get_should_require_mention():
-        logger.info(f"🔔 Agent risponde automaticamente (single user o force mode): '{text[:50]}...'")
-        return (True, text)
+    # Filtro per "hallucination" di Whisper - frasi spurie generate durante silenzio/rumore
+    WHISPER_HALLUCINATIONS = [
+        "sottotitoli e revisione a cura di qtss",
+        "sottotitoli a cura di qtss",
+        "sottotitoli creati dalla comunità di amara.org",
+        "sottotitoli di amara.org",
+        "grazie per aver guardato",
+        "grazie per la visione",
+        "iscriviti al canale",
+        "metti mi piace",
+        "lascia un commento",
+        "thanks for watching",
+        "subscribe to the channel",
+        "like and subscribe",
+        "thank you for watching",
+        "music",
+        "musica",
+        "applausi",
+        "applause",
+        "silenzio",
+        "...",
+        "…",
+    ]
     
     text_lower = text.lower().strip()
 
-    # Trigger per attivare l'agent (in ordine di priorità)
-    triggers = ["@sophyai", "@sophy", "sophy ai", "sofyai", "sofy ai"]
+    # Ignora messaggi troppo corti o vuoti
+    if len(text_lower) < 3:
+        logger.debug(f"🔇 Messaggio troppo corto ignorato: '{text}'")
+        return (False, text, False)
+    
+    # Ignora hallucination di Whisper
+    for hallucination in WHISPER_HALLUCINATIONS:
+        if hallucination in text_lower or text_lower in hallucination:
+            logger.warning(f"🔇 Whisper hallucination ignorato: '{text}'")
+            return (False, text, False)
+    
+    # ==================== WAKE WORD DETECTION ====================
+    # Controlla se è un wake trigger ("Hey Sophy", "Ehi Sophy", ecc.)
+    if is_wake_trigger(text):
+        # NON attivare sessione qui - sarà gestito da handle_wake_word_detected
+        # Ritorna flag speciale: is_wake=True, should_respond=False
+        logger.info(f"🎤 WAKE WORD rilevato da {participant_id}: '{text}'")
+        # Ritorna (False, "", True) - non rispondere all'LLM, ma segnala wake word
+        return (False, "", True)
+    
+    # ==================== WAKE SESSION CHECK ====================
+    # Se c'è una wake session attiva per questo partecipante, rispondi e resetta timer
+    if is_wake_active(participant_id):
+        refresh_wake_session(participant_id)
+        logger.info(f"🎤 Wake session attiva per {participant_id}, rispondo a: '{text[:50]}...'")
+        return (True, text, False)
+    
+    # Controlla anche se c'è una wake session attiva per qualsiasi partecipante
+    # (utile in single-user mode dove non abbiamo sempre l'ID)
+    active_participant = get_any_active_wake_participant()
+    if active_participant:
+        refresh_wake_session(active_participant)
+        logger.info(f"🎤 Wake session attiva (partecipante: {active_participant}), rispondo a: '{text[:50]}...'")
+        return (True, text, False)
+    
+    # ==================== STANDARD TRIGGERS (FALLBACK) ====================
+    # Il wake word è il metodo principale. I trigger testuali (@sophyai) sono solo fallback
+    # per messaggi scritti, NON per il parlato
+    
+    # Se force mode è attivo dal pulsante, rispondi sempre (ma solo con pulsante, non single user)
+    if _force_agent_response:
+        logger.info(f"🔔 Agent risponde (force mode attivo dal pulsante): '{text[:50]}...'")
+        return (True, text, False)
+
+    # Trigger testuali (solo per chat scritta, non per parlato)
+    # Questi sono meno prioritari del wake word
+    triggers = ["@sophyai", "@sophy"]
 
     for trigger in triggers:
         if trigger in text_lower:
             # Rimuovi il trigger dal testo per una risposta più naturale
             cleaned_text = re.sub(re.escape(trigger), '', text, flags=re.IGNORECASE).strip()
-            # Rimuovi eventuali virgole o spazi extra all'inizio
             cleaned_text = re.sub(r'^[,\s]+', '', cleaned_text).strip()
-            logger.info(f"🔔 Agent attivato con trigger '{trigger}': '{text[:50]}...' -> '{cleaned_text[:50]}...'")
-            return (True, cleaned_text if cleaned_text else text)
+            logger.info(f"🔔 Agent attivato con trigger testuale '{trigger}': '{text[:50]}...'")
+            return (True, cleaned_text if cleaned_text else text, False)
 
-    # Controlla anche "sophy" da solo (senza @) ma solo se è una parola intera
-    if re.search(r'\bsophy\b', text_lower):
-        cleaned_text = re.sub(r'\bsophy\b', '', text, flags=re.IGNORECASE).strip()
-        cleaned_text = re.sub(r'^[,\s]+', '', cleaned_text).strip()
-        logger.info(f"🔔 Agent attivato con trigger 'sophy': '{text[:50]}...'")
-        return (True, cleaned_text if cleaned_text else text)
-
-    return (False, text)
+    # Nessun wake word attivo e nessun trigger trovato
+    logger.debug(f"🔕 Nessun wake word/trigger attivo, ignoro: '{text[:50]}...'")
+    return (False, text, False)
 
 async def send_timing_to_server(timing_type: str, data: dict):
     """Invia timing stats al web server"""
@@ -326,7 +991,9 @@ class OllamaLLMStream(llm.LLMStream):
                     content = msg.content
                 elif isinstance(msg.content, list):
                     for c in msg.content:
-                        if hasattr(c, 'text'):
+                        if isinstance(c, str):
+                            content += c
+                        elif hasattr(c, 'text'):
                             content += c.text
                 if content:
                     messages.append({"role": role, "content": content})
@@ -374,6 +1041,172 @@ class OllamaLLMStream(llm.LLMStream):
             logger.error(f"Errore Ollama: {e}")
             import traceback
             traceback.print_exc()
+
+
+class RemoteLLMAdapter(llm.LLM):
+    """
+    Adapter LiveKit-compatible per server LLM remoti custom.
+    Converte l'interfaccia LiveKit LLM nel formato del server remoto.
+    """
+    
+    def __init__(
+        self,
+        server_url: str,
+        token: str = "",
+        collection: str = "",
+        fallback_model: str = "devstral-small-2:latest"
+    ):
+        super().__init__()
+        self._server_url = server_url
+        self._token = token
+        self._collection = collection
+        self._fallback_model = fallback_model
+        self._remote_llm = RemoteLLM(
+            server_url=server_url,
+            token=token,
+            collection=collection
+        )
+        logger.info(f"RemoteLLMAdapter inizializzato: url={server_url}, collection={collection}")
+    
+    def chat(
+        self,
+        *,
+        chat_ctx: llm.ChatContext,
+        tools: list[llm.FunctionTool] | None = None,
+        conn_options: APIConnectOptions = APIConnectOptions(),
+        parallel_tool_calls: bool | None = None,
+        tool_choice: llm.ToolChoice | None = None,
+        extra_kwargs: dict | None = None,
+    ) -> "RemoteLLMStream":
+        return RemoteLLMStream(
+            self,
+            chat_ctx=chat_ctx,
+            tools=tools or [],
+            conn_options=conn_options or APIConnectOptions()
+        )
+
+
+class RemoteLLMStream(llm.LLMStream):
+    """Stream di risposta dal server LLM remoto"""
+    
+    def __init__(
+        self,
+        llm_instance: RemoteLLMAdapter,
+        chat_ctx: llm.ChatContext,
+        tools: list,
+        conn_options: APIConnectOptions
+    ):
+        super().__init__(llm_instance, chat_ctx=chat_ctx, tools=tools, conn_options=conn_options)
+        self._llm = llm_instance
+        self._chat_ctx = chat_ctx
+    
+    # #region agent log - debug helper
+    def _debug_log(self, hypothesis_id, location, message, data=None):
+        import json, time, os
+        try:
+            log_path = "/app/config/debug.log"
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "a") as f:
+                f.write(json.dumps({"hypothesisId": hypothesis_id, "location": location, "message": message, "data": data, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+        except: pass
+    # #endregion
+    
+    async def _run(self) -> None:
+        logger.info("RemoteLLMStream._run() iniziato")
+        # #region agent log - H1: entry point
+        self._debug_log("H1", "main.py:RemoteLLMStream._run:entry", "Inizio _run()", {"chat_ctx_items": len(list(self._chat_ctx.items))})
+        # #endregion
+        
+        # Estrai l'ultimo messaggio utente dal contesto
+        user_message = ""
+        # #region agent log - H9: debug chat_ctx
+        import json as _json
+        try:
+            _log_path = "/app/config/debug.log"
+            ctx_items = list(self._chat_ctx.items)
+            ctx_debug = []
+            for msg in ctx_items:
+                ctx_debug.append({"role": getattr(msg, 'role', 'unknown'), "content_type": type(getattr(msg, 'content', None)).__name__, "content_preview": str(getattr(msg, 'content', ''))[:100]})
+            with open(_log_path, "a") as _f:
+                _f.write(_json.dumps({"hypothesisId": "H9", "location": "RemoteLLMStream:chat_ctx", "message": "Contenuto chat_ctx", "data": {"num_items": len(ctx_items), "items": ctx_debug}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+        except: pass
+        # #endregion
+        
+        for msg in reversed(list(self._chat_ctx.items)):
+            if hasattr(msg, 'role') and msg.role == "user":
+                if isinstance(msg.content, str):
+                    user_message = msg.content
+                elif isinstance(msg.content, list):
+                    for c in msg.content:
+                        if isinstance(c, str):
+                            user_message += c
+                        elif hasattr(c, 'text'):
+                            user_message += c.text
+                if user_message:
+                    break
+        
+        if not user_message:
+            user_message = "Ciao"
+        
+        # #region agent log - H2: messaggio estratto
+        self._debug_log("H2", "main.py:RemoteLLMStream._run:user_msg", "Messaggio utente estratto", {"user_message": user_message[:100], "length": len(user_message)})
+        # #endregion
+        
+        logger.info(f"RemoteLLM: invio messaggio al server remoto: {user_message[:50]}...")
+        
+        try:
+            # Chiama il server remoto
+            # #region agent log - H2: pre-call
+            self._debug_log("H2", "main.py:RemoteLLMStream._run:pre_call", "Prima della chiamata al server remoto", {"server_url": self._llm._server_url})
+            # #endregion
+            response = await self._llm._remote_llm.chat(user_message)
+            
+            # #region agent log - H3: post-call
+            self._debug_log("H3", "main.py:RemoteLLMStream._run:post_call", "Risposta ricevuta", {"has_text": bool(response.text), "text_len": len(response.text) if response.text else 0})
+            # #endregion
+            
+            if response.text:
+                logger.info(f"RemoteLLM: risposta ricevuta ({len(response.text)} chars)")
+                chunk_id = str(uuid.uuid4())
+                
+                # Invia la risposta come singolo chunk (il server remoto non supporta streaming)
+                # NOTA: ChatChunk usa 'delta' (singolo), NON 'choices' (lista)
+                self._event_ch.send_nowait(
+                    llm.ChatChunk(
+                        id=chunk_id,
+                        delta=llm.ChoiceDelta(content=response.text, role="assistant")
+                    )
+                )
+                
+                # Invia chunk finale con finish_reason
+                self._event_ch.send_nowait(
+                    llm.ChatChunk(
+                        id=chunk_id,
+                        delta=llm.ChoiceDelta(content="", role="assistant", finish_reason="stop")
+                    )
+                )
+                logger.info(f"RemoteLLM: risposta inviata, finish")
+            else:
+                logger.warning("RemoteLLM: risposta vuota dal server")
+                # Invia messaggio di errore
+                self._event_ch.send_nowait(
+                    llm.ChatChunk(
+                        id=str(uuid.uuid4()),
+                        delta=llm.ChoiceDelta(content="Mi dispiace, non ho ricevuto risposta dal server.", role="assistant", finish_reason="stop")
+                    )
+                )
+                
+        except Exception as e:
+            logger.error(f"Errore RemoteLLM: {e}")
+            import traceback
+            traceback.print_exc()
+            # Invia messaggio di errore
+            self._event_ch.send_nowait(
+                llm.ChatChunk(
+                    id=str(uuid.uuid4()),
+                    delta=llm.ChoiceDelta(content=f"Errore di connessione al server remoto: {str(e)}", role="assistant", finish_reason="stop")
+                )
+            )
 
 
 class ExternalTTSLiveKit(tts.TTS):
@@ -1290,20 +2123,41 @@ class WhisperSTT(stt.STT):
                     alternatives=[stt.SpeechData(text="", language=detected_lang)]
                 )
         
-        # Verifica se l'agent deve rispondere (cerca @sophyai o varianti)
+        # Verifica se l'agent deve rispondere (cerca @sophyai, wake word, o sessione attiva)
         # La trascrizione è già stata inviata al frontend sopra, qui filtriamo solo per l'LLM
         if text:
-            should_respond, cleaned_text = should_agent_respond(text)
+            # ==================== TTS INTERRUPT ====================
+            # Se l'utente sta parlando e il TTS è attivo, interrompi il TTS SEMPRE
+            if is_tts_speaking():
+                logger.info(f"✋ Utente parla mentre TTS attivo - STOP immediato")
+                asyncio.create_task(interrupt_tts_if_speaking())
+                # NON processare questo messaggio, era solo per fermare il TTS
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
+            
+            should_respond, cleaned_text, is_wake = should_agent_respond(text)
+            
+            if is_wake:
+                # Wake word rilevato - pronuncia "Dimmi" e avvia timer
+                logger.info(f"🎤 Wake word rilevato, pronuncio 'Dimmi'...")
+                asyncio.create_task(handle_wake_word_detected("default"))
+                return stt.SpeechEvent(
+                    type=stt.SpeechEventType.FINAL_TRANSCRIPT,
+                    alternatives=[stt.SpeechData(text="", language=detected_lang)]
+                )
+            
             if not should_respond:
-                logger.info(f"🔕 Messaggio senza menzione @sophyai, LLM non risponderà: '{text[:50]}...'")
+                logger.info(f"🔕 Messaggio senza wake attivo, ignoro: '{text[:50]}...'")
                 # Restituisci testo vuoto all'LLM per evitare che risponda
                 return stt.SpeechEvent(
                     type=stt.SpeechEventType.FINAL_TRANSCRIPT,
                     alternatives=[stt.SpeechData(text="", language=detected_lang)]
                 )
             else:
-                # L'agent è stato menzionato, passa il testo pulito (senza il trigger)
-                logger.info(f"🔔 Messaggio con menzione @sophyai, LLM risponderà: '{cleaned_text[:50]}...'")
+                # Wake session attiva, passa il testo all'LLM
+                logger.info(f"🔔 Wake attivo, invio a LLM: '{cleaned_text[:50]}...'")
                 return stt.SpeechEvent(
                     type=stt.SpeechEventType.FINAL_TRANSCRIPT,
                     alternatives=[stt.SpeechData(text=cleaned_text, language=detected_lang)]
@@ -1475,7 +2329,7 @@ class MultimodalLLM:
         
         Args:
             base_llm: LLM base (OpenAI-compatible)
-            llm_provider: "openrouter" o "ollama"
+            llm_provider: "openrouter", "ollama" o "remote"
             db_settings: Settings dal database
         """
         self.base_llm = base_llm
@@ -1489,7 +2343,10 @@ class MultimodalLLM:
     
     def _check_vision_support(self) -> bool:
         """Verifica se il modello corrente supporta vision usando info dal database"""
-        if self.llm_provider == "openrouter":
+        if self.llm_provider == "remote":
+            # Server remoto custom - assumiamo no vision support
+            return False
+        elif self.llm_provider == "openrouter":
             # Prima controlla se abbiamo l'info salvata dal database (da API OpenRouter)
             db_vision_support = self.db_settings.get("openrouter_supports_vision", "")
             if db_vision_support:
@@ -1852,10 +2709,13 @@ Rispondi come se stessi parlando direttamente a qualcuno."""
         # Invia direttamente al TTS senza passare dall'LLM
         if self._session and result:
             try:
+                set_tts_speaking(True)
                 speech_handle = self._session.say(result, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"📹 Risultato analyze_video pronunciato direttamente via TTS")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS analyze_video: {tts_error}")
         
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
@@ -1879,10 +2739,13 @@ Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazion
         # Invia direttamente al TTS senza passare dall'LLM
         if self._session and result:
             try:
+                set_tts_speaking(True)
                 speech_handle = self._session.say(result, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"📹 Risultato analyze_document pronunciato direttamente via TTS")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS analyze_document: {tts_error}")
         
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
@@ -1906,10 +2769,13 @@ Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere."""
         # Invia direttamente al TTS senza passare dall'LLM
         if self._session and result:
             try:
+                set_tts_speaking(True)
                 speech_handle = self._session.say(result, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"📹 Risultato estimate_age pronunciato direttamente via TTS")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS estimate_age: {tts_error}")
         
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
@@ -1933,10 +2799,13 @@ Scrivi solo testo semplice e discorsivo."""
         # Invia direttamente al TTS senza passare dall'LLM
         if self._session and result:
             try:
+                set_tts_speaking(True)
                 speech_handle = self._session.say(result, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"📹 Risultato describe_environment pronunciato direttamente via TTS")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS describe_environment: {tts_error}")
         
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
@@ -2025,11 +2894,14 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         # Pronuncia il risultato via TTS
         if session:
             try:
+                set_tts_speaking(True)
                 speech_handle = session.say(tts_result, allow_interruptions=True)
                 # Attendi che il TTS finisca
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"📹 Risultato pronunciato via TTS (id={video_analysis_id})")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS analisi video: {tts_error}")
         
     except Exception as e:
@@ -2049,10 +2921,12 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         # Pronuncia errore via TTS
         if session:
             try:
+                set_tts_speaking(True)
                 speech_handle = session.say(error_msg, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
             except:
-                pass
+                set_tts_speaking(False)
 
 
 async def handle_image_analysis(
@@ -2136,10 +3010,13 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         # Pronuncia il risultato via TTS
         if session:
             try:
+                set_tts_speaking(True)
                 speech_handle = session.say(tts_result, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
                 logger.info(f"🖼️ Risultato analisi immagine pronunciato via TTS (id={image_analysis_id})")
             except Exception as tts_error:
+                set_tts_speaking(False)
                 logger.error(f"Errore TTS analisi immagine: {tts_error}")
         
     except Exception as e:
@@ -2159,10 +3036,12 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         # Pronuncia errore via TTS
         if session:
             try:
+                set_tts_speaking(True)
                 speech_handle = session.say(error_msg, allow_interruptions=True)
                 await speech_handle
+                set_tts_speaking(False)
             except:
-                pass
+                set_tts_speaking(False)
 
 
 async def load_settings_from_server() -> dict:
@@ -2178,6 +3057,12 @@ async def load_settings_from_server() -> dict:
         "context_injection": "",
         "whisper_model": config.whisper.model,
         "whisper_language": config.whisper.language,
+        # Voice Activation defaults
+        "wake_timeout_seconds": "20",
+        "vad_energy_threshold": "40",
+        "speech_energy_threshold": "100",
+        "silence_threshold": "30",
+        "tts_cooldown_seconds": "5",
     }
     
     try:
@@ -2225,16 +3110,51 @@ async def entrypoint(ctx: JobContext):
     """Entry point per l'agent LiveKit"""
     await ctx.connect()
     
+    # ==================== CHECK DUPLICATI ====================
+    # Verifica se c'è già un altro agent (bot) nella room
+    # Se sì, questo agent si disconnette per evitare duplicati
+    existing_agents = [p for p in ctx.room.remote_participants.values() 
+                       if p.kind == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT]
+    if existing_agents:
+        logger.warning(f"⚠️ Room {ctx.room.name} ha già {len(existing_agents)} agent(s), questo agent si disconnette")
+        await ctx.disconnect()
+        return
+    
     logger.info(f"Agent connesso alla room: {ctx.room.name}")
     
     # Carica impostazioni dal database
     db_settings = await load_settings_from_server()
     logger.info(f"📥 LLM Provider: {db_settings.get('llm_provider', 'ollama')}")
     
+    # Applica Voice Settings dalle impostazioni caricate
+    global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
+    try:
+        WAKE_TIMEOUT_SECONDS = int(db_settings.get('wake_timeout_seconds', '20'))
+        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '40'))
+        SPEECH_ENERGY_THRESHOLD = int(db_settings.get('speech_energy_threshold', '100'))
+        SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '30'))
+        TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '5'))
+        logger.info(f"🎙️ Voice Settings: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
+    except Exception as e:
+        logger.warning(f"⚠️ Errore parsing voice settings: {e}, uso default")
+    
     # Inizializza LLM in base al provider configurato
     llm_provider = db_settings.get("llm_provider", "ollama")
     
-    if llm_provider == "openrouter" and db_settings.get("openrouter_api_key"):
+    if llm_provider == "remote" and db_settings.get("remote_server_url"):
+        # Usa Server Remoto Custom con adapter LiveKit-compatible
+        remote_url = db_settings.get("remote_server_url", "")
+        remote_token = db_settings.get("remote_server_token", "")
+        remote_collection = db_settings.get("remote_server_collection", "")
+        
+        base_llm = RemoteLLMAdapter(
+            server_url=remote_url,
+            token=remote_token,
+            collection=remote_collection
+        )
+        logger.info(f"🖥️ LLM: Server Remoto ({remote_url}), collection={remote_collection}")
+        
+    elif llm_provider == "openrouter" and db_settings.get("openrouter_api_key"):
         # Usa OpenRouter
         openrouter_model = db_settings.get("openrouter_model", "openai/gpt-3.5-turbo")
         openrouter_key = db_settings.get("openrouter_api_key", "")
@@ -2555,6 +3475,31 @@ FORMATO TTS:
     
     logger.info("AgentSession avviata!")
     
+    # ==================== INIZIALIZZA VAD MONITOR ====================
+    # Crea callback thread-safe per l'interrupt
+    main_loop = asyncio.get_event_loop()
+    
+    def vad_interrupt_callback():
+        """Callback chiamato dal thread VAD quando rileva barge-in"""
+        try:
+            # Usa run_coroutine_threadsafe per chiamare l'interrupt dal thread VAD
+            future = asyncio.run_coroutine_threadsafe(
+                _async_interrupt_from_vad(session),
+                main_loop
+            )
+            # Non aspettiamo il risultato per non bloccare il thread VAD
+        except Exception as e:
+            logger.error(f"🎤 [VAD] Errore nel callback interrupt: {e}")
+    
+    # Crea e avvia il VAD monitor
+    global _vad_monitor
+    _vad_monitor = VADMonitor(
+        interrupt_callback=vad_interrupt_callback,
+        energy_threshold=VAD_ENERGY_THRESHOLD  # Soglia configurabile da database
+    )
+    _vad_monitor.start()
+    logger.info("🎤 [VAD] Monitor inizializzato e avviato")
+    
     # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings, session)
     VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings, session)
     logger.info("📹 VisionAgent dipendenze vision impostate")
@@ -2588,7 +3533,7 @@ FORMATO TTS:
             silence_frames = 0
             speech_frames = 0
             MIN_SPEECH_FRAMES = 10  # ~500ms di speech prima di trascrivere
-            SILENCE_THRESHOLD = 30  # ~1.5s di silenzio per terminare
+            # NOTA: SILENCE_THRESHOLD è ora globale e configurabile da database
             
             async for event in audio_stream:
                 if not isinstance(event, rtc.AudioFrameEvent):
@@ -2596,6 +3541,13 @@ FORMATO TTS:
                     
                 frame = event.frame
                 audio_data = bytes(frame.data)
+                
+                # ==================== ALIMENTA VAD MONITOR (SEMPRE) ====================
+                # Il VAD monitor gira in un thread separato e può rilevare barge-in
+                # anche durante il TTS, perché non è bloccato dal loop asyncio
+                vad = get_vad_monitor()
+                if vad:
+                    vad.feed_audio(audio_data)
                 
                 # Calcola energia audio per VAD semplice
                 samples = [int.from_bytes(audio_data[i:i+2], 'little', signed=True) 
@@ -2605,11 +3557,78 @@ FORMATO TTS:
                 else:
                     energy = 0
                 
-                # Soglia energia per rilevare speech
-                ENERGY_THRESHOLD = 500
+                # Soglia energia per rilevare speech (configurabile da database)
+                # NOTA: SPEECH_ENERGY_THRESHOLD è globale e configurabile
                 
-                if energy > ENERGY_THRESHOLD:
-                    # Speech rilevato
+                # ==================== CHECK FLAG TTS MANUALE ====================
+                # NOTA: session.agent_state NON ritorna 'speaking' durante TTS (bug LiveKit?)
+                # Uso il flag manuale is_tts_speaking() impostato prima di session.say()
+                tts_active = is_tts_speaking()
+                tts_cooldown = is_in_tts_cooldown()
+                
+                # Scarta audio sia durante TTS che durante cooldown (per evitare eco)
+                should_discard = tts_active or tts_cooldown
+                
+                # #region agent log - H10/H14: stato TTS flag (SEMPRE se attivo, ogni 50 frame altrimenti)
+                should_log = should_discard or (speech_frames % 50 == 0)
+                if should_log:
+                    import json as _json, os as _os
+                    try:
+                        with open("/app/config/debug.log", "a") as _f:
+                            _f.write(_json.dumps({"hypothesisId": "H10", "location": "process_participant_audio:loop", "message": "Audio frame check", "data": {"tts_active": tts_active, "tts_cooldown": tts_cooldown, "should_discard": should_discard, "energy": round(energy, 1), "buffer_size": len(audio_buffer), "frame": speech_frames, "pid": _os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                    except: pass
+                # #endregion
+                
+                # ==================== SCARTA AUDIO DURANTE TTS E COOLDOWN ====================
+                # Se il TTS è attivo o siamo in cooldown, SCARTA TUTTO l'audio in ingresso
+                if should_discard:
+                    # #region agent log - H6: TTS attivo
+                    import json as _json
+                    reason = "TTS_ATTIVO" if tts_active else "COOLDOWN"
+                    try:
+                        with open("/app/config/debug.log", "a") as _f:
+                            _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:discard", "message": f"SCARTO AUDIO - {reason}", "data": {"energy": round(energy, 1), "tts_active": tts_active, "tts_cooldown": tts_cooldown}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                    except: pass
+                    # #endregion
+                    
+                    # Se c'è voce significativa durante TTS (non cooldown), interrompi
+                    if tts_active and energy > 50:  # Soglia abbassata per maggiore sensibilità
+                        # #region agent log - H6: tentativo interrupt
+                        try:
+                            with open("/app/config/debug.log", "a") as _f:
+                                _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_attempt", "message": "TENTATIVO INTERRUPT", "data": {"energy": round(energy, 1)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                        except: pass
+                        # #endregion
+                        
+                        logger.info(f"✋ [BARGE-IN] Voce durante TTS (energia: {energy:.0f}) - INTERRUPT")
+                        try:
+                            await session.interrupt()
+                            set_tts_speaking(False)  # Reset flag dopo interrupt
+                            # #region agent log - H6: interrupt success
+                            try:
+                                with open("/app/config/debug.log", "a") as _f:
+                                    _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_success", "message": "INTERRUPT RIUSCITO", "data": {}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                            except: pass
+                            # #endregion
+                            logger.info(f"✋ [BARGE-IN] TTS interrotto")
+                        except Exception as e:
+                            # #region agent log - H6: interrupt failed
+                            try:
+                                with open("/app/config/debug.log", "a") as _f:
+                                    _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_failed", "message": "INTERRUPT FALLITO", "data": {"error": str(e)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                            except: pass
+                            # #endregion
+                            logger.error(f"✋ [BARGE-IN] Errore: {e}")
+                        request_cancel_llm()
+                    # Scarta buffer e resetta contatori
+                    audio_buffer.clear()
+                    speech_frames = 0
+                    silence_frames = 0
+                    continue  # SEMPRE scarta durante TTS
+                
+                # ==================== PROCESSING NORMALE (agent non sta parlando) ====================
+                if energy > SPEECH_ENERGY_THRESHOLD:
+                    # Speech rilevato, aggiungi al buffer
                     audio_buffer.extend(audio_data)
                     speech_frames += 1
                     silence_frames = 0
@@ -2635,15 +3654,29 @@ FORMATO TTS:
                                 if text and len(text) > 1:
                                     logger.info(f"🎤 [MULTI-AUDIO] {participant_identity} dice: {text}")
                                     
+                                    # ==================== TTS INTERRUPT ====================
+                                    # Se TTS attivo, interrompi SEMPRE e non processare
+                                    if is_tts_speaking():
+                                        logger.info(f"✋ [MULTI-AUDIO] TTS attivo - STOP immediato")
+                                        await interrupt_tts_if_speaking()
+                                        continue  # Non processare questo messaggio
+                                    
                                     # Invia al frontend con il nome del partecipante
                                     msg_id = generate_message_id()
                                     await send_to_frontend(text, "user", msg_id, participant_identity)
                                     
-                                    # Verifica se l'agent deve rispondere
-                                    should_respond, cleaned_text = should_agent_respond(text)
-                                    if should_respond:
-                                        # Rispondi direttamente senza re-broadcast
-                                        await handle_agent_response_only(session, text, send_to_frontend, participant_identity)
+                                    # Verifica se l'agent deve rispondere (con participant_id per wake sessions)
+                                    should_respond, cleaned_text, is_wake = should_agent_respond(text, participant_identity)
+                                    
+                                    if is_wake:
+                                        # Wake word rilevato - pronuncia "Dimmi"
+                                        logger.info(f"🎤 [MULTI-AUDIO] Wake word per {participant_identity} - pronuncio Dimmi")
+                                        await handle_wake_word_detected(participant_identity)
+                                        continue  # Non processare oltre
+                                    
+                                    if should_respond and cleaned_text:
+                                        # Wake session attiva, rispondi
+                                        await handle_agent_response_only(session, cleaned_text, send_to_frontend, participant_identity)
                             except Exception as e:
                                 logger.error(f"🎤 [MULTI-AUDIO] Errore STT per {participant_identity}: {e}")
                                 
@@ -2715,6 +3748,20 @@ FORMATO TTS:
     
     set_transcript_callback(send_to_frontend)
     
+    # ==================== WAKE WORD SYSTEM SETUP ====================
+    async def send_wake_update(wake_data: dict):
+        """Invia aggiornamenti wake session al frontend"""
+        try:
+            data = json.dumps(wake_data)
+            await ctx.room.local_participant.publish_data(data.encode(), reliable=True)
+            logger.debug(f"📤 [WAKE] {wake_data.get('type')}: {wake_data}")
+        except Exception as e:
+            logger.error(f"Errore invio wake update: {e}")
+    
+    set_wake_callback(send_wake_update)
+    start_wake_countdown_task()
+    logger.info("🎤 Wake word system inizializzato")
+    
     # Handler per messaggi dal frontend (es. interrupt, text_message)
     @ctx.room.on("data_received")
     def on_data_received(data: rtc.DataPacket):
@@ -2724,7 +3771,16 @@ FORMATO TTS:
             
             if msg_type == "interrupt":
                 logger.info("✋ Richiesta interruzione dal frontend")
-                asyncio.create_task(session.interrupt())
+                try:
+                    # session.interrupt() può essere sync o async
+                    result = session.interrupt()
+                    if asyncio.iscoroutine(result):
+                        asyncio.create_task(result)
+                    set_tts_speaking(False)  # Reset flag TTS
+                    request_cancel_llm()  # Cancella anche LLM
+                    logger.info("✋ Interrupt eseguito con successo")
+                except Exception as e:
+                    logger.error(f"✋ Errore durante interrupt: {e}")
             
             elif msg_type == "text_message":
                 # Messaggio testuale dall'utente
@@ -2762,6 +3818,13 @@ FORMATO TTS:
         except Exception as e:
             logger.error(f"Errore parsing messaggio frontend: {e}")
 
+    async def _speak_tts_task(session: AgentSession, text: str):
+        """Task helper per eseguire TTS senza bloccare il loop audio"""
+        try:
+            await session.say(text, allow_interruptions=True)
+        finally:
+            set_tts_speaking(False)
+
     async def handle_text_message(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
         """Gestisce un messaggio testuale - broadcast a tutti, chiama LLM solo se menzionato con @sophyai"""
         # Genera ID univoco per il messaggio utente
@@ -2771,12 +3834,15 @@ FORMATO TTS:
         logger.info(f"💬 Broadcast messaggio utente: {user_text[:50]}... (sender={sender_identity})")
         await send_callback(user_text, "user", user_message_id, sender_identity)
         
-        # Verifica se l'agent deve rispondere (cerca @sophyai o varianti)
-        should_respond, cleaned_text = should_agent_respond(user_text)
+        # Verifica se l'agent deve rispondere (cerca @sophyai, wake word, o sessione attiva)
+        should_respond, cleaned_text, is_wake = should_agent_respond(user_text, sender_identity or "text_user")
+        
+        if is_wake:
+            logger.info(f"🎤 Wake session attivata da messaggio testuale di {sender_identity}")
         
         if not should_respond:
-            # L'agent non è stato menzionato, il messaggio è stato già inviato a tutti ma non risponde
-            logger.info(f"💬 Messaggio senza menzione @sophyai, non rispondo: {user_text[:50]}...")
+            # L'agent non è stato menzionato e non c'è wake session attiva
+            logger.info(f"💬 Messaggio senza menzione/wake, non rispondo: {user_text[:50]}...")
             return
         
         # Genera ID univoco per la risposta dell'agent
@@ -2796,14 +3862,27 @@ FORMATO TTS:
             # Chiama LLM
             t_start = time.time()
             response_text = ""
+            llm_cancelled = False
+            reset_cancel_llm()  # Reset flag prima di iniziare
             stream = my_llm.chat(chat_ctx=chat_ctx)
             
             async for chunk in stream:
+                # Check cancellazione ad ogni chunk
+                if should_cancel_llm():
+                    logger.info("🛑 Risposta LLM ANNULLATA (utente ha interrotto)")
+                    llm_cancelled = True
+                    break
+                    
                 if hasattr(chunk, 'delta') and chunk.delta:
                     # chunk.delta è un ChoiceDelta, il testo è in .content
                     content = chunk.delta.content if hasattr(chunk.delta, 'content') else str(chunk.delta)
                     if content:
                         response_text += content
+            
+            # Se cancellato, non fare TTS
+            if llm_cancelled:
+                logger.info("🛑 TTS saltato - risposta annullata")
+                return
             
             t_llm = time.time()
             logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
@@ -2811,16 +3890,18 @@ FORMATO TTS:
             # Invia risposta al frontend con ID
             await send_callback(response_text, "assistant", text_response_id)
             
-            # Pronuncia la risposta
-            await session.say(response_text, allow_interruptions=True)
+            # Pronuncia la risposta con tracking TTS in un task separato
+            set_tts_speaking(True)
+            asyncio.create_task(_speak_tts_task(session, response_text))
             
         except Exception as e:
+            set_tts_speaking(False)  # Reset in caso di errore
             logger.error(f"Errore gestione messaggio testuale: {e}")
     
     async def handle_agent_response_only(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
         """Gestisce solo la risposta dell'agent (messaggio user già inviato da multi-audio)"""
-        # Rimuovi @sophyai dal testo
-        _, cleaned_text = should_agent_respond(user_text)
+        # Il testo è già pulito dal trigger/wake word, usa direttamente
+        cleaned_text = user_text
         
         # Genera ID univoco per la risposta dell'agent
         text_response_id = generate_message_id()
@@ -2836,33 +3917,115 @@ FORMATO TTS:
             # Chiama LLM
             t_start = time.time()
             response_text = ""
+            llm_cancelled = False
+            reset_cancel_llm()  # Reset flag prima di iniziare
             stream = my_llm.chat(chat_ctx=chat_ctx)
             
             async for chunk in stream:
-                if hasattr(chunk, 'delta') and chunk.delta:
-                    content = chunk.delta.content if hasattr(chunk.delta, 'content') else str(chunk.delta)
-                    if content:
-                        response_text += content
+                # ==================== CHECK CANCELLAZIONE ====================
+                if should_cancel_llm():
+                    logger.info("🛑 [MULTI-AUDIO] Risposta LLM ANNULLATA (utente ha interrotto)")
+                    llm_cancelled = True
+                    break
+                
+                # Debug log rimosso per fix indentazione
+                
+                # Prova prima formato choices (RemoteLLMStream)
+                if hasattr(chunk, 'choices') and chunk.choices:
+                    for choice in chunk.choices:
+                        if hasattr(choice, 'content') and choice.content:
+                            response_text += choice.content
+                # Poi prova formato delta (OpenAI-style) - controlla anche delta.choices
+                elif hasattr(chunk, 'delta') and chunk.delta:
+                    d = chunk.delta
+                    # Prova delta.content direttamente
+                    if hasattr(d, 'content') and d.content:
+                        response_text += d.content
+                    # Prova delta.choices[0].delta.content (formato OpenAI)
+                    elif hasattr(d, 'choices') and d.choices:
+                        for choice in d.choices:
+                            if hasattr(choice, 'delta') and hasattr(choice.delta, 'content') and choice.delta.content:
+                                response_text += choice.delta.content
+                            elif hasattr(choice, 'content') and choice.content:
+                                response_text += choice.content
+            
+            # Se cancellato, non procedere con TTS
+            if llm_cancelled:
+                logger.info("🛑 [MULTI-AUDIO] TTS saltato - risposta annullata")
+                return
             
             t_llm = time.time()
+            # #region agent log - H7: risposta finale
+            try:
+                _log_path = "/app/config/debug.log"
+                with open(_log_path, "a") as _f:
+                    _f.write(_json.dumps({"hypothesisId": "H7", "location": "handle_agent_response_only:response", "message": "Risposta LLM accumulata", "data": {"response_len": len(response_text), "response_preview": response_text[:100] if response_text else "EMPTY"}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+            except: pass
+            # #endregion
             logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
             
             # Invia risposta al frontend
+            # #region agent log - H8: send_callback
+            try:
+                _log_path = "/app/config/debug.log"
+                with open(_log_path, "a") as _f:
+                    _f.write(_json.dumps({"hypothesisId": "H8", "location": "handle_agent_response_only:send_callback", "message": "Invio a frontend", "data": {"text_len": len(response_text), "text_preview": response_text[:100] if response_text else "EMPTY", "msg_id": text_response_id}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+            except: pass
+            # #endregion
             await send_callback(response_text, "assistant", text_response_id)
             
-            # Pronuncia la risposta
-            await session.say(response_text, allow_interruptions=True)
+            # Pronuncia la risposta (pulisci testo per TTS)
+            tts_text = response_text
+            # Rimuovi contenuti tra parentesi quadre [...]
+            tts_text = re.sub(r'\[.*?\]', '', tts_text)
+            # Rimuovi contenuti tra parentesi tonde (...)
+            tts_text = re.sub(r'\(.*?\)', '', tts_text)
+            # Rimuovi asterischi * e **
+            tts_text = re.sub(r'\*+', '', tts_text)
+            # Rimuovi underscore _ e __
+            tts_text = re.sub(r'_+', ' ', tts_text)
+            # Rimuovi hashtag #
+            tts_text = re.sub(r'#+\s*', '', tts_text)
+            # Rimuovi backtick ` e ```
+            tts_text = re.sub(r'`+', '', tts_text)
+            # Rimuovi caratteri speciali comuni che non si pronunciano
+            tts_text = re.sub(r'[<>{}|\\^~]', '', tts_text)
+            # Rimuovi URL http/https
+            tts_text = re.sub(r'https?://\S+', '', tts_text)
+            # Rimuovi emoji (range Unicode comuni)
+            tts_text = re.sub(r'[\U0001F300-\U0001F9FF]', '', tts_text)
+            # Rimuovi spazi multipli
+            tts_text = re.sub(r' +', ' ', tts_text)
+            # Rimuovi righe vuote multiple
+            tts_text = re.sub(r'\n\s*\n', '\n', tts_text).strip()
+            
+            # Traccia stato TTS speaking
+            # NOTA: Non usiamo await per non bloccare - il TTS gira in parallelo
+            set_tts_speaking(True)
+            
+            async def speak_and_reset():
+                try:
+                    await session.say(tts_text, allow_interruptions=True)
+                finally:
+                    set_tts_speaking(False)
+            
+            # Avvia TTS in task separato - NON attendiamo per permettere al loop audio di continuare
+            asyncio.create_task(speak_and_reset())
             
         except Exception as e:
+            set_tts_speaking(False)  # Reset in caso di errore
             logger.error(f"Errore gestione risposta agent: {e}")
     
     # Messaggio di benvenuto
     # #region debug log - welcome message
     debug_log("A", "main.py:991", "PRIMA di session.say() benvenuto", {"text": "Ciao! Come posso aiutarti?", "session_ready": True})
     try:
+        set_tts_speaking(True)
         await session.say("Ciao! Come posso aiutarti?")
+        set_tts_speaking(False)
         debug_log("A", "main.py:991", "DOPO session.say() benvenuto - completato senza eccezioni", {})
     except Exception as e:
+        set_tts_speaking(False)
         debug_log("A", "main.py:991", "ERRORE in session.say() benvenuto", {"error": str(e), "type": type(e).__name__})
         logger.error(f"❌ Errore nel messaggio di benvenuto: {e}")
         raise

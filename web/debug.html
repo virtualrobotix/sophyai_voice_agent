@@ -508,6 +508,7 @@
             <button class="tab" data-tab="whisper" onclick="switchTab('whisper')">🎤 Whisper</button>
             <button class="tab" data-tab="llm" onclick="switchTab('llm')">🧠 LLM</button>
             <button class="tab" data-tab="tts" onclick="switchTab('tts')">🔊 TTS</button>
+            <button class="tab" data-tab="voice" onclick="switchTab('voice')">🎙️ Voice</button>
         </div>
     </div>
 
@@ -611,6 +612,9 @@
                 <button class="provider-btn" data-provider="openrouter" onclick="switchProvider('openrouter')">
                     🌐 OpenRouter (Cloud)
                 </button>
+                <button class="provider-btn" data-provider="remote" onclick="switchProvider('remote')">
+                    🖥️ Server Remoto
+                </button>
             </div>
             
             <!-- Ollama Section -->
@@ -662,6 +666,66 @@
                 
                 <div class="model-grid" id="openrouter-models">
                     <div class="loading"></div>
+                </div>
+            </div>
+            
+            <!-- Remote Server Section -->
+            <div id="remote-section" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">URL Server</label>
+                    <input type="text" class="form-input" id="remote-server-url" placeholder="http://10.0.0.133:5006">
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        URL base del server LLM remoto (es. http://192.168.1.100:5006)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Token di Autenticazione</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="password" class="form-input" id="remote-server-token" placeholder="mysecrettoken" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="toggleTokenVisibility()" title="Mostra/Nascondi">👁️</button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        Bearer Token per l'autenticazione (opzionale)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Collection</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-input" id="remote-server-collection" placeholder="fctsa" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="loadRemoteCollections()" title="Carica collections">🔄</button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        Nome della collection/knowledge base da usare
+                    </small>
+                </div>
+                
+                <div id="remote-collections-list" style="display: none; margin: 12px 0;">
+                    <label class="form-label">Collections disponibili:</label>
+                    <div id="remote-collections-grid" class="model-grid" style="max-height: 150px; overflow-y: auto;">
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick="testRemoteServer()">
+                        🔌 Test Connessione
+                    </button>
+                    <button class="btn btn-primary" onclick="saveRemoteServer()">
+                        💾 Salva e Usa
+                    </button>
+                </div>
+                
+                <div id="remote-test-result" style="margin-top: 12px; display: none;">
+                </div>
+                
+                <div class="info-box" style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; border-left: 3px solid var(--accent);">
+                    <div style="font-weight: 600; margin-bottom: 8px;">📋 Formato API supportato</div>
+                    <code style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); display: block; white-space: pre-wrap;">POST /chat
+Content-Type: application/json
+Authorization: Bearer &lt;token&gt;
+
+{"message": "ciao", "collection": "fctsa"}</code>
                 </div>
             </div>
         </div>
@@ -849,6 +913,104 @@
         </div>
     </div>
 
+    <!-- Voice Activation Tab -->
+    <div class="tab-content" id="tab-voice">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎙️</div>
+                <h2 class="card-title">Configurazione Voice Activation</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Timeout "Hey Sophy" (secondi)</label>
+                <input type="range" id="wake-timeout" min="5" max="60" value="20" 
+                       style="width: 100%;" oninput="updateVoiceSlider('wake-timeout')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>5s</span>
+                    <span id="wake-timeout-value" style="font-weight: 600; color: var(--accent);">20s</span>
+                    <span>60s</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Tempo di inattività dopo il quale l'utente deve dire nuovamente "Hey Sophy"
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Sensibilità VAD Barge-in</label>
+                <input type="range" id="vad-threshold" min="10" max="200" value="40" 
+                       style="width: 100%;" oninput="updateVoiceSlider('vad-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>🔇 Sensibile (10)</span>
+                    <span id="vad-threshold-value" style="font-weight: 600; color: var(--accent);">40</span>
+                    <span>Robusto (200) 🔊</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Soglia energia per interrompere il TTS quando parli (più basso = più sensibile)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Sensibilità Rilevamento Parlato</label>
+                <input type="range" id="speech-threshold" min="20" max="500" value="100" 
+                       style="width: 100%;" oninput="updateVoiceSlider('speech-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>🔇 Sensibile (20)</span>
+                    <span id="speech-threshold-value" style="font-weight: 600; color: var(--accent);">100</span>
+                    <span>Robusto (500) 🔊</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Soglia energia per rilevare che stai parlando (più basso = più sensibile)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Soglia Silenzio (frames)</label>
+                <input type="range" id="silence-threshold" min="10" max="100" value="30" 
+                       style="width: 100%;" oninput="updateVoiceSlider('silence-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>Veloce (10)</span>
+                    <span id="silence-threshold-value" style="font-weight: 600; color: var(--accent);">30</span>
+                    <span>Paziente (100)</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Frames di silenzio prima di terminare l'ascolto (~50ms per frame)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Cooldown dopo TTS (secondi)</label>
+                <input type="range" id="tts-cooldown" min="0" max="10" value="5" step="0.5"
+                       style="width: 100%;" oninput="updateVoiceSlider('tts-cooldown')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>0s</span>
+                    <span id="tts-cooldown-value" style="font-weight: 600; color: var(--accent);">5s</span>
+                    <span>10s</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Tempo di attesa dopo il TTS per evitare eco (audio bufferizzato)
+                </small>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveVoiceSettings()">💾 Salva</button>
+                <button class="btn btn-secondary" onclick="resetVoiceDefaults()">🔄 Reset Default</button>
+                <button class="btn btn-primary" onclick="saveAndRestartAgent()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    🚀 Salva e Riavvia Agent
+                </button>
+            </div>
+            
+            <div class="info-box" style="margin-top: 20px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border-left: 3px solid var(--accent);">
+                <div style="font-weight: 600; margin-bottom: 8px;">💡 Suggerimenti</div>
+                <ul style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li><strong>VAD Barge-in</strong>: Se Sophy non si ferma quando parli, abbassa questo valore</li>
+                    <li><strong>Rilevamento Parlato</strong>: Se devi urlare per attivare, abbassa questo valore</li>
+                    <li><strong>Cooldown TTS</strong>: Se Sophy rileva l'eco delle sue risposte, aumenta questo valore</li>
+                    <li><strong>Timeout Hey Sophy</strong>: Tempo di silenzio prima che devi riattivare con "Hey Sophy"</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -870,6 +1032,7 @@
             await loadSettings();
             await loadOllamaModels();
             await loadPromptSettings();
+            await loadVoiceSettings();
             startStatsPolling();
         });
 
@@ -930,6 +1093,8 @@
                 // LLM Provider
                 if (settings.llm_provider === 'openrouter') {
                     switchProvider('openrouter');
+                } else if (settings.llm_provider === 'remote') {
+                    switchProvider('remote');
                 }
                 
                 // Ollama model
@@ -944,6 +1109,17 @@
                 if (settings.openrouter_api_key) {
                     const keyInput = document.getElementById('openrouter-key');
                     if (keyInput) keyInput.value = settings.openrouter_api_key;
+                }
+                
+                // Remote Server
+                if (settings.remote_server_url) {
+                    document.getElementById('remote-server-url').value = settings.remote_server_url;
+                }
+                if (settings.remote_server_token) {
+                    document.getElementById('remote-server-token').value = settings.remote_server_token;
+                }
+                if (settings.remote_server_collection) {
+                    document.getElementById('remote-server-collection').value = settings.remote_server_collection;
                 }
                 
                 // System prompt e context
@@ -1016,9 +1192,14 @@
             
             document.getElementById('ollama-section').style.display = provider === 'ollama' ? 'block' : 'none';
             document.getElementById('openrouter-section').style.display = provider === 'openrouter' ? 'block' : 'none';
+            document.getElementById('remote-section').style.display = provider === 'remote' ? 'block' : 'none';
             
             if (provider === 'openrouter' && openrouterModels.length === 0) {
                 loadOpenRouterModels();
+            }
+            
+            if (provider === 'remote' && !window.remoteConfigLoaded) {
+                loadRemoteConfig();
             }
         }
 
@@ -1574,6 +1755,289 @@
             if (gb >= 1) return `${gb.toFixed(1)} GB`;
             const mb = bytes / (1024 * 1024);
             return `${mb.toFixed(0)} MB`;
+        }
+
+        // ==================== Remote Server Functions ====================
+        window.remoteConfigLoaded = false;
+        
+        async function loadRemoteConfig() {
+            try {
+                const resp = await fetch('/api/remote/config');
+                const config = await resp.json();
+                
+                if (config.server_url) {
+                    document.getElementById('remote-server-url').value = config.server_url;
+                }
+                if (config.token) {
+                    document.getElementById('remote-server-token').value = config.token;
+                }
+                if (config.collection) {
+                    document.getElementById('remote-server-collection').value = config.collection;
+                }
+                
+                window.remoteConfigLoaded = true;
+            } catch (e) {
+                console.error('Errore caricamento config remote:', e);
+            }
+        }
+        
+        function toggleTokenVisibility() {
+            const tokenInput = document.getElementById('remote-server-token');
+            if (tokenInput.type === 'password') {
+                tokenInput.type = 'text';
+            } else {
+                tokenInput.type = 'password';
+            }
+        }
+        
+        async function testRemoteServer() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            const collection = document.getElementById('remote-server-collection').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('remote-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Test in corso...';
+            resultDiv.style.color = 'var(--text-secondary)';
+            
+            try {
+                const resp = await fetch('/api/remote/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        server_url: serverUrl,
+                        token: token,
+                        collection: collection
+                    })
+                });
+                
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    resultDiv.innerHTML = `
+                        <div style="color: var(--success); font-weight: 600;">✅ Connessione riuscita!</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                            ${result.message || 'Server raggiungibile'}
+                            ${result.response_preview ? `<br><em>"${escapeHtml(result.response_preview.substring(0, 100))}..."</em>` : ''}
+                        </div>
+                    `;
+                    showToast('Connessione riuscita!', 'success');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: var(--danger); font-weight: 600;">❌ Errore connessione</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                            ${result.message || 'Impossibile connettersi al server'}
+                            ${result.code ? ` (HTTP ${result.code})` : ''}
+                        </div>
+                    `;
+                    showToast('Test fallito: ' + result.message, 'error');
+                }
+                
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div style="color: var(--danger); font-weight: 600;">❌ Errore</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">${e.message}</div>
+                `;
+                showToast('Errore test: ' + e.message, 'error');
+            }
+        }
+        
+        async function loadRemoteCollections() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`/api/remote/collections?server_url=${encodeURIComponent(serverUrl)}&token=${encodeURIComponent(token)}`);
+                const data = await resp.json();
+                
+                if (data.collections && data.collections.length > 0) {
+                    const listDiv = document.getElementById('remote-collections-list');
+                    const gridDiv = document.getElementById('remote-collections-grid');
+                    
+                    listDiv.style.display = 'block';
+                    gridDiv.innerHTML = data.collections.map(coll => `
+                        <div class="model-item" style="cursor: pointer; padding: 8px 12px;" onclick="selectRemoteCollection('${escapeHtml(coll)}')">
+                            <span>📁 ${escapeHtml(coll)}</span>
+                        </div>
+                    `).join('');
+                    
+                    showToast(`${data.collections.length} collections trovate`, 'success');
+                } else {
+                    showToast('Nessuna collection trovata o endpoint non supportato', 'warning');
+                }
+                
+            } catch (e) {
+                showToast('Errore caricamento collections: ' + e.message, 'error');
+            }
+        }
+        
+        function selectRemoteCollection(collection) {
+            document.getElementById('remote-server-collection').value = collection;
+            showToast(`Collection "${collection}" selezionata`, 'success');
+        }
+        
+        // ==================== Voice Activation ====================
+        function updateVoiceSlider(id) {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(`${id}-value`);
+            const value = slider.value;
+            
+            if (id === 'wake-timeout') {
+                valueDisplay.textContent = `${value}s`;
+            } else if (id === 'tts-cooldown') {
+                valueDisplay.textContent = `${value}s`;
+            } else {
+                valueDisplay.textContent = value;
+            }
+        }
+        
+        async function loadVoiceSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const settings = await resp.json();
+                
+                if (settings.wake_timeout_seconds) {
+                    document.getElementById('wake-timeout').value = settings.wake_timeout_seconds;
+                    document.getElementById('wake-timeout-value').textContent = `${settings.wake_timeout_seconds}s`;
+                }
+                if (settings.vad_energy_threshold) {
+                    document.getElementById('vad-threshold').value = settings.vad_energy_threshold;
+                    document.getElementById('vad-threshold-value').textContent = settings.vad_energy_threshold;
+                }
+                if (settings.speech_energy_threshold) {
+                    document.getElementById('speech-threshold').value = settings.speech_energy_threshold;
+                    document.getElementById('speech-threshold-value').textContent = settings.speech_energy_threshold;
+                }
+                if (settings.silence_threshold) {
+                    document.getElementById('silence-threshold').value = settings.silence_threshold;
+                    document.getElementById('silence-threshold-value').textContent = settings.silence_threshold;
+                }
+                if (settings.tts_cooldown_seconds) {
+                    document.getElementById('tts-cooldown').value = settings.tts_cooldown_seconds;
+                    document.getElementById('tts-cooldown-value').textContent = `${settings.tts_cooldown_seconds}s`;
+                }
+            } catch (e) {
+                console.error('Errore caricamento voice settings:', e);
+            }
+        }
+        
+        async function saveVoiceSettings() {
+            const settings = {
+                wake_timeout_seconds: document.getElementById('wake-timeout').value,
+                vad_energy_threshold: document.getElementById('vad-threshold').value,
+                speech_energy_threshold: document.getElementById('speech-threshold').value,
+                silence_threshold: document.getElementById('silence-threshold').value,
+                tts_cooldown_seconds: document.getElementById('tts-cooldown').value
+            };
+            
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                showToast('Impostazioni Voice salvate! Riavvia l\'agent per applicare.', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+        
+        function resetVoiceDefaults() {
+            document.getElementById('wake-timeout').value = '20';
+            document.getElementById('wake-timeout-value').textContent = '20s';
+            document.getElementById('vad-threshold').value = '40';
+            document.getElementById('vad-threshold-value').textContent = '40';
+            document.getElementById('speech-threshold').value = '100';
+            document.getElementById('speech-threshold-value').textContent = '100';
+            document.getElementById('silence-threshold').value = '30';
+            document.getElementById('silence-threshold-value').textContent = '30';
+            document.getElementById('tts-cooldown').value = '5';
+            document.getElementById('tts-cooldown-value').textContent = '5s';
+            showToast('Valori di default ripristinati (non salvati)', 'success');
+        }
+        
+        async function saveAndRestartAgent() {
+            // Prima salva i settings
+            await saveVoiceSettings();
+            
+            showToast('⏳ Riavvio agent in corso...', 'success');
+            
+            try {
+                const resp = await fetch('/api/agent/restart', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    showToast('✅ Agent riavviato! I nuovi settings sono attivi.', 'success');
+                } else {
+                    showToast('❌ Errore: ' + result.message, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Errore riavvio: ' + e.message, 'error');
+            }
+        }
+        
+        async function restartAgentOnly() {
+            showToast('⏳ Riavvio agent in corso...', 'success');
+            
+            try {
+                const resp = await fetch('/api/agent/restart', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    showToast('✅ Agent riavviato!', 'success');
+                } else {
+                    showToast('❌ Errore: ' + result.message, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Errore riavvio: ' + e.message, 'error');
+            }
+        }
+        
+        async function saveRemoteServer() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            const collection = document.getElementById('remote-server-collection').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            try {
+                const resp = await fetch('/api/remote/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        server_url: serverUrl,
+                        token: token,
+                        collection: collection
+                    })
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Errore salvataggio');
+                }
+                
+                showToast('Server remoto configurato! Riavvia l\'agent per applicare.', 'success');
+                
+            } catch (e) {
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
         }
     </script>
 </body>
