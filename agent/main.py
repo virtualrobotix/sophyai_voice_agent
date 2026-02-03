@@ -28,7 +28,9 @@ def debug_log(hypothesis_id, location, message, data=None):
 # #endregion
 from livekit.agents import (
     JobContext,
+    JobRequest,
     WorkerOptions,
+    AutoSubscribe,
     cli,
     llm,
     stt,
@@ -56,6 +58,10 @@ _last_user_message = ""  # Per evitare duplicati STT
 _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
 _last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
 _message_counter = 0  # Contatore progressivo per ID messaggi
+
+# Variabili per tracciamento chiamate SIP
+_current_call_log_id = None  # ID del log chiamata attivo (se è una chiamata SIP)
+_is_sip_call = False  # True se siamo in una chiamata SIP
 
 # Anti-duplicazione STT avanzata: traccia hash + timestamp degli ultimi messaggi
 _stt_recent_hashes = {}  # hash -> timestamp di quando è stato processato
@@ -85,6 +91,12 @@ WAKE_TIMEOUT_SECONDS = 20  # Timeout di silenzio per disattivazione automatica
 VAD_ENERGY_THRESHOLD = 40  # Soglia energia per barge-in VAD
 SPEECH_ENERGY_THRESHOLD = 100  # Soglia energia per rilevamento parlato
 SILENCE_THRESHOLD = 30  # Frames di silenzio prima di terminare ascolto
+
+# ==================== BRANDING CONFIGURATION ====================
+# Nome assistente e trigger (caricati da variabili ambiente)
+from agent.config import config
+ASSISTANT_NAME = config.branding.assistant_name
+ASSISTANT_TRIGGERS = config.branding.assistant_triggers
 
 # Pattern regex fuzzy per riconoscere wake word con varianti Whisper
 # Cattura: "hey sophy", "ehi sophie", "e sofi", "a softie", "soffì", "e i soffi", "safi", ecc.
@@ -799,6 +811,13 @@ def should_agent_respond(text: str, participant_id: str = "default") -> tuple[bo
             logger.warning(f"🔇 Whisper hallucination ignorato: '{text}'")
             return (False, text, False)
     
+    # ==================== SIP AUTO-RESPONSE ====================
+    # Per chiamate SIP, rispondi SEMPRE automaticamente
+    # I partecipanti SIP hanno identity che inizia con "sip_" (es: sip_+390111951786)
+    if participant_id.startswith("sip_"):
+        logger.info(f"📞 [SIP] Auto-risposta per {participant_id}: '{text[:50]}...'")
+        return (True, text, False)
+    
     # ==================== WAKE WORD DETECTION ====================
     # Controlla se è un wake trigger ("Hey Sophy", "Ehi Sophy", ecc.)
     if is_wake_trigger(text):
@@ -834,7 +853,8 @@ def should_agent_respond(text: str, participant_id: str = "default") -> tuple[bo
 
     # Trigger testuali (solo per chat scritta, non per parlato)
     # Questi sono meno prioritari del wake word
-    triggers = ["@sophyai", "@sophy"]
+    # I trigger sono caricati dalla configurazione branding
+    triggers = ASSISTANT_TRIGGERS
 
     for trigger in triggers:
         if trigger in text_lower:
@@ -923,6 +943,24 @@ async def send_transcript(text: str, role: str, message_id: str = None):
             await _send_transcript_callback(text, role, message_id)
         except Exception as e:
             logger.error(f"Errore invio trascrizione: {e}")
+    
+    # Salva nel database se è una chiamata SIP
+    if _is_sip_call and _current_call_log_id:
+        try:
+            import aiohttp
+            import os
+            server_url = os.getenv("WEB_SERVER_URL", "http://voice-agent-web:8080")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{server_url}/api/calls/{_current_call_log_id}/message",
+                    params={"role": role, "content": text}
+                ) as resp:
+                    if resp.status == 200:
+                        logger.debug(f"📝 Messaggio salvato nel log chiamata")
+                    else:
+                        logger.warning(f"⚠️ Errore salvataggio messaggio: {resp.status}")
+        except Exception as e:
+            logger.warning(f"⚠️ Impossibile salvare messaggio nel log: {e}")
 
 
 # Configura logging
@@ -3106,6 +3144,26 @@ async def load_settings_from_server() -> dict:
     return settings
 
 
+async def request_handler(request: JobRequest) -> AutoSubscribe:
+    """
+    Gestisce le richieste di job.
+    Accetta automaticamente i job nelle room SIP per permettere all'agent
+    di rispondere alle chiamate telefoniche.
+    """
+    room_name = request.room.name
+    
+    # Accetta automaticamente job in room SIP
+    if room_name.startswith("sip-") or room_name == "sip-call":
+        logger.info(f"📞 Accetto automaticamente job SIP per room: {room_name}")
+        await request.accept()
+        return AutoSubscribe.SUBSCRIBE_ALL
+    
+    # Per altre room, accetta normalmente (dispatch esplicito)
+    logger.info(f"✅ Accetto job per room: {room_name}")
+    await request.accept()
+    return AutoSubscribe.SUBSCRIBE_ALL
+
+
 async def entrypoint(ctx: JobContext):
     """Entry point per l'agent LiveKit"""
     await ctx.connect()
@@ -3121,6 +3179,39 @@ async def entrypoint(ctx: JobContext):
         return
     
     logger.info(f"Agent connesso alla room: {ctx.room.name}")
+    
+    # ==================== RILEVAMENTO CHIAMATA SIP ====================
+    global _is_sip_call, _current_call_log_id
+    
+    room_name = ctx.room.name
+    _is_sip_call = room_name.startswith("sip-") or room_name == "sip-call"
+    _current_call_log_id = None
+    
+    if _is_sip_call:
+        logger.info(f"📞 CHIAMATA SIP RILEVATA in room: {room_name}")
+        logger.info(f"🔄 Contesto resettato per nuova chiamata SIP")
+        
+        # Le chiamate SIP partono con contesto pulito
+        # Il call_log viene creato dal webhook, qui lo recuperiamo per salvare i messaggi
+        try:
+            import aiohttp
+            import os
+            server_url = os.getenv("WEB_SERVER_URL", "http://voice-agent-web:8080")
+            async with aiohttp.ClientSession() as session:
+                # Cerca il call_log attivo per questa room
+                async with session.get(f"{server_url}/api/calls?status=active&limit=10") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        for call in data.get('calls', []):
+                            if call.get('room_name') == room_name:
+                                _current_call_log_id = call.get('call_id')
+                                logger.info(f"📝 Trovato call_log attivo: {_current_call_log_id}")
+                                break
+        except Exception as e:
+            logger.warning(f"⚠️ Impossibile recuperare call_log: {e}")
+    else:
+        _is_sip_call = False
+        _current_call_log_id = None
     
     # Carica impostazioni dal database
     db_settings = await load_settings_from_server()
@@ -3385,12 +3476,14 @@ async def entrypoint(ctx: JobContext):
     logger.info("Componenti caricati, creo Agent...")
     
     # Costruisci il prompt usando quello dal database (se disponibile)
-    default_prompt = """Sei Sophy, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
+    # I trigger per l'attivazione vengono dalla configurazione branding
+    triggers_str = ", ".join([f'"{t}"' for t in ASSISTANT_TRIGGERS[:3]])  # Primi 3 trigger
+    default_prompt = f"""Sei {ASSISTANT_NAME}, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
 
 ATTIVAZIONE:
-IMPORTANTE: Rispondi SOLO quando vieni menzionata esplicitamente con "@sophyai", "@sophy", "Sophy" o varianti simili.
+IMPORTANTE: Rispondi SOLO quando vieni menzionato esplicitamente con {triggers_str} o varianti simili.
 Se il messaggio NON contiene il tuo nome o una menzione diretta a te, NON rispondere affatto.
-Quando sei menzionata, rispondi in modo utile e conciso.
+Quando sei menzionato, rispondi in modo utile e conciso.
 
 REGOLE FONDAMENTALI:
 1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai più di 30 parole
@@ -3411,7 +3504,7 @@ STILE:
 - Preferisci risposte secche e precise
 
 FORMATO TTS:
-- NO simboli: * # @ € $ % & / | < > { } [ ] ~ ^ `
+- NO simboli: * # @ euro dollaro percentuale ampersand / | minore maggiore parentesi graffe quadre tilde
 - NO emoji
 - Numeri in parole (ventitre, non 23)
 - NO elenchi puntati, scrivi discorsivo"""
@@ -3518,7 +3611,11 @@ FORMATO TTS:
     
     async def process_participant_audio(participant_identity: str, track: rtc.Track):
         """Processa l'audio di un singolo partecipante con STT"""
-        logger.info(f"🎤 [MULTI-AUDIO] Avvio processing audio per {participant_identity}")
+        is_sip_participant = participant_identity.startswith("sip_")
+        if is_sip_participant:
+            logger.info(f"📞 [SIP-AUDIO] Avvio processing audio per chiamata SIP: {participant_identity}")
+        else:
+            logger.info(f"🎤 [MULTI-AUDIO] Avvio processing audio per {participant_identity}")
         
         try:
             # Crea AudioStream per questa traccia
@@ -3632,6 +3729,9 @@ FORMATO TTS:
                     audio_buffer.extend(audio_data)
                     speech_frames += 1
                     silence_frames = 0
+                    # Log periodico per SIP (ogni 20 frames = ~1 secondo)
+                    if is_sip_participant and speech_frames % 20 == 1:
+                        logger.debug(f"📞 [SIP-AUDIO] Speech da {participant_identity}: energy={energy:.0f}, frames={speech_frames}")
                 elif len(audio_buffer) > 0:
                     # Silenzio dopo speech
                     audio_buffer.extend(audio_data)
@@ -3645,14 +3745,20 @@ FORMATO TTS:
                         speech_frames = 0
                         
                         if len(audio_bytes) > 3200:  # Almeno 100ms di audio
-                            logger.info(f"🎤 [MULTI-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere")
+                            if is_sip_participant:
+                                logger.info(f"📞 [SIP-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere con Whisper")
+                            else:
+                                logger.info(f"🎤 [MULTI-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere")
                             
                             # Trascrivi con WhisperSTT (metodo dedicato senza invio automatico)
                             try:
                                 text = await my_stt.transcribe_only(audio_bytes, 16000)
                                 
                                 if text and len(text) > 1:
-                                    logger.info(f"🎤 [MULTI-AUDIO] {participant_identity} dice: {text}")
+                                    if is_sip_participant:
+                                        logger.info(f"📞 [SIP-AUDIO] Trascrizione Whisper da {participant_identity}: '{text}'")
+                                    else:
+                                        logger.info(f"🎤 [MULTI-AUDIO] {participant_identity} dice: {text}")
                                     
                                     # ==================== TTS INTERRUPT ====================
                                     # Se TTS attivo, interrompi SEMPRE e non processare
@@ -3665,6 +3771,13 @@ FORMATO TTS:
                                     msg_id = generate_message_id()
                                     await send_to_frontend(text, "user", msg_id, participant_identity)
                                     
+                                    # ==================== SIP ROOM DEBUG MODE ====================
+                                    # Per stanze SIP, solo i partecipanti SIP attivano risposte
+                                    # I client web in stanze SIP sono in modalità debug/ascolto
+                                    if _is_sip_call and not participant_identity.startswith("sip_"):
+                                        logger.info(f"🔇 [SIP-DEBUG] Partecipante web {participant_identity} in ascolto - no LLM response")
+                                        continue  # Non processare con LLM, la trascrizione è già inviata al frontend
+                                    
                                     # Verifica se l'agent deve rispondere (con participant_id per wake sessions)
                                     should_respond, cleaned_text, is_wake = should_agent_respond(text, participant_identity)
                                     
@@ -3675,7 +3788,9 @@ FORMATO TTS:
                                         continue  # Non processare oltre
                                     
                                     if should_respond and cleaned_text:
-                                        # Wake session attiva, rispondi
+                                        # Wake session attiva o partecipante SIP, rispondi
+                                        if is_sip_participant:
+                                            logger.info(f"📞 [SIP-AUDIO] Invio a LLM per risposta: '{cleaned_text[:50]}...'")
                                         await handle_agent_response_only(session, cleaned_text, send_to_frontend, participant_identity)
                             except Exception as e:
                                 logger.error(f"🎤 [MULTI-AUDIO] Errore STT per {participant_identity}: {e}")
@@ -3738,8 +3853,8 @@ FORMATO TTS:
                     data = text
             else:
                 # Includi sender per identificare chi ha inviato il messaggio
-                # Per agent usa sempre "SophyAI", per user usa il sender passato
-                sender_name = "SophyAI" if role == "assistant" else sender
+                # Per agent usa sempre il nome configurato, per user usa il sender passato
+                sender_name = ASSISTANT_NAME if role == "assistant" else sender
                 data = json.dumps({"type": "transcript", "text": text, "role": role, "id": message_id, "sender": sender_name})
             await ctx.room.local_participant.publish_data(data.encode(), reliable=True)
             logger.info(f"📤 [FRONTEND] id={message_id} {role} (sender={sender_name}): {text[:50]}...")
@@ -4056,6 +4171,7 @@ def main():
     
     worker_options = WorkerOptions(
         entrypoint_fnc=entrypoint,
+        request_fnc=request_handler,  # Accetta automaticamente job SIP
         api_key=config.livekit.api_key,
         api_secret=config.livekit.api_secret,
         ws_url=config.livekit.url,

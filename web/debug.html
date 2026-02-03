@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SophyAi - Impostazioni</title>
+    <title id="page-title">Receptionist AI - Impostazioni</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -494,7 +494,7 @@
         <div class="logo">
             <div class="logo-icon">S</div>
             <div>
-                <div class="logo-text">SophyAi</div>
+                <div class="logo-text" id="logo-text">Receptionist AI</div>
                 <div class="logo-subtitle">Impostazioni</div>
             </div>
         </div>
@@ -509,6 +509,7 @@
             <button class="tab" data-tab="llm" onclick="switchTab('llm')">🧠 LLM</button>
             <button class="tab" data-tab="tts" onclick="switchTab('tts')">🔊 TTS</button>
             <button class="tab" data-tab="voice" onclick="switchTab('voice')">🎙️ Voice</button>
+            <button class="tab" data-tab="sip" onclick="switchTab('sip')">📞 SIP</button>
         </div>
     </div>
 
@@ -922,7 +923,7 @@ Authorization: Bearer &lt;token&gt;
             </div>
             
             <div class="form-group">
-                <label class="form-label">Timeout "Hey Sophy" (secondi)</label>
+                <label class="form-label" id="wake-timeout-label">Timeout "Hey Assistant" (secondi)</label>
                 <input type="range" id="wake-timeout" min="5" max="60" value="20" 
                        style="width: 100%;" oninput="updateVoiceSlider('wake-timeout')">
                 <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
@@ -931,7 +932,7 @@ Authorization: Bearer &lt;token&gt;
                     <span>60s</span>
                 </div>
                 <small style="color: var(--text-muted); display: block; margin-top: 8px;">
-                    Tempo di inattività dopo il quale l'utente deve dire nuovamente "Hey Sophy"
+                    <span id="wake-timeout-hint">Tempo di inattività dopo il quale l'utente deve dire nuovamente il wake word</span>
                 </small>
             </div>
             
@@ -1002,11 +1003,231 @@ Authorization: Bearer &lt;token&gt;
             <div class="info-box" style="margin-top: 20px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border-left: 3px solid var(--accent);">
                 <div style="font-weight: 600; margin-bottom: 8px;">💡 Suggerimenti</div>
                 <ul style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; padding-left: 20px; line-height: 1.8;">
-                    <li><strong>VAD Barge-in</strong>: Se Sophy non si ferma quando parli, abbassa questo valore</li>
+                    <li id="tip-vad"><strong>VAD Barge-in</strong>: Se l'assistente non si ferma quando parli, abbassa questo valore</li>
                     <li><strong>Rilevamento Parlato</strong>: Se devi urlare per attivare, abbassa questo valore</li>
-                    <li><strong>Cooldown TTS</strong>: Se Sophy rileva l'eco delle sue risposte, aumenta questo valore</li>
-                    <li><strong>Timeout Hey Sophy</strong>: Tempo di silenzio prima che devi riattivare con "Hey Sophy"</li>
+                    <li id="tip-cooldown"><strong>Cooldown TTS</strong>: Se l'assistente rileva l'eco delle sue risposte, aumenta questo valore</li>
+                    <li id="tip-timeout"><strong>Timeout Wake Word</strong>: Tempo di silenzio prima che devi riattivare con il wake word</li>
                 </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIP Configuration Tab -->
+    <div class="tab-content" id="tab-sip">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📞</div>
+                <h2 class="card-title">Stato Servizio SIP</h2>
+            </div>
+            
+            <div id="sip-status-container">
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-box" id="sip-status-box" style="border-left-color: var(--text-muted);">
+                        <div class="stat-label">📡 Stato Servizio</div>
+                        <div class="stat-value" id="sip-service-status" style="font-size: 1.2rem;">--</div>
+                        <div class="stat-details" id="sip-status-message">Verifica in corso...</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #3b82f6;">
+                        <div class="stat-label">🔌 Porta SIP (UDP)</div>
+                        <div class="stat-value" id="sip-port-5060" style="font-size: 1.2rem; color: var(--text-muted);">--</div>
+                        <div class="stat-details">5060</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #8b5cf6;">
+                        <div class="stat-label">🔒 Porta SIP (TLS)</div>
+                        <div class="stat-value" id="sip-port-5061" style="font-size: 1.2rem; color: var(--text-muted);">--</div>
+                        <div class="stat-details">5061</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #f59e0b;">
+                        <div class="stat-label">📋 Trunk Configurati</div>
+                        <div class="stat-value" id="sip-trunks-count" style="font-size: 1.2rem; color: var(--text-muted);">0</div>
+                        <div class="stat-details">Provider SIP</div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="checkSIPStatus()">🔄 Aggiorna Stato</button>
+                    <button class="btn btn-secondary" onclick="testSIPConnection()">🔌 Test Connessione</button>
+                </div>
+                <div id="sip-test-result" style="margin-top: 12px; display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">⚙️</div>
+                <h2 class="card-title">Configurazione SIP Bridge</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">🔧 Porte SIP</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta SIP (UDP)</label>
+                        <input type="number" class="form-input" id="sip-port" value="5060" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Porta per il traffico SIP non cifrato</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta SIP TLS</label>
+                        <input type="number" class="form-input" id="sip-port-tls" value="5061" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Porta per il traffico SIP cifrato (TLS)</small>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">📡 Porte RTP (Media)</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Range Porte RTP - Inizio</label>
+                        <input type="number" class="form-input" id="rtp-port-start" value="10000" min="1024" max="65535">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Range Porte RTP - Fine</label>
+                        <input type="number" class="form-input" id="rtp-port-end" value="10100" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Range di porte UDP per il traffico audio RTP</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🌐</div>
+                <h2 class="card-title">Configurazione Trunk SIP</h2>
+            </div>
+            
+            <div class="info-box" style="margin-bottom: 20px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 3px solid #3b82f6;">
+                <div style="font-weight: 600; margin-bottom: 4px;">ℹ️ Cos'è un Trunk SIP?</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Un trunk SIP connette il tuo sistema telefonico a un provider VoIP (es. Twilio, Vonage, VoIP.ms). 
+                    Configura questi parametri per ricevere/effettuare chiamate telefoniche.
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Nome Trunk</label>
+                        <input type="text" class="form-input" id="trunk-name" placeholder="trunk-principale">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Nome identificativo del trunk</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Host Provider SIP</label>
+                        <input type="text" class="form-input" id="trunk-host" placeholder="sip.provider.com">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Indirizzo del server SIP del provider</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta</label>
+                        <input type="number" class="form-input" id="trunk-port" value="5060" min="1" max="65535">
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" id="trunk-username" placeholder="username">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Credenziali fornite dal provider</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" class="form-input" id="trunk-password" placeholder="password" style="flex: 1;">
+                            <button class="btn btn-secondary" onclick="toggleSIPPasswordVisibility()" title="Mostra/Nascondi">👁️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Numeri di Telefono</label>
+                        <input type="text" class="form-input" id="trunk-numbers" placeholder="+39XXXXXXXXXX, +39YYYYYYYYYY">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Numeri associati al trunk (separati da virgola)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <h2 class="card-title">Dispatch Rules & Audio</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">📥 Regole Chiamate Inbound</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Prefisso Room</label>
+                        <input type="text" class="form-input" id="room-prefix" value="sip-call-">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Nome room LiveKit per le chiamate (es. sip-call-12345)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="enable-recording">
+                            <span>Abilita registrazione chiamate</span>
+                        </label>
+                        <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+                            Le chiamate verranno registrate (richiede storage configurato)
+                        </small>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">🔊 Codec Audio</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Codec Preferiti</label>
+                        <input type="text" class="form-input" id="audio-codecs" value="opus,pcmu,pcma">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">
+                            Codec in ordine di preferenza (separati da virgola).<br>
+                            • <strong>opus</strong>: Alta qualità, bassa latenza<br>
+                            • <strong>pcmu</strong>: G.711 μ-law (USA)<br>
+                            • <strong>pcma</strong>: G.711 A-law (Europa)
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="saveSIPConfig()">💾 Salva Configurazione</button>
+                <button class="btn btn-secondary" onclick="loadSIPConfig()">🔄 Ricarica</button>
+            </div>
+            
+            <div id="sip-save-result" style="margin-top: 12px; display: none;"></div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📚</div>
+                <h2 class="card-title">Documentazione SIP</h2>
+            </div>
+            
+            <div class="info-box" style="padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px;">
+                <h4 style="margin-bottom: 12px;">🚀 Come configurare SIP con LiveKit</h4>
+                <ol style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li>Scegli un provider SIP (Twilio, Vonage, VoIP.ms, ecc.)</li>
+                    <li>Registra un numero di telefono con il provider</li>
+                    <li>Ottieni le credenziali SIP (host, username, password)</li>
+                    <li>Configura il trunk qui sopra con le credenziali</li>
+                    <li>Configura il provider per inoltrare le chiamate al tuo server LiveKit</li>
+                    <li>Avvia il servizio SIP di LiveKit: <code>docker-compose up -d livekit-sip</code></li>
+                </ol>
+                
+                <div style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">📋 Provider SIP Popolari</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
+                        <a href="https://www.twilio.com/sip-trunking" target="_blank" style="color: var(--accent); text-decoration: none;">Twilio</a>
+                        <a href="https://www.vonage.com/communications-apis/sip-trunking/" target="_blank" style="color: var(--accent); text-decoration: none;">Vonage</a>
+                        <a href="https://voip.ms/" target="_blank" style="color: var(--accent); text-decoration: none;">VoIP.ms</a>
+                        <a href="https://www.plivo.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Plivo</a>
+                        <a href="https://www.bandwidth.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Bandwidth</a>
+                        <a href="https://www.telnyx.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Telnyx</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1027,22 +1248,88 @@ Authorization: Bearer &lt;token&gt;
             latency: { values: [], avg: 0, last: 0, count: 0 }
         };
 
+        // Branding configuration (caricata dinamicamente)
+        const branding = {
+            appName: 'Receptionist AI',
+            assistantName: 'Receptionist',
+            assistantTriggers: ['@receptionist', 'receptionist', 'hey receptionist']
+        };
+
+        // Carica configurazione branding dal server
+        async function loadBranding() {
+            try {
+                const resp = await fetch('/api/branding');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    branding.appName = data.app_name || branding.appName;
+                    branding.assistantName = data.assistant_name || branding.assistantName;
+                    branding.assistantTriggers = data.assistant_triggers || branding.assistantTriggers;
+                    
+                    // Aggiorna elementi UI
+                    document.getElementById('page-title').textContent = branding.appName + ' - Impostazioni';
+                    document.getElementById('logo-text').textContent = branding.appName;
+                    
+                    // Aggiorna label wake timeout
+                    const wakeLabel = document.getElementById('wake-timeout-label');
+                    if (wakeLabel) {
+                        wakeLabel.textContent = `Timeout "Hey ${branding.assistantName}" (secondi)`;
+                    }
+                    
+                    console.log('✅ Branding caricato:', branding);
+                }
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare branding, uso default:', e);
+            }
+        }
+
         // ==================== Init ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            await loadSettings();
-            await loadOllamaModels();
-            await loadPromptSettings();
-            await loadVoiceSettings();
+            // Carica le impostazioni in modo resiliente - non bloccare se i servizi non sono attivi
+            try {
+                await loadBranding();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare branding, uso default:', e);
+            }
+            
+            try {
+                await loadSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare settings, usa valori default:', e);
+                showToast('Alcuni servizi non sono attivi. Puoi comunque configurare i parametri.', 'warning');
+            }
+            
+            try {
+                await loadOllamaModels();
+            } catch (e) {
+                console.warn('⚠️ Ollama non disponibile:', e);
+                document.getElementById('ollama-models').innerHTML = '<div style="color: var(--warning);">⚠️ Ollama non raggiungibile. Avvia il servizio per vedere i modelli.</div>';
+            }
+            
+            try {
+                await loadPromptSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare prompt settings:', e);
+            }
+            
+            try {
+                await loadVoiceSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare voice settings:', e);
+            }
+            
+            // Polling stats (non critico)
             startStatsPolling();
+            
+            // Controlla se siamo in tab SIP dall'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab) {
+                switchTab(tab);
+            }
         });
 
         // ==================== Tabs ====================
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-        }
+        // La funzione switchTab è definita alla fine del file con il supporto per SIP
 
         // ==================== Settings ====================
         async function loadSettings() {
@@ -2037,6 +2324,192 @@ Authorization: Bearer &lt;token&gt;
                 
             } catch (e) {
                 showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+        
+        // ==================== SIP Configuration ====================
+        
+        async function checkSIPStatus() {
+            const statusBox = document.getElementById('sip-status-box');
+            const serviceStatus = document.getElementById('sip-service-status');
+            const statusMessage = document.getElementById('sip-status-message');
+            const port5060 = document.getElementById('sip-port-5060');
+            const port5061 = document.getElementById('sip-port-5061');
+            const trunksCount = document.getElementById('sip-trunks-count');
+            
+            serviceStatus.textContent = '⏳';
+            statusMessage.textContent = 'Verifica in corso...';
+            
+            try {
+                const resp = await fetch('/api/sip/status');
+                const status = await resp.json();
+                
+                if (status.available) {
+                    serviceStatus.textContent = '✅ Attivo';
+                    serviceStatus.style.color = 'var(--success)';
+                    statusBox.style.borderLeftColor = 'var(--success)';
+                } else {
+                    serviceStatus.textContent = '❌ Non attivo';
+                    serviceStatus.style.color = 'var(--danger)';
+                    statusBox.style.borderLeftColor = 'var(--danger)';
+                }
+                
+                statusMessage.textContent = status.message;
+                
+                // Aggiorna indicatori porte
+                port5060.textContent = status.details?.port_5060 ? '✅' : '❌';
+                port5060.style.color = status.details?.port_5060 ? 'var(--success)' : 'var(--danger)';
+                
+                port5061.textContent = status.details?.port_5061 ? '✅' : '❌';
+                port5061.style.color = status.details?.port_5061 ? 'var(--success)' : 'var(--danger)';
+                
+                trunksCount.textContent = status.details?.trunks_configured || 0;
+                trunksCount.style.color = status.details?.trunks_configured > 0 ? 'var(--success)' : 'var(--warning)';
+                
+            } catch (e) {
+                serviceStatus.textContent = '⚠️ Errore';
+                serviceStatus.style.color = 'var(--warning)';
+                statusMessage.textContent = 'Impossibile verificare lo stato: ' + e.message;
+            }
+        }
+        
+        async function testSIPConnection() {
+            const resultDiv = document.getElementById('sip-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Test in corso...';
+            
+            try {
+                const resp = await fetch('/api/sip/test', { method: 'POST' });
+                const result = await resp.json();
+                
+                let html = '<div style="margin-top: 8px;">';
+                
+                result.tests.forEach(test => {
+                    const icon = test.passed ? '✅' : '❌';
+                    const color = test.passed ? 'var(--success)' : 'var(--danger)';
+                    html += `<div style="margin: 4px 0; color: ${color};">${icon} ${test.name}: ${test.message}</div>`;
+                });
+                
+                html += '</div>';
+                
+                if (result.status === 'ok') {
+                    resultDiv.innerHTML = `<div style="color: var(--success); font-weight: 600;">✅ Tutti i test superati!</div>${html}`;
+                    showToast('Test SIP completato con successo', 'success');
+                } else if (result.status === 'partial') {
+                    resultDiv.innerHTML = `<div style="color: var(--warning); font-weight: 600;">⚠️ Alcuni test falliti</div>${html}`;
+                    showToast('Test SIP parzialmente riuscito', 'warning');
+                } else {
+                    resultDiv.innerHTML = `<div style="color: var(--danger); font-weight: 600;">❌ Test fallito</div>${html}`;
+                    showToast('Test SIP fallito', 'error');
+                }
+                
+            } catch (e) {
+                resultDiv.innerHTML = `<div style="color: var(--danger);">❌ Errore: ${e.message}</div>`;
+                showToast('Errore test SIP', 'error');
+            }
+        }
+        
+        async function loadSIPConfig() {
+            console.log('📞 Caricamento configurazione SIP...');
+            try {
+                const resp = await fetch('/api/sip/config');
+                const config = await resp.json();
+                console.log('📞 Configurazione ricevuta:', config);
+                
+                // Popola i campi del form
+                document.getElementById('sip-port').value = config.sip_port || 5060;
+                document.getElementById('sip-port-tls').value = config.sip_port_tls || 5061;
+                document.getElementById('rtp-port-start').value = config.rtp_port_start || 10000;
+                document.getElementById('rtp-port-end').value = config.rtp_port_end || 10100;
+                document.getElementById('trunk-name').value = config.trunk_name || '';
+                document.getElementById('trunk-host').value = config.trunk_host || '';
+                document.getElementById('trunk-port').value = config.trunk_port || 5060;
+                document.getElementById('trunk-username').value = config.trunk_username || '';
+                document.getElementById('trunk-password').value = config.trunk_password || '';
+                document.getElementById('trunk-numbers').value = config.trunk_numbers || '';
+                document.getElementById('room-prefix').value = config.room_prefix || 'sip-call-';
+                document.getElementById('enable-recording').checked = config.enable_recording || false;
+                document.getElementById('audio-codecs').value = config.audio_codecs || 'opus,pcmu,pcma';
+                
+                console.log('✅ Configurazione SIP caricata');
+                
+            } catch (e) {
+                console.error('Errore caricamento config SIP:', e);
+            }
+        }
+        
+        async function saveSIPConfig() {
+            const config = {
+                sip_port: parseInt(document.getElementById('sip-port').value) || 5060,
+                sip_port_tls: parseInt(document.getElementById('sip-port-tls').value) || 5061,
+                rtp_port_start: parseInt(document.getElementById('rtp-port-start').value) || 10000,
+                rtp_port_end: parseInt(document.getElementById('rtp-port-end').value) || 10100,
+                trunk_name: document.getElementById('trunk-name').value.trim(),
+                trunk_host: document.getElementById('trunk-host').value.trim(),
+                trunk_port: parseInt(document.getElementById('trunk-port').value) || 5060,
+                trunk_username: document.getElementById('trunk-username').value.trim(),
+                trunk_password: document.getElementById('trunk-password').value,
+                trunk_numbers: document.getElementById('trunk-numbers').value.trim(),
+                room_prefix: document.getElementById('room-prefix').value.trim() || 'sip-call-',
+                enable_recording: document.getElementById('enable-recording').checked,
+                audio_codecs: document.getElementById('audio-codecs').value.trim() || 'opus,pcmu,pcma'
+            };
+            
+            const resultDiv = document.getElementById('sip-save-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Salvataggio...';
+            
+            try {
+                const resp = await fetch('/api/sip/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Errore salvataggio');
+                }
+                
+                const result = await resp.json();
+                
+                resultDiv.innerHTML = `
+                    <div style="color: var(--success); font-weight: 600;">✅ ${result.message}</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                        File: ${result.config_file}
+                    </div>
+                `;
+                showToast('Configurazione SIP salvata!', 'success');
+                
+                // Aggiorna lo stato
+                checkSIPStatus();
+                
+            } catch (e) {
+                resultDiv.innerHTML = `<div style="color: var(--danger);">❌ Errore: ${e.message}</div>`;
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+        
+        function toggleSIPPasswordVisibility() {
+            const passwordInput = document.getElementById('trunk-password');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+            } else {
+                passwordInput.type = 'password';
+            }
+        }
+        
+        // Carica configurazione SIP al cambio tab
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // Carica dati specifici per tab
+            if (tabId === 'sip') {
+                loadSIPConfig();
+                checkSIPStatus();
             }
         }
     </script>

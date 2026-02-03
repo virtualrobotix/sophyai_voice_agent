@@ -1,6 +1,10 @@
 # LiveKit SIP Configuration
 # Configurazione per il bridge SIP-WebRTC
 
+# Configurazione Redis (richiesto per LiveKit SIP)
+redis:
+  address: livekit-redis:6379
+
 # Configurazione server SIP
 sip:
   # Porta UDP per SIP
@@ -13,26 +17,19 @@ rtp:
   port_range_start: 10000
   port_range_end: 10100
 
-# Configurazione LiveKit
-livekit:
-  url: ws://host.docker.internal:7880
-  api_key: devkey
-  api_secret: secret_dev_key_change_in_production
+# Configurazione LiveKit API
+api_key: devkey
+api_secret: secret_dev_key_change_in_production
+ws_url: ws://host.docker.internal:7880
 
-# Trunk SIP (configurazione di esempio)
-# Decommentare e configurare secondo il proprio provider SIP
-# 
-# trunks:
-#   - name: "trunk-principale"
-#     # Provider SIP (es. Twilio, Vonage, VoIP.ms, ecc.)
-#     host: "sip.provider.com"
-#     port: 5060
-#     # Autenticazione (se richiesta)
-#     username: "your-username"
-#     password: "your-password"
-#     # Numeri di telefono associati
-#     numbers:
-#       - "+39XXXXXXXXXX"
+# Trunk SIP - Twilio AIMS
+trunks:
+  - name: "AIMS dev trunk"
+    host: "aims-dev-trunk.pstn.twilio.com"
+    port: 5060
+    # Numeri di telefono associati
+    numbers:
+      - "+390111951786"
 
 # Regole di dispatch per chiamate inbound
 # Quando arriva una chiamata, viene creata una room e dispatchato l'agent

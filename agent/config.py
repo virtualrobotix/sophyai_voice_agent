@@ -5,12 +5,28 @@ Gestisce la configurazione dell'applicazione.
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 
 
 # Carica variabili d'ambiente
 load_dotenv()
+
+
+@dataclass
+class BrandingConfig:
+    """Configurazione branding dell'applicativo"""
+    # Nome dell'applicativo mostrato nell'interfaccia
+    app_name: str = field(default_factory=lambda: os.getenv("APP_NAME", "Receptionist AI"))
+    # Nome dell'assistente (usato nei prompt e nell'interfaccia)
+    assistant_name: str = field(default_factory=lambda: os.getenv("ASSISTANT_NAME", "Receptionist"))
+    # Trigger per attivare l'assistente
+    assistant_triggers: List[str] = field(default_factory=lambda: [
+        t.strip().lower() for t in os.getenv(
+            "ASSISTANT_TRIGGERS", 
+            "@receptionist,receptionist,hey receptionist,ehi receptionist"
+        ).split(",") if t.strip()
+    ])
 
 
 @dataclass
@@ -25,7 +41,7 @@ class LiveKitConfig:
 class OllamaConfig:
     """Configurazione Ollama"""
     host: str = field(default_factory=lambda: os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "devstral-small-2:latest"))
+    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "gpt-oss:20b"))
 
 
 @dataclass
@@ -96,6 +112,7 @@ class ServerConfig:
 @dataclass
 class AppConfig:
     """Configurazione principale dell'applicazione"""
+    branding: BrandingConfig = field(default_factory=BrandingConfig)
     livekit: LiveKitConfig = field(default_factory=LiveKitConfig)
     ollama: OllamaConfig = field(default_factory=OllamaConfig)
     whisper: WhisperConfig = field(default_factory=WhisperConfig)

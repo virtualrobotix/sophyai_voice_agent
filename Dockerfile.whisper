@@ -1,0 +1,48 @@
+# Whisper Server con supporto CUDA
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# Installa Python e dipendenze sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    libsndfile1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Installa dipendenze Python per Whisper
+RUN pip3 install --no-cache-dir \
+    faster-whisper \
+    openai-whisper \
+    torch \
+    torchaudio \
+    fastapi \
+    uvicorn \
+    python-multipart \
+    numpy \
+    soundfile \
+    loguru \
+    librosa
+
+# Copia il server Whisper
+COPY whisper_server.py .
+
+# Directory per i modelli
+RUN mkdir -p /app/models
+ENV HF_HOME=/app/models
+
+# Variabili di default
+ENV WHISPER_MODEL=large-v3
+ENV WHISPER_LANGUAGE=it
+ENV WHISPER_DEVICE=cuda
+ENV WHISPER_PORT=8091
+
+EXPOSE 8091
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+    CMD curl -f http://localhost:8091/ || exit 1
+
+CMD ["python3", "whisper_server.py"]

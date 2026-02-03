@@ -1,3 +1,6 @@
+# Docker Compose per server NVIDIA (H100, A100, etc.)
+# Usa: docker-compose -f docker-compose.nvidia.yml up -d
+
 services:
   # PostgreSQL per persistenza configurazioni e chat
   postgres:
@@ -38,8 +41,7 @@ services:
     networks:
       - voiceagent
 
-  # Whisper Server con GPU CUDA (solo per architetture NVIDIA)
-  # Per Apple Silicon, usa whisper_server.py nativo in venv
+  # Whisper Server con GPU CUDA
   whisper:
     build:
       context: .
@@ -49,7 +51,7 @@ services:
     ports:
       - "8091:8091"
     environment:
-      - WHISPER_MODEL=large-v3
+      - WHISPER_MODEL=${WHISPER_MODEL:-large-v3}
       - WHISPER_LANGUAGE=it
       - WHISPER_DEVICE=cuda
       - WHISPER_PORT=8091
@@ -71,11 +73,8 @@ services:
       start_period: 180s
     networks:
       - voiceagent
-    profiles:
-      - nvidia
 
-  # TTS Server con GPU CUDA (solo per architetture NVIDIA)
-  # Per Apple Silicon, usa tts_server.py nativo in venv
+  # TTS Server con GPU CUDA
   tts:
     build:
       context: .
@@ -106,8 +105,6 @@ services:
       start_period: 60s
     networks:
       - voiceagent
-    profiles:
-      - nvidia
 
   # Web Server (Frontend + API) con HTTPS
   web:
@@ -120,11 +117,6 @@ services:
       - "8080:8080"
       - "8443:8443"
     environment:
-      # Branding Configuration
-      - APP_NAME=${APP_NAME:-Receptionist AI}
-      - ASSISTANT_NAME=${ASSISTANT_NAME:-Receptionist}
-      - ASSISTANT_TRIGGERS=${ASSISTANT_TRIGGERS:-@receptionist,receptionist,hey receptionist,ehi receptionist}
-      # LiveKit Configuration
       - LIVEKIT_URL=${LIVEKIT_URL:-ws://0.0.0.0:7880}
       - LIVEKIT_INTERNAL_URL=ws://host.docker.internal:7880
       - SERVER_IP=${SERVER_IP:-host.docker.internal}
@@ -173,13 +165,13 @@ services:
       - RTP_PORT_LOW=10000
       - RTP_PORT_HIGH=10100
     volumes:
-      - ./sip-config.yaml:/sip/config.yaml:ro
+      - ./sip-config.yaml:/etc/livekit-sip/config.yaml:ro
     networks:
       - voiceagent
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Voice Agent - si connette a LiveKit locale
+  # Voice Agent - si connette a LiveKit locale e usa Whisper/TTS in Docker
   agent:
     build:
       context: .
@@ -187,11 +179,6 @@ services:
     container_name: voice-agent-worker
     restart: unless-stopped
     environment:
-      # Branding Configuration
-      - APP_NAME=${APP_NAME:-Receptionist AI}
-      - ASSISTANT_NAME=${ASSISTANT_NAME:-Receptionist}
-      - ASSISTANT_TRIGGERS=${ASSISTANT_TRIGGERS:-@receptionist,receptionist,hey receptionist,ehi receptionist}
-      # LiveKit Configuration
       - LIVEKIT_URL=ws://host.docker.internal:7880
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
@@ -199,10 +186,9 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gpt-oss:20b}
       - WHISPER_MODEL=${WHISPER_MODEL:-large-v3}
       - WHISPER_LANGUAGE=it
-      # Per NVIDIA: usa whisper e tts interni
-      # Per Apple Silicon: usa server esterni (host.docker.internal)
-      - WHISPER_SERVER_URL=${WHISPER_SERVER_URL:-http://host.docker.internal:8091}
-      - TTS_SERVER_URL=${TTS_SERVER_URL:-http://host.docker.internal:8092}
+      # Usa i servizi Docker interni
+      - WHISPER_SERVER_URL=http://whisper:8091
+      - TTS_SERVER_URL=http://tts:8092
       - DEFAULT_TTS=edge
       - LOG_LEVEL=INFO
       - HF_HOME=/app/models/huggingface
@@ -215,6 +201,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      whisper:
+        condition: service_started
+      tts:
+        condition: service_started
     networks:
       - voiceagent
     extra_hosts:

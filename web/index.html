@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SophyAi Live</title>
+    <title id="page-title">Receptionist AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1335,7 +1335,7 @@
                         <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm-1 14.93A7.006 7.006 0 0 1 5 10h2a5 5 0 0 0 10 0h2a7.006 7.006 0 0 1-6 6.93V20h4v2H7v-2h4v-3.07z"/>
                     </svg>
                 </div>
-                <span class="logo-text">SophyAi Live</span>
+                <span class="logo-text" id="logo-text">Receptionist AI</span>
             </div>
         </div>
         <div class="header-actions">
@@ -1397,9 +1397,9 @@
                         <!-- Corpo/spalle -->
                         <ellipse cx="100" cy="185" rx="50" ry="30" fill="#667eea"/>
                     </svg>
-                    <span class="placeholder-text">Sophy AI</span>
+                    <span class="placeholder-text" id="assistant-placeholder">Receptionist</span>
                 </div>
-                <div class="video-label">Sophy</div>
+                <div class="video-label" id="assistant-video-label">Receptionist</div>
             </div>
         </div>
 
@@ -1454,10 +1454,10 @@
                     🎙️
                 </button>
                 
-                <!-- Agent toggle button - forza comunicazione con Sophy -->
-                <button class="agent-toggle-btn" id="agent-toggle-btn" onclick="toggleAgentMode()" title="Attiva per parlare direttamente con Sophy">
+                <!-- Agent toggle button - forza comunicazione con l'assistente -->
+                <button class="agent-toggle-btn" id="agent-toggle-btn" onclick="toggleAgentMode()" title="Attiva per parlare direttamente con l'assistente">
                     <span class="toggle-icon">🤖</span>
-                    <span class="toggle-text">Sophy</span>
+                    <span class="toggle-text" id="agent-toggle-text">Receptionist</span>
                 </button>
 
                 <!-- Upload image button -->
@@ -1534,13 +1534,24 @@
     <!-- Connect Overlay -->
     <div class="connect-overlay" id="connect-overlay">
         <div class="connect-card">
-            <h2>🎙️ SophyAi Live</h2>
+            <h2 id="connect-title">🎙️ Receptionist AI</h2>
             <p>Assistente vocale intelligente</p>
             
             <div class="connect-form">
                 <div class="input-group">
                     <label for="user-name">Il tuo nome</label>
                     <input type="text" id="user-name" value="Utente" placeholder="Come ti chiami?">
+                </div>
+                
+                <div class="input-group">
+                    <label for="room-select">Stanza</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="room-select" style="flex: 1;">
+                            <option value="voice-room">🆕 Nuova stanza</option>
+                        </select>
+                        <button type="button" onclick="refreshRooms()" style="padding: 8px 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-primary);" title="Aggiorna lista stanze">🔄</button>
+                    </div>
+                    <small id="room-info" style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;"></small>
                 </div>
                 
                 <button class="btn-connect" id="connect-btn" onclick="connect()">
@@ -1672,6 +1683,41 @@
             elements.videoAnalysisPanel.classList.add('video-hidden');
         }
 
+        // Branding configuration (caricata dinamicamente)
+        const branding = {
+            appName: 'Receptionist AI',
+            assistantName: 'Receptionist',
+            assistantTriggers: ['@receptionist', 'receptionist', 'hey receptionist']
+        };
+
+        // Carica configurazione branding dal server
+        async function loadBranding() {
+            try {
+                const resp = await fetch('/api/branding');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    branding.appName = data.app_name || branding.appName;
+                    branding.assistantName = data.assistant_name || branding.assistantName;
+                    branding.assistantTriggers = data.assistant_triggers || branding.assistantTriggers;
+                    
+                    // Aggiorna elementi UI
+                    document.getElementById('page-title').textContent = branding.appName;
+                    document.getElementById('logo-text').textContent = branding.appName;
+                    document.getElementById('connect-title').textContent = '🎙️ ' + branding.appName;
+                    document.getElementById('assistant-placeholder').textContent = branding.assistantName;
+                    document.getElementById('assistant-video-label').textContent = branding.assistantName;
+                    document.getElementById('agent-toggle-text').textContent = branding.assistantName;
+                    
+                    console.log('✅ Branding caricato:', branding);
+                }
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare branding, uso default:', e);
+            }
+        }
+        
+        // Carica branding all'avvio
+        loadBranding();
+
         // Check services on load
         async function checkServices() {
             try {
@@ -1694,6 +1740,57 @@
                 console.error('Error checking services:', e);
             }
         }
+
+        // Carica lista room disponibili
+        async function refreshRooms() {
+            const roomSelect = document.getElementById('room-select');
+            const roomInfo = document.getElementById('room-info');
+            
+            try {
+                roomInfo.textContent = '🔄 Caricamento...';
+                const resp = await fetch('/api/rooms');
+                const data = await resp.json();
+                
+                // Salva selezione corrente
+                const currentValue = roomSelect.value;
+                
+                // Pulisci e ricostruisci opzioni
+                roomSelect.innerHTML = '<option value="voice-room">🆕 Nuova stanza</option>';
+                
+                if (data.rooms && data.rooms.length > 0) {
+                    // Aggiungi separatore
+                    const separator = document.createElement('option');
+                    separator.disabled = true;
+                    separator.textContent = '── Stanze attive ──';
+                    roomSelect.appendChild(separator);
+                    
+                    // Aggiungi room attive
+                    data.rooms.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.name;
+                        const participantText = room.num_participants === 1 ? '1 partecipante' : `${room.num_participants} partecipanti`;
+                        option.textContent = `📞 ${room.name} (${participantText})`;
+                        roomSelect.appendChild(option);
+                    });
+                    
+                    roomInfo.textContent = `${data.rooms.length} stanza/e attiva/e`;
+                } else {
+                    roomInfo.textContent = 'Nessuna stanza attiva';
+                }
+                
+                // Ripristina selezione se ancora valida
+                if (currentValue && [...roomSelect.options].some(o => o.value === currentValue)) {
+                    roomSelect.value = currentValue;
+                }
+                
+            } catch (e) {
+                console.error('Errore caricamento rooms:', e);
+                roomInfo.textContent = '⚠️ Errore caricamento';
+            }
+        }
+        
+        // Carica room all'avvio
+        refreshRooms();
 
         // Initialization Modal Functions
         const initModal = {
@@ -1738,6 +1835,8 @@
         // Connect with initialization modal
         async function connect() {
             const userName = elements.userName.value || 'Utente';
+            const roomSelect = document.getElementById('room-select');
+            const selectedRoom = roomSelect.value || 'voice-room';
             
             elements.connectBtn.disabled = true;
             elements.connectBtn.textContent = '⏳ Connessione...';
@@ -1812,13 +1911,13 @@
                 initModal.setMessage('Connessione alla room in corso...');
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:'voice-room',userName:userName,protocol:window.location.protocol,host:window.location.host},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:selectedRoom,userName:userName,protocol:window.location.protocol,host:window.location.host},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
                 // #endregion
                 const resp = await fetch('/api/token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        room_name: 'voice-room',
+                        room_name: selectedRoom,
                         participant_name: userName
                     })
                 });
@@ -1899,7 +1998,7 @@
                             
                             const label = document.createElement('div');
                             label.className = 'video-label';
-                            label.textContent = isAgent ? 'SophyAI' : displayName;
+                            label.textContent = isAgent ? branding.assistantName : displayName;
                             
                             wrapper.appendChild(video);
                             wrapper.appendChild(label);
@@ -1978,7 +2077,7 @@
                             if (msg.sender) {
                                 senderName = msg.sender;
                             } else if (msg.role === 'assistant') {
-                                senderName = 'SophyAI';
+                                senderName = branding.assistantName;
                             } else {
                                 // Messaggio vocale - non sappiamo chi sta parlando
                                 senderName = 'Partecipante';
@@ -2002,7 +2101,7 @@
                             const result = msg.result || 'Nessun risultato';
                             addMessage(result, 'assistant', messageId);
                             
-                            elements.voiceStatus.textContent = 'Parla con Sophy...';
+                            elements.voiceStatus.textContent = `Parla con ${branding.assistantName}...`;
                             
                             if (elements.analyzeImageBtn) {
                                 elements.analyzeImageBtn.disabled = false;
@@ -2114,7 +2213,7 @@
                 elements.statusDot.className = 'status-dot connected';
                 elements.statusText.textContent = 'Connesso';
                 initModal.hide();
-                elements.voiceStatus.textContent = 'Parla con Sophy...';
+                elements.voiceStatus.textContent = `Parla con ${branding.assistantName}...`;
                 
                 // Inizializza sistema di interruzione vocale automatica
                 setupVoiceInterrupt();
@@ -2199,7 +2298,7 @@
             
             // Mostra sender name (se disponibile) e ID debug
             const shortId = messageId.length > 20 ? messageId.substring(messageId.length - 15) : messageId;
-            const displayName = senderName || (role === 'user' ? 'Tu' : 'SophyAI');
+            const displayName = senderName || (role === 'user' ? 'Tu' : branding.assistantName);
             msg.innerHTML = `
                 <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
                 <div class="message-bubble">
@@ -3009,14 +3108,14 @@
                     }
                     // Aggiorna status bar
                     if (elements.voiceStatus) {
-                        elements.voiceStatus.textContent = '🎤 Hey Sophy! Sto ascoltando...';
+                        elements.voiceStatus.textContent = `🎤 Hey ${branding.assistantName}! Sto ascoltando...`;
                     }
                     console.log(`🎤 Wake session ATTIVATA (${remainingSeconds}s)`);
                 } else {
                     elements.wakeIndicator.classList.add('hidden');
                     // Ripristina status bar
                     if (elements.voiceStatus && state.micActive) {
-                        elements.voiceStatus.textContent = '🎤 Parla con Sophy...';
+                        elements.voiceStatus.textContent = `🎤 Parla con ${branding.assistantName}...`;
                     }
                     console.log('🎤 Wake session DISATTIVATA');
                 }
@@ -3062,10 +3161,10 @@
             if (elements.agentToggleBtn) {
                 if (state.agentModeActive) {
                     elements.agentToggleBtn.classList.add('active');
-                    elements.agentToggleBtn.title = 'Modalità Sophy attiva - clicca per disattivare';
+                    elements.agentToggleBtn.title = `Modalità ${branding.assistantName} attiva - clicca per disattivare`;
                 } else {
                     elements.agentToggleBtn.classList.remove('active');
-                    elements.agentToggleBtn.title = 'Attiva per parlare direttamente con Sophy';
+                    elements.agentToggleBtn.title = `Attiva per parlare direttamente con ${branding.assistantName}`;
                 }
             }
             
@@ -3081,9 +3180,10 @@
                 
                 // Mostra feedback
                 if (state.agentModeActive) {
-                    elements.voiceStatus.textContent = '🤖 Modalità Sophy attiva - parla liberamente';
+                    elements.voiceStatus.textContent = `🤖 Modalità ${branding.assistantName} attiva - parla liberamente`;
                 } else {
-                    elements.voiceStatus.textContent = '🎤 Usa @sophyai per parlare con Sophy';
+                    const trigger = branding.assistantTriggers[0] || '@assistant';
+                    elements.voiceStatus.textContent = `🎤 Usa ${trigger} per parlare con ${branding.assistantName}`;
                 }
             } catch (e) {
                 console.error('Errore invio toggle agent:', e);

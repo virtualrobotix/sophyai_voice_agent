@@ -10,6 +10,7 @@ import os
 import sys
 import subprocess
 import time
+import yaml
 from pathlib import Path
 
 import uvicorn
@@ -176,6 +177,13 @@ async def root():
 async def debug_page():
     """Serve la pagina di debug e impostazioni"""
     return FileResponse("web/debug.html")
+
+
+@app.get("/admin.html")
+@app.get("/admin")
+async def admin_page():
+    """Serve la pagina admin per i log delle chiamate"""
+    return FileResponse("web/admin.html")
 
 
 @app.get("/api/health")
@@ -454,7 +462,7 @@ async def get_settings():
         # Fallback to defaults
         return {
             "llm_provider": "ollama",
-            "ollama_model": os.getenv("OLLAMA_MODEL", "gpt-oss"),
+            "ollama_model": os.getenv("OLLAMA_MODEL", "gpt-oss:20b"),
             "openrouter_model": "",
             "openrouter_api_key": "",
             "whisper_model": os.getenv("WHISPER_MODEL", "medium"),
@@ -991,7 +999,12 @@ async def get_prompt():
     """Get current system prompt."""
     db = await get_database()
     
-    default_prompt = """Sei Sophy, assistente vocale ultra-veloce. PRIORITA ASSOLUTA: VELOCITA E SINTESI.
+    # Costruisci prompt di default con nome assistente dalla configurazione
+    triggers_str = ", ".join([f'"{t}"' for t in config.branding.assistant_triggers[:3]])
+    default_prompt = f"""Sei {config.branding.assistant_name}, assistente vocale ultra-veloce. PRIORITA ASSOLUTA: VELOCITA E SINTESI.
+
+ATTIVAZIONE:
+Rispondi SOLO quando vieni menzionato con {triggers_str} o varianti simili.
 
 REGOLE FONDAMENTALI:
 1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai piu di 30 parole
@@ -1057,6 +1070,281 @@ async def update_context(request: ContextUpdate):
         return {"status": "ok", "message": "Context aggiornato"}
     except Exception as e:
         logger.error(f"Errore salvataggio context: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/rooms")
+async def get_rooms():
+    """
+    Ottiene la lista delle room attive in LiveKit.
+    """
+    import os
+    internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+    
+    try:
+        lk_api = api.LiveKitAPI(
+            url=internal_url,
+            api_key=config.livekit.api_key,
+            api_secret=config.livekit.api_secret
+        )
+        
+        rooms_response = await lk_api.room.list_rooms(api.ListRoomsRequest())
+        await lk_api.aclose()
+        
+        rooms = []
+        for room in rooms_response.rooms:
+            rooms.append({
+                "name": room.name,
+                "num_participants": room.num_participants,
+                "creation_time": room.creation_time,
+                "active_recording": room.active_recording
+            })
+        
+        return {"rooms": rooms}
+        
+    except Exception as e:
+        logger.error(f"Errore ottenimento rooms: {e}")
+        return {"rooms": [], "error": str(e)}
+
+
+@app.post("/api/livekit/webhook")
+async def livekit_webhook(request: Request):
+    """
+    Webhook per eventi LiveKit.
+    Gestisce apertura/chiusura chiamate SIP e dispatch automatico dell'agent.
+    """
+    import os
+    import re
+    internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+    
+    try:
+        body = await request.body()
+        auth_header = request.headers.get("Authorization", "")
+        
+        # Verifica il webhook token
+        from livekit.api import WebhookReceiver
+        webhook_receiver = WebhookReceiver(
+            api_key=config.livekit.api_key,
+            api_secret=config.livekit.api_secret
+        )
+        
+        event = webhook_receiver.receive(body.decode(), auth_header)
+        
+        logger.info(f"📞 Webhook ricevuto: {event.event}")
+        
+        # Ottieni connessione database
+        db = await get_database()
+        
+        # ==================== PARTECIPANTE SIP ENTRATO ====================
+        if event.event == "participant_joined":
+            participant = event.participant
+            room = event.room
+            
+            # Verifica se è un partecipante SIP
+            if participant and participant.identity.startswith("sip_"):
+                logger.info(f"📞 CHIAMATA IN ARRIVO: {participant.identity} in room {room.name}")
+                
+                # Estrai numero dal participant identity (formato: sip_+XXXXXXXXXXX)
+                caller_number = participant.identity.replace("sip_", "")
+                caller_name = participant.name or f"Phone {caller_number}"
+                
+                # Genera un call_id univoco
+                call_id = f"call_{room.name}_{int(datetime.now().timestamp())}"
+                
+                # Crea il log della chiamata nel database
+                try:
+                    call_log_id = await db.create_call_log(
+                        call_id=call_id,
+                        room_name=room.name,
+                        caller_number=caller_number,
+                        caller_name=caller_name,
+                        metadata={
+                            "participant_sid": participant.sid,
+                            "room_sid": room.sid if hasattr(room, 'sid') else None
+                        }
+                    )
+                    logger.info(f"📝 Log chiamata creato: ID={call_log_id}, call_id={call_id}")
+                except Exception as e:
+                    logger.error(f"Errore creazione log chiamata: {e}")
+                
+                # Dispatcha l'agent
+                lk_api = api.LiveKitAPI(
+                    url=internal_url,
+                    api_key=config.livekit.api_key,
+                    api_secret=config.livekit.api_secret
+                )
+                
+                try:
+                    # Verifica se c'è già un agent
+                    participants_resp = await lk_api.room.list_participants(
+                        api.ListParticipantsRequest(room=room.name)
+                    )
+                    
+                    agent_exists = False
+                    for p in participants_resp.participants:
+                        if p.identity.startswith("agent-"):
+                            agent_exists = True
+                            break
+                    
+                    if not agent_exists:
+                        await lk_api.agent_dispatch.create_dispatch(
+                            api.CreateAgentDispatchRequest(
+                                room=room.name,
+                                agent_name=""
+                            )
+                        )
+                        logger.info(f"✅ Agent dispatchato per chiamata SIP in room {room.name}")
+                    else:
+                        logger.info(f"ℹ️ Agent già presente in room {room.name}")
+                        
+                except Exception as e:
+                    logger.error(f"Errore dispatch agent: {e}")
+                finally:
+                    await lk_api.aclose()
+        
+        # ==================== PARTECIPANTE SIP USCITO ====================
+        elif event.event == "participant_left":
+            participant = event.participant
+            room = event.room
+            
+            if participant and participant.identity.startswith("sip_"):
+                logger.info(f"📞 CHIAMATA TERMINATA: {participant.identity} da room {room.name}")
+                
+                # Trova e chiudi il log della chiamata
+                try:
+                    call_log = await db.get_call_log_by_room(room.name, status="active")
+                    if call_log:
+                        await db.end_call_log(call_log['call_id'], status="completed")
+                        logger.info(f"📝 Log chiamata chiuso: {call_log['call_id']}")
+                except Exception as e:
+                    logger.error(f"Errore chiusura log chiamata: {e}")
+        
+        # ==================== ROOM CHIUSA ====================
+        elif event.event == "room_finished":
+            room = event.room
+            logger.info(f"🚪 Room chiusa: {room.name}")
+            
+            # Chiudi eventuali chiamate ancora attive in questa room
+            try:
+                call_log = await db.get_call_log_by_room(room.name, status="active")
+                if call_log:
+                    await db.end_call_log(call_log['call_id'], status="completed")
+                    logger.info(f"📝 Log chiamata chiuso (room finished): {call_log['call_id']}")
+            except Exception as e:
+                logger.error(f"Errore chiusura log per room finished: {e}")
+        
+        return {"status": "ok"}
+        
+    except Exception as e:
+        logger.error(f"Errore webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+# ==================== CALL LOGS API ====================
+
+@app.get("/api/calls")
+async def get_calls(
+    limit: int = 50,
+    offset: int = 0,
+    status: str = None
+):
+    """Ottiene la lista delle chiamate con paginazione."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        calls = await db.get_call_logs(limit=limit, offset=offset, status=status)
+        stats = await db.get_call_stats()
+        return {
+            "calls": calls,
+            "stats": stats,
+            "pagination": {
+                "limit": limit,
+                "offset": offset,
+                "has_more": len(calls) == limit
+            }
+        }
+    except Exception as e:
+        logger.error(f"Errore ottenimento chiamate: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/calls/{call_id}")
+async def get_call_detail(call_id: str):
+    """Ottiene i dettagli di una singola chiamata."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        call_log = await db.get_call_log_by_call_id(call_id)
+        if not call_log:
+            raise HTTPException(status_code=404, detail="Chiamata non trovata")
+        
+        # Ottieni i messaggi
+        messages = await db.get_call_messages(call_log['id'])
+        
+        # Formatta datetime
+        if call_log.get('start_time'):
+            call_log['start_time'] = call_log['start_time'].isoformat()
+        if call_log.get('end_time'):
+            call_log['end_time'] = call_log['end_time'].isoformat()
+        if call_log.get('created_at'):
+            call_log['created_at'] = call_log['created_at'].isoformat()
+        if call_log.get('updated_at'):
+            call_log['updated_at'] = call_log['updated_at'].isoformat()
+        
+        return {
+            "call": call_log,
+            "messages": messages
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore ottenimento dettaglio chiamata: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/calls/stats/summary")
+async def get_calls_stats():
+    """Ottiene statistiche sulle chiamate."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        stats = await db.get_call_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Errore ottenimento statistiche: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/calls/{call_id}/message")
+async def add_call_message(call_id: str, role: str, content: str):
+    """Aggiunge un messaggio al log di una chiamata (usato dall'agent)."""
+    db = await get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    
+    try:
+        call_log = await db.get_call_log_by_call_id(call_id)
+        if not call_log:
+            # Prova a cercare per room name
+            call_log = await db.get_call_log_by_room(call_id, status="active")
+        
+        if not call_log:
+            raise HTTPException(status_code=404, detail="Chiamata non trovata")
+        
+        msg_id = await db.add_call_message(call_log['id'], role, content)
+        return {"status": "ok", "message_id": msg_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore aggiunta messaggio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1263,6 +1551,16 @@ async def get_config(request: Request):
         "default_tts": config.tts.default_engine,
         "whisper_model": config.whisper.model,
         "ollama_model": config.ollama.model
+    }
+
+
+@app.get("/api/branding")
+async def get_branding():
+    """Ritorna la configurazione di branding dell'applicativo"""
+    return {
+        "app_name": config.branding.app_name,
+        "assistant_name": config.branding.assistant_name,
+        "assistant_triggers": config.branding.assistant_triggers
     }
 
 
@@ -1980,6 +2278,327 @@ async def get_remote_config():
             "configured": False,
             "error": str(e)
         }
+
+
+# ==================== SIP Configuration API ====================
+
+class SIPConfig(BaseModel):
+    """SIP configuration model."""
+    sip_port: int = 5060
+    sip_port_tls: int = 5061
+    rtp_port_start: int = 10000
+    rtp_port_end: int = 10100
+    # Trunk configuration
+    trunk_name: str = ""
+    trunk_host: str = ""
+    trunk_port: int = 5060
+    trunk_username: str = ""
+    trunk_password: str = ""
+    trunk_numbers: str = ""  # Comma-separated list of phone numbers
+    # Dispatch rules
+    room_prefix: str = "sip-call-"
+    enable_recording: bool = False
+    # Audio codecs (comma-separated)
+    audio_codecs: str = "opus,pcmu,pcma"
+
+
+@app.get("/api/sip/status")
+async def get_sip_status():
+    """Verifica lo stato dettagliato del servizio SIP di LiveKit."""
+    import socket
+    
+    status = {
+        "available": False,
+        "message": "Non configurato",
+        "details": {
+            "service_running": False,
+            "port_5060": False,
+            "port_5061": False,
+            "trunks_configured": 0,
+            "dispatch_rules": 0
+        },
+        "config": None
+    }
+    
+    # Leggi configurazione SIP attuale
+    sip_config_path = Path(__file__).parent / "sip-config.yaml"
+    if sip_config_path.exists():
+        try:
+            with open(sip_config_path, "r") as f:
+                sip_config = yaml.safe_load(f)
+                status["config"] = sip_config
+                
+                # Conta trunk e regole
+                trunks = sip_config.get("trunks", [])
+                status["details"]["trunks_configured"] = len(trunks) if trunks else 0
+                
+                dispatch_rules = sip_config.get("dispatch_rules", [])
+                status["details"]["dispatch_rules"] = len(dispatch_rules) if dispatch_rules else 0
+        except Exception as e:
+            logger.warning(f"Errore lettura sip-config.yaml: {e}")
+    
+    # Verifica se il servizio SIP è in esecuzione controllando le porte
+    # LiveKit SIP non ha un endpoint HTTP health, verifichiamo direttamente le porte
+    
+    # Test porta 5060 TCP (SIP signaling)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(("livekit-sip", 5060))
+        if result == 0:
+            status["details"]["port_5060"] = True
+            status["details"]["service_running"] = True
+        sock.close()
+    except Exception as e:
+        logger.debug(f"Test porta 5060 fallito: {e}")
+    
+    # Test porta 5061 TLS (se configurato)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(("livekit-sip", 5061))
+        if result == 0:
+            status["details"]["port_5061"] = True
+        sock.close()
+    except Exception as e:
+        logger.debug(f"Test porta 5061 fallito: {e}")
+    
+    # Aggiorna stato finale
+    if status["details"]["service_running"]:
+        status["available"] = True
+        status["message"] = "SIP Bridge attivo (porta 5060)"
+        if status["details"]["port_5061"]:
+            status["message"] += " e TLS (porta 5061)"
+    else:
+        status["message"] = "SIP Bridge non raggiungibile"
+    
+    return status
+
+
+@app.get("/api/sip/config")
+async def get_sip_config():
+    """Recupera la configurazione SIP corrente."""
+    
+    sip_config_path = Path(__file__).parent / "sip-config.yaml"
+    
+    # Valori di default
+    default_config = {
+        "sip_port": 5060,
+        "sip_port_tls": 5061,
+        "rtp_port_start": 10000,
+        "rtp_port_end": 10100,
+        "trunk_name": "",
+        "trunk_host": "",
+        "trunk_port": 5060,
+        "trunk_username": "",
+        "trunk_password": "",
+        "trunk_numbers": "",
+        "room_prefix": "sip-call-",
+        "enable_recording": False,
+        "audio_codecs": "opus,pcmu,pcma"
+    }
+    
+    # Prova a leggere dal database
+    db = await get_database()
+    if db:
+        try:
+            settings = await db.get_all_settings()
+            for key in default_config.keys():
+                sip_key = f"sip_{key}"
+                if sip_key in settings:
+                    value = settings[sip_key]
+                    # Converti i tipi appropriati
+                    if key in ["sip_port", "sip_port_tls", "rtp_port_start", "rtp_port_end", "trunk_port"]:
+                        default_config[key] = int(value)
+                    elif key == "enable_recording":
+                        default_config[key] = value.lower() == "true"
+                    else:
+                        default_config[key] = value
+        except Exception as e:
+            logger.warning(f"Errore lettura SIP settings dal DB: {e}")
+    
+    # Leggi anche dal file YAML per completezza
+    if sip_config_path.exists():
+        try:
+            with open(sip_config_path, "r") as f:
+                yaml_config = yaml.safe_load(f)
+                
+                # Mappa valori YAML ai campi del form
+                if yaml_config:
+                    sip = yaml_config.get("sip", {})
+                    if sip:
+                        default_config["sip_port"] = sip.get("port", default_config["sip_port"])
+                        default_config["sip_port_tls"] = sip.get("port_tls", default_config["sip_port_tls"])
+                    
+                    rtp = yaml_config.get("rtp", {})
+                    if rtp:
+                        default_config["rtp_port_start"] = rtp.get("port_range_start", default_config["rtp_port_start"])
+                        default_config["rtp_port_end"] = rtp.get("port_range_end", default_config["rtp_port_end"])
+                    
+                    trunks = yaml_config.get("trunks", [])
+                    if trunks and len(trunks) > 0:
+                        trunk = trunks[0]
+                        default_config["trunk_name"] = trunk.get("name", "")
+                        default_config["trunk_host"] = trunk.get("host", "")
+                        default_config["trunk_port"] = trunk.get("port", 5060)
+                        default_config["trunk_username"] = trunk.get("username", "")
+                        default_config["trunk_password"] = trunk.get("password", "")
+                        numbers = trunk.get("numbers", [])
+                        default_config["trunk_numbers"] = ",".join(numbers) if numbers else ""
+                    
+                    dispatch_rules = yaml_config.get("dispatch_rules", [])
+                    if dispatch_rules and len(dispatch_rules) > 0:
+                        rule = dispatch_rules[0]
+                        default_config["room_prefix"] = rule.get("room_prefix", "sip-call-")
+                        default_config["enable_recording"] = rule.get("enable_recording", False)
+                    
+                    audio = yaml_config.get("audio", {})
+                    if audio:
+                        codecs = audio.get("codecs", [])
+                        default_config["audio_codecs"] = ",".join(codecs) if codecs else "opus,pcmu,pcma"
+        except Exception as e:
+            logger.warning(f"Errore lettura sip-config.yaml: {e}")
+    
+    return default_config
+
+
+@app.post("/api/sip/config")
+async def save_sip_config(sip_config: SIPConfig):
+    """Salva la configurazione SIP."""
+    
+    # Salva nel database
+    db = await get_database()
+    if db:
+        try:
+            settings = {
+                "sip_sip_port": str(sip_config.sip_port),
+                "sip_sip_port_tls": str(sip_config.sip_port_tls),
+                "sip_rtp_port_start": str(sip_config.rtp_port_start),
+                "sip_rtp_port_end": str(sip_config.rtp_port_end),
+                "sip_trunk_name": sip_config.trunk_name,
+                "sip_trunk_host": sip_config.trunk_host,
+                "sip_trunk_port": str(sip_config.trunk_port),
+                "sip_trunk_username": sip_config.trunk_username,
+                "sip_trunk_password": sip_config.trunk_password,
+                "sip_trunk_numbers": sip_config.trunk_numbers,
+                "sip_room_prefix": sip_config.room_prefix,
+                "sip_enable_recording": str(sip_config.enable_recording).lower(),
+                "sip_audio_codecs": sip_config.audio_codecs
+            }
+            await db.set_multiple_settings(settings)
+        except Exception as e:
+            logger.error(f"Errore salvataggio SIP settings nel DB: {e}")
+    
+    # Genera e salva il file sip-config.yaml
+    sip_config_path = Path(__file__).parent / "sip-config.yaml"
+    
+    # Costruisci la configurazione YAML
+    yaml_config = {
+        "sip": {
+            "port": sip_config.sip_port,
+            "port_tls": sip_config.sip_port_tls
+        },
+        "rtp": {
+            "port_range_start": sip_config.rtp_port_start,
+            "port_range_end": sip_config.rtp_port_end
+        },
+        "livekit": {
+            "url": os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880"),
+            "api_key": os.getenv("LIVEKIT_API_KEY", "devkey"),
+            "api_secret": os.getenv("LIVEKIT_API_SECRET", "secret_dev_key_change_in_production")
+        },
+        "dispatch_rules": [
+            {
+                "name": "default-inbound",
+                "room_prefix": sip_config.room_prefix,
+                "metadata": {
+                    "source": "sip",
+                    "type": "phone-call"
+                },
+                "enable_recording": sip_config.enable_recording
+            }
+        ],
+        "audio": {
+            "codecs": [c.strip() for c in sip_config.audio_codecs.split(",") if c.strip()],
+            "sample_rate": 48000
+        },
+        "logging": {
+            "level": "info"
+        }
+    }
+    
+    # Aggiungi trunk se configurato
+    if sip_config.trunk_host:
+        trunk = {
+            "name": sip_config.trunk_name or "trunk-principale",
+            "host": sip_config.trunk_host,
+            "port": sip_config.trunk_port
+        }
+        if sip_config.trunk_username:
+            trunk["username"] = sip_config.trunk_username
+        if sip_config.trunk_password:
+            trunk["password"] = sip_config.trunk_password
+        if sip_config.trunk_numbers:
+            trunk["numbers"] = [n.strip() for n in sip_config.trunk_numbers.split(",") if n.strip()]
+        yaml_config["trunks"] = [trunk]
+    
+    # Scrivi il file YAML
+    try:
+        with open(sip_config_path, "w") as f:
+            yaml.dump(yaml_config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        logger.info(f"📞 Configurazione SIP salvata in {sip_config_path}")
+    except Exception as e:
+        logger.error(f"Errore scrittura sip-config.yaml: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore salvataggio file: {e}")
+    
+    return {
+        "status": "ok",
+        "message": "Configurazione SIP salvata. Riavvia il servizio SIP per applicare.",
+        "config_file": str(sip_config_path)
+    }
+
+
+@app.post("/api/sip/test")
+async def test_sip_connection():
+    """Testa la connessione SIP."""
+    import aiohttp
+    
+    result = {
+        "status": "unknown",
+        "tests": []
+    }
+    
+    # Test 1: Verifica container SIP
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://livekit-sip:8080/health", timeout=aiohttp.ClientTimeout(total=3)) as resp:
+                if resp.status == 200:
+                    result["tests"].append({"name": "SIP Service Health", "passed": True, "message": "Servizio attivo"})
+                else:
+                    result["tests"].append({"name": "SIP Service Health", "passed": False, "message": f"HTTP {resp.status}"})
+    except Exception as e:
+        result["tests"].append({"name": "SIP Service Health", "passed": False, "message": str(e)[:50]})
+    
+    # Test 2: Verifica LiveKit API per SIP
+    try:
+        internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+        lk_api = api.LiveKitAPI(
+            url=internal_url,
+            api_key=config.livekit.api_key,
+            api_secret=config.livekit.api_secret
+        )
+        # Verifica connessione LiveKit
+        await lk_api.room.list_rooms(api.ListRoomsRequest())
+        result["tests"].append({"name": "LiveKit Connection", "passed": True, "message": "Connesso"})
+        await lk_api.aclose()
+    except Exception as e:
+        result["tests"].append({"name": "LiveKit Connection", "passed": False, "message": str(e)[:50]})
+    
+    # Calcola risultato finale
+    all_passed = all(t["passed"] for t in result["tests"])
+    result["status"] = "ok" if all_passed else "partial" if any(t["passed"] for t in result["tests"]) else "failed"
+    
+    return result
 
 
 # Serve file statici

@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Log Chiamate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-elevated: #22222e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --border: #2a2a3a;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--bg-card);
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: #5558e3;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .stat-card .value.success { color: var(--success); }
+        .stat-card .value.warning { color: var(--warning); }
+        .stat-card .value.error { color: var(--error); }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        /* Calls Table */
+        .calls-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .calls-table th,
+        .calls-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .calls-table th {
+            background: var(--bg-elevated);
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .calls-table tr:hover {
+            background: var(--bg-elevated);
+        }
+
+        .calls-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge.completed {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent);
+        }
+
+        .status-badge.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .status-badge.missed {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .call-number {
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .call-duration {
+            color: var(--text-secondary);
+        }
+
+        .btn-view {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+
+        /* Call Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .call-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .call-info-item {
+            background: var(--bg-elevated);
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+
+        .call-info-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .call-info-item .value {
+            font-size: 0.9rem;
+        }
+
+        /* Messages */
+        .messages-section h3 {
+            margin-bottom: 16px;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .message {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: var(--bg-elevated);
+        }
+
+        .message.user {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--accent);
+        }
+
+        .message.assistant {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid var(--success);
+        }
+
+        .message .role {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .message .content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .message .timestamp {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .no-messages {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .calls-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .call-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📞 Log Chiamate</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="refreshData()">🔄 Aggiorna</button>
+                <a href="/" class="btn">← Torna all'App</a>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="label">Chiamate Totali</div>
+                <div class="value" id="stat-total">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Completate</div>
+                <div class="value success" id="stat-completed">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Attive Ora</div>
+                <div class="value warning" id="stat-active">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Oggi</div>
+                <div class="value" id="stat-today">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Durata Media</div>
+                <div class="value" id="stat-avg-duration">-</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>Stato</label>
+                <select id="filter-status" onchange="loadCalls()">
+                    <option value="">Tutti</option>
+                    <option value="active">Attive</option>
+                    <option value="completed">Completate</option>
+                    <option value="failed">Fallite</option>
+                    <option value="missed">Perse</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Risultati</label>
+                <select id="filter-limit" onchange="loadCalls()">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Calls Table -->
+        <div id="calls-container">
+            <div class="loading">Caricamento...</div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Call Detail Modal -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Dettaglio Chiamata</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOffset = 0;
+        let currentLimit = 50;
+
+        // Load calls on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCalls();
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+        });
+
+        async function loadCalls() {
+            const status = document.getElementById('filter-status').value;
+            currentLimit = parseInt(document.getElementById('filter-limit').value);
+            
+            try {
+                const params = new URLSearchParams({
+                    limit: currentLimit,
+                    offset: currentOffset
+                });
+                if (status) params.append('status', status);
+                
+                const resp = await fetch(`/api/calls?${params}`);
+                const data = await resp.json();
+                
+                updateStats(data.stats);
+                renderCalls(data.calls);
+                renderPagination(data.pagination);
+            } catch (e) {
+                console.error('Errore caricamento chiamate:', e);
+                document.getElementById('calls-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <div>Errore nel caricamento dei dati</div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('stat-total').textContent = stats.total_calls;
+            document.getElementById('stat-completed').textContent = stats.completed_calls;
+            document.getElementById('stat-active').textContent = stats.active_calls;
+            document.getElementById('stat-today').textContent = stats.today_calls;
+            document.getElementById('stat-avg-duration').textContent = formatDuration(stats.avg_duration_seconds);
+        }
+
+        function renderCalls(calls) {
+            if (!calls || calls.length === 0) {
+                document.getElementById('calls-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📞</div>
+                        <div>Nessuna chiamata trovata</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <table class="calls-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Ora</th>
+                            <th>Chiamante</th>
+                            <th>Room</th>
+                            <th>Durata</th>
+                            <th>Messaggi</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${calls.map(call => `
+                            <tr>
+                                <td>${formatDateTime(call.start_time)}</td>
+                                <td>
+                                    <div class="call-number">${call.caller_number || '-'}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">${call.caller_name || ''}</div>
+                                </td>
+                                <td>${call.room_name}</td>
+                                <td class="call-duration">${formatDuration(call.duration_seconds)}</td>
+                                <td>${call.message_count || 0}</td>
+                                <td><span class="status-badge ${call.status}">${getStatusLabel(call.status)}</span></td>
+                                <td><button class="btn btn-view" onclick="viewCall('${call.call_id}')">👁️ Vedi</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('calls-container').innerHTML = html;
+        }
+
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination');
+            if (!pagination.has_more && currentOffset === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <button class="btn" ${currentOffset === 0 ? 'disabled' : ''} onclick="prevPage()">← Precedente</button>
+                <button class="btn" ${!pagination.has_more ? 'disabled' : ''} onclick="nextPage()">Successivo →</button>
+            `;
+        }
+
+        function prevPage() {
+            currentOffset = Math.max(0, currentOffset - currentLimit);
+            loadCalls();
+        }
+
+        function nextPage() {
+            currentOffset += currentLimit;
+            loadCalls();
+        }
+
+        async function viewCall(callId) {
+            try {
+                const resp = await fetch(`/api/calls/${encodeURIComponent(callId)}`);
+                const data = await resp.json();
+                
+                renderCallDetail(data);
+                document.getElementById('modal-overlay').classList.add('active');
+            } catch (e) {
+                console.error('Errore caricamento dettaglio:', e);
+                alert('Errore nel caricamento dei dettagli');
+            }
+        }
+
+        function renderCallDetail(data) {
+            const call = data.call;
+            const messages = data.messages || [];
+
+            document.getElementById('modal-title').textContent = `Chiamata ${call.caller_number || call.call_id}`;
+            
+            const messagesHtml = messages.length > 0 
+                ? messages.map(m => `
+                    <div class="message ${m.role}">
+                        <div class="role">${m.role === 'user' ? '👤 Utente' : '🤖 Assistente'}</div>
+                        <div class="content">${escapeHtml(m.content)}</div>
+                        <div class="timestamp">${formatDateTime(m.timestamp)}</div>
+                    </div>
+                `).join('')
+                : '<div class="no-messages">Nessun messaggio registrato</div>';
+
+            document.getElementById('modal-body').innerHTML = `
+                <div class="call-info">
+                    <div class="call-info-item">
+                        <div class="label">Chiamante</div>
+                        <div class="value">${call.caller_number || '-'}</div>
+                    </div>
+                    <div class="call-info-item">
+                        <div class="label">Nome</div>
+                        <div class="value">${call.caller_name || '-'}</div>
+                    </div>
+                    <div class="call-info-item">
+                        <div class="label">Inizio</div>
+                        <div class="value">${formatDateTime(call.start_time)}</div>
+                    </div>
+                    <div class="call-info-item">
+                        <div class="label">Fine</div>
+                        <div class="value">${call.end_time ? formatDateTime(call.end_time) : 'In corso'}</div>
+                    </div>
+                    <div class="call-info-item">
+                        <div class="label">Durata</div>
+                        <div class="value">${formatDuration(call.duration_seconds)}</div>
+                    </div>
+                    <div class="call-info-item">
+                        <div class="label">Stato</div>
+                        <div class="value"><span class="status-badge ${call.status}">${getStatusLabel(call.status)}</span></div>
+                    </div>
+                </div>
+                
+                <div class="messages-section">
+                    <h3>💬 Conversazione (${messages.length} messaggi)</h3>
+                    ${messagesHtml}
+                </div>
+            `;
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== document.getElementById('modal-overlay')) return;
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+
+        function refreshData() {
+            loadCalls();
+        }
+
+        // Utility functions
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds || seconds === 0) return '-';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (mins > 0) {
+                return `${mins}m ${secs}s`;
+            }
+            return `${secs}s`;
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'active': '🟢 Attiva',
+                'completed': '✅ Completata',
+                'failed': '❌ Fallita',
+                'missed': '📵 Persa'
+            };
+            return labels[status] || status;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# TTS Server con supporto CUDA
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# Installa Python e dipendenze sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    libsndfile1 \
+    espeak-ng \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Installa dipendenze Python per TTS
+RUN pip3 install --no-cache-dir \
+    torch \
+    torchaudio \
+    fastapi \
+    uvicorn \
+    python-multipart \
+    numpy \
+    edge-tts \
+    soundfile \
+    scipy \
+    pydantic
+
+# Kokoro TTS (opzionale)
+RUN pip3 install --no-cache-dir kokoro>=0.3.4 || echo "Kokoro non installato"
+
+# Copia il server TTS e moduli necessari
+COPY tts_server.py .
+COPY agent/tts/ ./agent/tts/
+
+# Directory per i modelli
+RUN mkdir -p /app/models
+ENV HF_HOME=/app/models
+
+# Variabili di default
+ENV DEFAULT_TTS=edge
+ENV TTS_PORT=8092
+
+EXPOSE 8092
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8092/health || exit 1
+
+CMD ["python3", "tts_server.py"]

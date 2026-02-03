@@ -100,6 +100,48 @@ CREATE TRIGGER update_chats_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 
+-- =====================================================
+-- CALL LOGS: Registro delle chiamate SIP
+-- =====================================================
 
+-- Tabella principale delle chiamate
+CREATE TABLE IF NOT EXISTS call_logs (
+    id SERIAL PRIMARY KEY,
+    call_id VARCHAR(100) UNIQUE NOT NULL,  -- ID univoco della chiamata LiveKit
+    room_name VARCHAR(255) NOT NULL,
+    caller_number VARCHAR(50),  -- Numero del chiamante
+    called_number VARCHAR(50),  -- Numero chiamato
+    caller_name VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active',  -- active, completed, failed, missed
+    start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP WITH TIME ZONE,
+    duration_seconds INTEGER,
+    sip_trunk_id VARCHAR(100),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Messaggi della conversazione durante la chiamata
+CREATE TABLE IF NOT EXISTS call_messages (
+    id SERIAL PRIMARY KEY,
+    call_log_id INTEGER NOT NULL REFERENCES call_logs(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indici per performance
+CREATE INDEX IF NOT EXISTS idx_call_logs_status ON call_logs(status);
+CREATE INDEX IF NOT EXISTS idx_call_logs_start_time ON call_logs(start_time);
+CREATE INDEX IF NOT EXISTS idx_call_logs_caller_number ON call_logs(caller_number);
+CREATE INDEX IF NOT EXISTS idx_call_messages_call_log_id ON call_messages(call_log_id);
+
+-- Trigger per updated_at
+DROP TRIGGER IF EXISTS update_call_logs_updated_at ON call_logs;
+CREATE TRIGGER update_call_logs_updated_at
+    BEFORE UPDATE ON call_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 

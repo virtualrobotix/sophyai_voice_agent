@@ -233,6 +233,213 @@ class DatabaseService:
                 message_id
             )
             return result == "DELETE 1"
+    
+    # ==================== Call Logs ====================
+    
+    async def create_call_log(
+        self, 
+        call_id: str, 
+        room_name: str,
+        caller_number: str = None,
+        called_number: str = None,
+        caller_name: str = None,
+        sip_trunk_id: str = None,
+        metadata: dict = None
+    ) -> int:
+        """Crea un nuovo log di chiamata e restituisce l'ID."""
+        await self._ensure_connected()
+        import json
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO call_logs (call_id, room_name, caller_number, called_number, 
+                                       caller_name, sip_trunk_id, metadata, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+                ON CONFLICT (call_id) DO UPDATE SET 
+                    status = 'active',
+                    start_time = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING id
+                """,
+                call_id, room_name, caller_number, called_number,
+                caller_name, sip_trunk_id, json.dumps(metadata or {})
+            )
+            return row["id"]
+    
+    async def end_call_log(self, call_id: str, status: str = "completed") -> bool:
+        """Chiude un log di chiamata calcolando la durata."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                UPDATE call_logs 
+                SET status = $2,
+                    end_time = CURRENT_TIMESTAMP,
+                    duration_seconds = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - start_time))::INTEGER,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE call_id = $1 AND status = 'active'
+                """,
+                call_id, status
+            )
+            return "UPDATE 1" in result
+    
+    async def get_call_log_by_call_id(self, call_id: str) -> Optional[Dict[str, Any]]:
+        """Ottiene un log di chiamata per call_id."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM call_logs WHERE call_id = $1",
+                call_id
+            )
+            if row:
+                return dict(row)
+            return None
+    
+    async def get_call_log_by_room(self, room_name: str, status: str = "active") -> Optional[Dict[str, Any]]:
+        """Ottiene un log di chiamata attivo per room_name."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT * FROM call_logs 
+                WHERE room_name = $1 AND status = $2
+                ORDER BY start_time DESC
+                LIMIT 1
+                """,
+                room_name, status
+            )
+            if row:
+                return dict(row)
+            return None
+    
+    async def add_call_message(self, call_log_id: int, role: str, content: str) -> int:
+        """Aggiunge un messaggio al log della chiamata."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO call_messages (call_log_id, role, content)
+                VALUES ($1, $2, $3)
+                RETURNING id
+                """,
+                call_log_id, role, content
+            )
+            return row["id"]
+    
+    async def get_call_messages(self, call_log_id: int) -> List[Dict[str, Any]]:
+        """Ottiene tutti i messaggi di una chiamata."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, role, content, timestamp
+                FROM call_messages
+                WHERE call_log_id = $1
+                ORDER BY timestamp ASC
+                """,
+                call_log_id
+            )
+            return [
+                {
+                    "id": row["id"],
+                    "role": row["role"],
+                    "content": row["content"],
+                    "timestamp": row["timestamp"].isoformat() if row["timestamp"] else None
+                }
+                for row in rows
+            ]
+    
+    async def get_call_logs(
+        self, 
+        limit: int = 50, 
+        offset: int = 0,
+        status: str = None,
+        from_date: datetime = None,
+        to_date: datetime = None
+    ) -> List[Dict[str, Any]]:
+        """Ottiene la lista dei log delle chiamate con filtri."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            query = """
+                SELECT cl.*, 
+                       (SELECT COUNT(*) FROM call_messages WHERE call_log_id = cl.id) as message_count
+                FROM call_logs cl
+                WHERE 1=1
+            """
+            params = []
+            param_count = 0
+            
+            if status:
+                param_count += 1
+                query += f" AND status = ${param_count}"
+                params.append(status)
+            
+            if from_date:
+                param_count += 1
+                query += f" AND start_time >= ${param_count}"
+                params.append(from_date)
+            
+            if to_date:
+                param_count += 1
+                query += f" AND start_time <= ${param_count}"
+                params.append(to_date)
+            
+            query += " ORDER BY start_time DESC"
+            
+            param_count += 1
+            query += f" LIMIT ${param_count}"
+            params.append(limit)
+            
+            param_count += 1
+            query += f" OFFSET ${param_count}"
+            params.append(offset)
+            
+            rows = await conn.fetch(query, *params)
+            
+            result = []
+            for row in rows:
+                call = dict(row)
+                # Converti datetime in ISO format
+                if call.get('start_time'):
+                    call['start_time'] = call['start_time'].isoformat()
+                if call.get('end_time'):
+                    call['end_time'] = call['end_time'].isoformat()
+                if call.get('created_at'):
+                    call['created_at'] = call['created_at'].isoformat()
+                if call.get('updated_at'):
+                    call['updated_at'] = call['updated_at'].isoformat()
+                result.append(call)
+            
+            return result
+    
+    async def get_call_stats(self) -> Dict[str, Any]:
+        """Ottiene statistiche sulle chiamate."""
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            stats = await conn.fetchrow(
+                """
+                SELECT 
+                    COUNT(*) as total_calls,
+                    COUNT(*) FILTER (WHERE status = 'completed') as completed_calls,
+                    COUNT(*) FILTER (WHERE status = 'active') as active_calls,
+                    COUNT(*) FILTER (WHERE status = 'failed') as failed_calls,
+                    COUNT(*) FILTER (WHERE status = 'missed') as missed_calls,
+                    AVG(duration_seconds) FILTER (WHERE duration_seconds > 0) as avg_duration,
+                    SUM(duration_seconds) FILTER (WHERE duration_seconds > 0) as total_duration,
+                    COUNT(*) FILTER (WHERE start_time >= CURRENT_DATE) as today_calls
+                FROM call_logs
+                """
+            )
+            return {
+                "total_calls": stats["total_calls"] or 0,
+                "completed_calls": stats["completed_calls"] or 0,
+                "active_calls": stats["active_calls"] or 0,
+                "failed_calls": stats["failed_calls"] or 0,
+                "missed_calls": stats["missed_calls"] or 0,
+                "avg_duration_seconds": round(float(stats["avg_duration"] or 0), 1),
+                "total_duration_seconds": int(stats["total_duration"] or 0),
+                "today_calls": stats["today_calls"] or 0
+            }
 
 
 # Global database instance
