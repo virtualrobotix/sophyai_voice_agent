@@ -3777,8 +3777,8 @@ FORMATO TTS:
                                         try:
                                             import aiohttp
                                             server_url = os.getenv("WEB_SERVER_URL", "http://voice-agent-web:8080")
-                                            async with aiohttp.ClientSession() as session:
-                                                async with session.post(
+                                            async with aiohttp.ClientSession() as http_session:
+                                                async with http_session.post(
                                                     f"{server_url}/api/calls/{_current_call_log_id}/message",
                                                     params={"role": "user", "content": text}
                                                 ) as resp:
