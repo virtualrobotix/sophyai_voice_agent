@@ -3834,6 +3834,32 @@ FORMATO TTS:
                 audio_processing_tasks[participant_id].cancel()
                 del audio_processing_tasks[participant_id]
     
+    # ==================== GESTIONE PARTECIPANTI GIA' PRESENTI ====================
+    # Se ci sono partecipanti già nella room quando l'agent si connette,
+    # le loro tracce potrebbero essere già state sottoscritte PRIMA della registrazione
+    # dell'handler. Iteriamo sui partecipanti esistenti per gestire le loro tracce.
+    logger.info(f"🔍 Controllo partecipanti già presenti nella room...")
+    for participant in ctx.room.remote_participants.values():
+        logger.info(f"👤 Partecipante trovato: {participant.identity}")
+        for publication in participant.track_publications.values():
+            if publication.track is not None:
+                track = publication.track
+                if track.kind == rtc.TrackKind.KIND_AUDIO:
+                    participant_id = participant.identity
+                    # Ignora agent
+                    if participant_id.startswith("agent-"):
+                        logger.info(f"🎤 [MULTI-AUDIO] Ignoro traccia audio da agent esistente: {participant_id}")
+                        continue
+                    if participant_id not in audio_processing_tasks:
+                        logger.info(f"🎤 [MULTI-AUDIO] Sottoscrivo traccia audio esistente da {participant_id}")
+                        task = asyncio.create_task(process_participant_audio(participant_id, track))
+                        audio_processing_tasks[participant_id] = task
+                elif track.kind == rtc.TrackKind.KIND_VIDEO:
+                    logger.info(f"📹 Video track esistente da {participant.identity}")
+                    frame_extractor.register_video_track(participant.identity, track)
+    
+    logger.info(f"🎤 Audio processing tasks attivi: {len(audio_processing_tasks)}")
+    
     # Imposta callback per inviare trascrizioni al frontend
     async def send_to_frontend(text: str, role: str, message_id: str = None, sender: str = None):
         """Invia trascrizione al frontend via data channel con ID univoco"""
