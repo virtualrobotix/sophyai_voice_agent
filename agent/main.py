@@ -3771,6 +3771,24 @@ FORMATO TTS:
                                     msg_id = generate_message_id()
                                     await send_to_frontend(text, "user", msg_id, participant_identity)
                                     
+                                    # ==================== SALVA MESSAGGIO UTENTE NEL DB ====================
+                                    # Per chiamate SIP, salva anche i messaggi utente nel log chiamata
+                                    if _is_sip_call and _current_call_log_id:
+                                        try:
+                                            import aiohttp
+                                            server_url = os.getenv("WEB_SERVER_URL", "http://voice-agent-web:8080")
+                                            async with aiohttp.ClientSession() as session:
+                                                async with session.post(
+                                                    f"{server_url}/api/calls/{_current_call_log_id}/message",
+                                                    params={"role": "user", "content": text}
+                                                ) as resp:
+                                                    if resp.status == 200:
+                                                        logger.debug(f"📝 [SIP] Messaggio utente salvato nel log")
+                                                    else:
+                                                        logger.warning(f"⚠️ Errore salvataggio messaggio utente: {resp.status}")
+                                        except Exception as e:
+                                            logger.warning(f"⚠️ Impossibile salvare messaggio utente: {e}")
+                                    
                                     # ==================== SIP ROOM DEBUG MODE ====================
                                     # Per stanze SIP, solo i partecipanti SIP attivano risposte
                                     # I client web in stanze SIP sono in modalità debug/ascolto
