@@ -88,9 +88,9 @@ _send_wake_callback = None  # Callback per inviare aggiornamenti wake al fronten
 # Questi valori vengono caricati dal database all'avvio
 # Default values (saranno sovrascritti da load_voice_settings_from_db)
 WAKE_TIMEOUT_SECONDS = 20  # Timeout di silenzio per disattivazione automatica
-VAD_ENERGY_THRESHOLD = 40  # Soglia energia per barge-in VAD
-SPEECH_ENERGY_THRESHOLD = 100  # Soglia energia per rilevamento parlato
-SILENCE_THRESHOLD = 30  # Frames di silenzio prima di terminare ascolto
+VAD_ENERGY_THRESHOLD = 30  # Soglia energia per barge-in VAD (più sensibile)
+SPEECH_ENERGY_THRESHOLD = 50  # Soglia energia per rilevamento parlato (più sensibile)
+SILENCE_THRESHOLD = 15  # Frames di silenzio prima di terminare ascolto (~750ms invece di 1.5s)
 
 # ==================== BRANDING CONFIGURATION ====================
 # Nome assistente e trigger (caricati da variabili ambiente)
@@ -3095,12 +3095,12 @@ async def load_settings_from_server() -> dict:
         "context_injection": "",
         "whisper_model": config.whisper.model,
         "whisper_language": config.whisper.language,
-        # Voice Activation defaults
+        # Voice Activation defaults (più sensibili e responsivi)
         "wake_timeout_seconds": "20",
-        "vad_energy_threshold": "40",
-        "speech_energy_threshold": "100",
-        "silence_threshold": "30",
-        "tts_cooldown_seconds": "5",
+        "vad_energy_threshold": "30",
+        "speech_energy_threshold": "50",
+        "silence_threshold": "15",
+        "tts_cooldown_seconds": "3",
     }
     
     try:
@@ -3629,7 +3629,7 @@ FORMATO TTS:
             audio_buffer = bytearray()
             silence_frames = 0
             speech_frames = 0
-            MIN_SPEECH_FRAMES = 10  # ~500ms di speech prima di trascrivere
+            MIN_SPEECH_FRAMES = 5  # ~250ms di speech prima di trascrivere (più responsivo)
             # NOTA: SILENCE_THRESHOLD è ora globale e configurabile da database
             
             async for event in audio_stream:
