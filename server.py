@@ -1121,12 +1121,13 @@ async def livekit_webhook(request: Request):
         body = await request.body()
         auth_header = request.headers.get("Authorization", "")
         
-        # Verifica il webhook token
-        from livekit.api import WebhookReceiver
-        webhook_receiver = WebhookReceiver(
+        # Verifica il webhook token (API LiveKit aggiornata)
+        from livekit.api import WebhookReceiver, TokenVerifier
+        token_verifier = TokenVerifier(
             api_key=config.livekit.api_key,
             api_secret=config.livekit.api_secret
         )
+        webhook_receiver = WebhookReceiver(token_verifier)
         
         event = webhook_receiver.receive(body.decode(), auth_header)
         
