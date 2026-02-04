@@ -109,9 +109,12 @@ def get_livekit_url_for_client(request: Request) -> str:
     except Exception: pass
     # #endregion
     
-    if is_https:
-        proto = "wss"
-        port = "7443"  # Porta del proxy TLS per LiveKit
+    # NOTA: LiveKit non ha TLS configurato, usa sempre WS sulla porta 7880
+    # Se in futuro si configura un proxy TLS su 7443, riabilitare questo blocco
+    # if is_https:
+    #     proto = "wss"
+    #     port = "7443"  # Porta del proxy TLS per LiveKit
+    pass  # Usa sempre ws:// porta 7880
     
     final_url = f"{proto}://{host}:{port}"
     # #region agent log
