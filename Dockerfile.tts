@@ -1,23 +1,41 @@
 # TTS Server con supporto CUDA
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
-# Installa Python e dipendenze sistema
+# Installa Python 3.12 e dipendenze sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    python3.12-venv \
+    python3.12-dev \
     python3-pip \
     ffmpeg \
     libsndfile1 \
     espeak-ng \
     git \
     curl \
+    build-essential \
+    ninja-build \
     && rm -rf /var/lib/apt/lists/*
+
+# Usa Python 3.12 come default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
+    && update-alternatives --set python3 /usr/bin/python3.12
 
 WORKDIR /app
 
-# Installa dipendenze Python per TTS
+# Installa pip per Python 3.12
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
+
+# Installa PyTorch con CUDA 12.1
 RUN pip3 install --no-cache-dir \
     torch \
     torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Installa dipendenze Python per TTS
+RUN pip3 install --no-cache-dir \
     fastapi \
     uvicorn \
     python-multipart \
@@ -25,10 +43,17 @@ RUN pip3 install --no-cache-dir \
     edge-tts \
     soundfile \
     scipy \
-    pydantic
+    pydantic \
+    huggingface_hub
 
 # Kokoro TTS (opzionale)
 RUN pip3 install --no-cache-dir kokoro>=0.3.4 || echo "Kokoro non installato"
+
+# Qwen TTS (Alibaba - self-hosted)
+RUN pip3 install --no-cache-dir qwen-tts || echo "Qwen TTS non installato"
+
+# FlashAttention 2 per prestazioni ottimali (richiede CUDA devel)
+RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || echo "FlashAttention non installato"
 
 # Copia il server TTS e moduli necessari
 COPY tts_server.py .

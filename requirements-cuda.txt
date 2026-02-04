@@ -26,9 +26,17 @@ ollama>=0.3.0
 edge-tts>=6.1.0
 soundfile>=0.12.0
 
+# TTS - Qwen TTS (Alibaba, self-hosted, alta qualità)
+# Richiede Python 3.12+ e CUDA per prestazioni ottimali
+qwen-tts>=0.1.0
+
 # TTS - VibeVoice (Microsoft)
 # Per installare: git clone https://github.com/microsoft/VibeVoice.git && cd VibeVoice && pip install -e .
 huggingface_hub>=0.20.0
+
+# FlashAttention 2 per prestazioni ottimali con Qwen TTS
+# pip install flash-attn --no-build-isolation
+flash-attn>=2.0.0
 
 # Audio processing
 numpy>=1.24.0

@@ -30,6 +30,7 @@ def get_tts_engine(engine_name: str, **kwargs) -> BaseTTS:
     VIBEVOICE_PARAMS = {'model', 'language', 'sample_rate', 'speaker', 'speed'}
     CHATTERBOX_PARAMS = {'model', 'language', 'sample_rate', 'device', 'exaggeration', 'cfg_weight', 'audio_prompt_path'}
     COQUI_PARAMS = {'model', 'language', 'sample_rate', 'speaker'}
+    QWEN_PARAMS = {'model', 'speaker', 'language', 'sample_rate', 'instruct', 'device'}
     
     def filter_kwargs(allowed_params):
         return {k: v for k, v in kwargs.items() if k in allowed_params and v is not None}
@@ -81,6 +82,15 @@ def get_tts_engine(engine_name: str, **kwargs) -> BaseTTS:
             return ChatterboxTTS(**filter_kwargs(CHATTERBOX_PARAMS))
         except ImportError:
             print("Chatterbox TTS non disponibile, uso Edge TTS")
+            return EdgeTTS(**filter_kwargs(EDGE_PARAMS))
+    
+    # Qwen TTS (opzionale)
+    if engine_name == "qwen":
+        try:
+            from .qwen_tts import QwenTTS
+            return QwenTTS(**filter_kwargs(QWEN_PARAMS))
+        except ImportError:
+            print("Qwen TTS non disponibile, uso Edge TTS")
             return EdgeTTS(**filter_kwargs(EDGE_PARAMS))
     
     # Default a Edge TTS

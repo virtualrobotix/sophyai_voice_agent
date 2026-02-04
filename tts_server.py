@@ -201,7 +201,7 @@ async def status():
         engine=_tts_type or "none",
         device=_device or "none",
         model_loaded=_tts_engine is not None,
-        available_engines=["vibevoice", "edge", "chatterbox"]
+        available_engines=["vibevoice", "edge", "chatterbox", "kokoro", "piper", "qwen"]
     )
 
 
@@ -271,6 +271,13 @@ async def synthesize(request: TTSRequest):
                 pcm_data = await synthesize_vibevoice(text, request.speaker, request.speed)
             except Exception as e:
                 logger.warning(f"⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: {e}")
+                actual_engine_used = "edge"
+                pcm_data = await synthesize_edge(text, request.language)
+        elif engine_to_use == "qwen":
+            try:
+                pcm_data = await synthesize_qwen(text, request.language, request.speaker)
+            except Exception as e:
+                logger.warning(f"⚠️ Qwen non disponibile, uso EdgeTTS come fallback: {e}")
                 actual_engine_used = "edge"
                 pcm_data = await synthesize_edge(text, request.language)
         elif engine_to_use == "edge" or _tts_type == "edge":
@@ -556,6 +563,93 @@ async def synthesize_chatterbox(
             return await synthesize_edge(text, language)
         # Per altri errori, solleva eccezione
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def synthesize_qwen(text: str, language: str = "it", speaker: str = "Ryan") -> bytes:
+    """Sintetizza con Qwen TTS (self-hosted)"""
+    import asyncio
+    
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    
+    try:
+        from qwen_tts import Qwen3TTSModel
+        import torch
+    except ImportError as e:
+        logger.error(f"❌ qwen-tts non installato: {e}")
+        raise ImportError("qwen-tts non installato. Installa con: pip install qwen-tts")
+    
+    # Mapping lingua
+    LANGUAGE_MAP = {
+        "it": "Italian",
+        "en": "English",
+        "zh": "Chinese",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "de": "German",
+        "fr": "French",
+        "es": "Spanish",
+        "pt": "Portuguese",
+        "ru": "Russian"
+    }
+    
+    qwen_language = LANGUAGE_MAP.get(language, "Italian")
+    
+    logger.info(f"🎤 Qwen TTS: speaker={speaker}, language={qwen_language}")
+    
+    # Carica modello (singleton pattern - carica solo una volta)
+    global _qwen_model
+    if '_qwen_model' not in globals() or _qwen_model is None:
+        logger.info("📥 Caricamento modello Qwen TTS...")
+        dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        attn_impl = "flash_attention_2" if torch.cuda.is_available() else "sdpa"
+        
+        _qwen_model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+            device_map=device,
+            dtype=dtype,
+            attn_implementation=attn_impl
+        )
+        logger.info(f"✅ Qwen TTS caricato su {device}")
+    
+    # Sintetizza in thread pool
+    def _generate():
+        wavs, sr = _qwen_model.generate_custom_voice(
+            text=text,
+            language=qwen_language,
+            speaker=speaker
+        )
+        return wavs[0], sr
+    
+    loop = asyncio.get_event_loop()
+    audio_data, sample_rate = await loop.run_in_executor(None, _generate)
+    
+    # Converti a float32 se necessario
+    if audio_data.dtype != np.float32:
+        audio_data = audio_data.astype(np.float32)
+    
+    # Normalizza
+    max_val = np.abs(audio_data).max()
+    if max_val > 1.0:
+        audio_data = audio_data / max_val
+    
+    # Resample a 24kHz se necessario
+    if sample_rate != 24000:
+        import scipy.signal as signal
+        num_samples = int(len(audio_data) * 24000 / sample_rate)
+        audio_data = signal.resample(audio_data, num_samples)
+    
+    # Converti a int16 PCM
+    audio_data = np.clip(audio_data, -1.0, 1.0)
+    pcm_data = (audio_data * 32767).astype(np.int16).tobytes()
+    
+    return pcm_data
+
+
+# Variabile globale per modello Qwen (singleton)
+_qwen_model = None
 
 
 @app.get("/voices")

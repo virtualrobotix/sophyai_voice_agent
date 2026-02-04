@@ -18,6 +18,7 @@ class TTSEngine(str, Enum):
     KOKORO = "kokoro"
     VIBEVOICE = "vibevoice"
     CHATTERBOX = "chatterbox"
+    QWEN = "qwen"
 
 
 @dataclass

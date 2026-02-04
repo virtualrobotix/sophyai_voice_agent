@@ -1513,6 +1513,12 @@ async def get_tts_engines():
                 "name": "VibeVoice (Microsoft)",
                 "self_hosted": True,
                 "description": "Espressivo, multi-speaker, real-time streaming"
+            },
+            {
+                "id": "qwen",
+                "name": "Qwen TTS (Alibaba)",
+                "self_hosted": True,
+                "description": "Alta qualità, 10 lingue, controllo stile"
             }
         ],
         "default": config.tts.default_engine
@@ -1777,8 +1783,8 @@ async def test_tts(request: TTSTestRequest):
         # Prepara parametri in base all'engine
         tts_params = {}
         
-        # TTS che vanno chiamati via server esterno (venv locale con MPS/GPU)
-        if request.engine in ["chatterbox", "piper", "kokoro", "vibevoice"]:
+        # TTS che vanno chiamati via server esterno (server con CUDA/GPU)
+        if request.engine in ["chatterbox", "piper", "kokoro", "vibevoice", "qwen"]:
             tts_server_url = os.getenv("TTS_SERVER_URL", "http://host.docker.internal:8092")
             logger.info(f"🔗 Routing {request.engine} a server esterno: {tts_server_url}")
             return await test_tts_via_external_server(request, tts_server_url)
