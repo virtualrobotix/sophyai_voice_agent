@@ -1,8 +1,8 @@
 {
-  "engine": "edge",
+  "engine": "qwen",
   "language": "it",
   "voice": null,
   "speaker": null,
   "speed": 1.0,
-  "updated_at": "2026-01-13T06:23:51.737728"
+  "updated_at": "2026-02-05T14:03:21.726647"
 }

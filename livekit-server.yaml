@@ -1,0 +1,25 @@
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+  
+keys:
+  devkey: secret_dev_key_change_in_production
+
+redis:
+  address: livekit-redis:6379
+
+logging:
+  level: info
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  max_participants: 100
+
+webhook:
+  urls:
+    - http://voice-agent-web:8080/api/livekit/webhook
+  api_key: devkey

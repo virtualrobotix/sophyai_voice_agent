@@ -1911,7 +1911,7 @@
                 initModal.setMessage('Connessione alla room in corso...');
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:selectedRoom,userName:userName,protocol:window.location.protocol,host:window.location.host},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:selectedRoom,userName:userName,protocol:window.location.protocol,host:window.location.host,href:window.location.href},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
                 // #endregion
                 const resp = await fetch('/api/token', {
                     method: 'POST',
@@ -1923,7 +1923,7 @@
                 });
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenResponse',message:'Token response received',data:{status:resp.status,statusText:resp.statusText,ok:resp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenResponse',message:'Token response received',data:{status:resp.status,statusText:resp.statusText,ok:resp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
                 // #endregion
                 
                 // Gestione errore 409 - nome utente duplicato
@@ -1940,7 +1940,7 @@
                 const data = await resp.json();
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenData',message:'Token data parsed',data:{url:data.url,tokenLength:data.token?.length||0,tokenPreview:data.token?.substring(0,30)+'...'||'missing',urlProtocol:data.url?.substring(0,data.url.indexOf('://'))||'unknown'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenData',message:'Token data parsed - MIXED CONTENT CHECK',data:{url:data.url,tokenLength:data.token?.length||0,urlProtocol:data.url?.substring(0,data.url.indexOf('://'))||'unknown',pageProtocol:window.location.protocol,isMixedContent:window.location.protocol==='https:'&&data.url?.startsWith('ws://')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
                 // #endregion
                 
                 // Connect to room
@@ -2153,16 +2153,16 @@
                 });
 
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeConnect',message:'Before room.connect',data:{url:data.url,tokenExists:!!data.token,roomExists:!!state.room},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeConnect',message:'Before room.connect',data:{url:data.url,tokenExists:!!data.token,roomExists:!!state.room},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
                 // #endregion
                 try {
                     await state.room.connect(data.url, data.token);
                     // #region agent log
-                    fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:afterConnect',message:'Room.connect succeeded',data:{connected:state.room.state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:afterConnect',message:'Room.connect succeeded',data:{connected:state.room.state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
                     // #endregion
                 } catch (connectError) {
                     // #region agent log
-                    fetch('http://127.0.0.1:7245/ingest/9e5d28b8-a7f6-4963-8f5f-4b6d8a3cc77b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:connectError',message:'Room.connect failed',data:{errorMessage:connectError.message,errorName:connectError.name,errorStack:connectError.stack?.substring(0,200),url:data.url},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:connectError',message:'Room.connect FAILED',data:{errorMessage:connectError.message,errorName:connectError.name,errorStack:connectError.stack?.substring(0,300),url:data.url,pageProtocol:window.location.protocol},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
                     // #endregion
                     throw connectError;
                 }
