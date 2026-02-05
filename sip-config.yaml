@@ -2,8 +2,9 @@
 # Configurazione per il bridge SIP-WebRTC
 
 # Configurazione Redis (richiesto per LiveKit SIP)
+# Con network_mode: host, usa localhost
 redis:
-  address: livekit-redis:6379
+  address: 127.0.0.1:6379
 
 # Configurazione server SIP
 sip:
@@ -11,16 +12,23 @@ sip:
   port: 5060
   # Porta TLS per SIP sicuro
   port_tls: 5061
+  # IP pubblico per NAT traversal (richiesto per Twilio)
+  use_external_ip: false
+  
+# NAT Configuration - IP pubblico del server
+nat:
+  external_ip: "188.166.134.148"
   
 # Range porte RTP per il media
 rtp:
   port_range_start: 10000
   port_range_end: 10100
+  external_ip: "188.166.134.148"
 
 # Configurazione LiveKit API
 api_key: devkey
 api_secret: secret_dev_key_change_in_production
-ws_url: ws://host.docker.internal:7880
+ws_url: ws://127.0.0.1:7880
 
 # Trunk SIP - Twilio AIMS
 trunks:
@@ -29,7 +37,7 @@ trunks:
     port: 5060
     # Numeri di telefono associati
     numbers:
-      - "+390111951786"
+      - "+3901119517814"
 
 # Regole di dispatch per chiamate inbound
 # Quando arriva una chiamata, viene creata una room e dispatchato l'agent

@@ -98,8 +98,9 @@ class WhisperSTT:
             beam_size=5,
             vad_filter=True,
             vad_parameters=dict(
-                min_silence_duration_ms=500,
-                speech_pad_ms=200
+                min_silence_duration_ms=800,  # Più tollerante alle pause
+                speech_pad_ms=400,  # Più padding per non tagliare
+                threshold=0.3  # Soglia più bassa per rilevare voce
             )
         )
         

@@ -87,10 +87,10 @@ _send_wake_callback = None  # Callback per inviare aggiornamenti wake al fronten
 # ==================== CONFIGURABLE VOICE SETTINGS ====================
 # Questi valori vengono caricati dal database all'avvio
 # Default values (saranno sovrascritti da load_voice_settings_from_db)
-WAKE_TIMEOUT_SECONDS = 20  # Timeout di silenzio per disattivazione automatica
-VAD_ENERGY_THRESHOLD = 30  # Soglia energia per barge-in VAD (più sensibile)
-SPEECH_ENERGY_THRESHOLD = 50  # Soglia energia per rilevamento parlato (più sensibile)
-SILENCE_THRESHOLD = 15  # Frames di silenzio prima di terminare ascolto (~750ms invece di 1.5s)
+WAKE_TIMEOUT_SECONDS = 30  # Timeout di silenzio per disattivazione automatica
+VAD_ENERGY_THRESHOLD = 70  # Soglia energia per barge-in VAD (meno sensibile)
+SPEECH_ENERGY_THRESHOLD = 25  # Soglia energia per rilevamento parlato (molto sensibile)
+SILENCE_THRESHOLD = 60  # Frames di silenzio prima di terminare ascolto (~3s per frasi complete)
 
 # ==================== BRANDING CONFIGURATION ====================
 # Nome assistente e trigger (caricati da variabili ambiente)
@@ -2000,6 +2000,22 @@ class WhisperSTT(stt.STT):
                     if response.status == 200:
                         result = await response.json()
                         text = result.get("text", "").strip()
+                        detected_lang = result.get("language", "?")
+                        lang_prob = result.get("language_probability", 0)
+                        segments = result.get("segments", [])
+                        
+                        # #region agent log
+                        import json as _json
+                        _log_path = "/app/.cursor/debug.log"
+                        try:
+                            import os as _os
+                            _os.makedirs("/app/.cursor", exist_ok=True)
+                            with open(_log_path, "a") as _f:
+                                _f.write(_json.dumps({"location":"WhisperSTT:transcribe_only","message":"Whisper response","data":{"text":text[:100] if text else "","language":detected_lang,"lang_prob":round(lang_prob,2),"num_segments":len(segments),"segments_preview":[{"text":s.get("text","")[:50],"start":s.get("start",0),"end":s.get("end",0)} for s in segments[:3]] if segments else []},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-WHISPER"})+"\n")
+                        except: pass
+                        # #endregion
+                        
+                        logger.info(f"🎤 [WHISPER] Risposta: '{text}' (lang={detected_lang}, prob={lang_prob:.0%}, segments={len(segments)})")
                         return text
                     else:
                         error_text = await response.text()
@@ -3095,12 +3111,12 @@ async def load_settings_from_server() -> dict:
         "context_injection": "",
         "whisper_model": config.whisper.model,
         "whisper_language": config.whisper.language,
-        # Voice Activation defaults (più sensibili e responsivi)
-        "wake_timeout_seconds": "20",
-        "vad_energy_threshold": "30",
-        "speech_energy_threshold": "50",
-        "silence_threshold": "15",
-        "tts_cooldown_seconds": "3",
+        # Voice Activation defaults (molto sensibili per chiamate SIP)
+        "wake_timeout_seconds": "30",
+        "vad_energy_threshold": "70",
+        "speech_energy_threshold": "25",
+        "silence_threshold": "60",
+        "tts_cooldown_seconds": "1.5",
     }
     
     try:
@@ -3150,16 +3166,30 @@ async def request_handler(request: JobRequest) -> AutoSubscribe:
     Accetta automaticamente i job nelle room SIP per permettere all'agent
     di rispondere alle chiamate telefoniche.
     """
+    # #region agent log
+    import json as _json
+    from pathlib import Path as _Path
+    _log_path = _Path(__file__).parent.parent / ".cursor" / "debug.log"
+    _log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:entry","message":"Job request received","data":{"room_name":request.room.name,"job_id":request.id},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
+    # #endregion
+    
     room_name = request.room.name
     
     # Accetta automaticamente job in room SIP
     if room_name.startswith("sip-") or room_name == "sip-call":
         logger.info(f"📞 Accetto automaticamente job SIP per room: {room_name}")
+        # #region agent log
+        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:sip_accept","message":"Accepting SIP job","data":{"room_name":room_name},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
+        # #endregion
         await request.accept()
         return AutoSubscribe.SUBSCRIBE_ALL
     
     # Per altre room, accetta normalmente (dispatch esplicito)
     logger.info(f"✅ Accetto job per room: {room_name}")
+    # #region agent log
+    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:normal_accept","message":"Accepting normal job","data":{"room_name":room_name},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
+    # #endregion
     await request.accept()
     return AutoSubscribe.SUBSCRIBE_ALL
 
@@ -3220,11 +3250,11 @@ async def entrypoint(ctx: JobContext):
     # Applica Voice Settings dalle impostazioni caricate
     global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
     try:
-        WAKE_TIMEOUT_SECONDS = int(db_settings.get('wake_timeout_seconds', '20'))
-        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '40'))
-        SPEECH_ENERGY_THRESHOLD = int(db_settings.get('speech_energy_threshold', '100'))
-        SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '30'))
-        TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '5'))
+        WAKE_TIMEOUT_SECONDS = int(db_settings.get('wake_timeout_seconds', '30'))
+        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '70'))
+        SPEECH_ENERGY_THRESHOLD = int(db_settings.get('speech_energy_threshold', '25'))
+        SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '60'))
+        TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '1.5'))
         logger.info(f"🎙️ Voice Settings: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
     except Exception as e:
         logger.warning(f"⚠️ Errore parsing voice settings: {e}, uso default")
@@ -3629,8 +3659,9 @@ FORMATO TTS:
             audio_buffer = bytearray()
             silence_frames = 0
             speech_frames = 0
-            MIN_SPEECH_FRAMES = 5  # ~250ms di speech prima di trascrivere (più responsivo)
-            # NOTA: SILENCE_THRESHOLD è ora globale e configurabile da database
+            MIN_SPEECH_FRAMES = 30  # ~1.5 secondi di speech prima di trascrivere
+            MIN_AUDIO_BYTES = 32000  # Almeno 1 secondo di audio (16kHz * 16bit = 32 bytes/ms * 1000ms)
+            # NOTA: SILENCE_THRESHOLD è ora globale e configurabile da database (default 60 = ~3 sec silenzio)
             
             async for event in audio_stream:
                 if not isinstance(event, rtc.AudioFrameEvent):
@@ -3689,7 +3720,7 @@ FORMATO TTS:
                     # #endregion
                     
                     # Se c'è voce significativa durante TTS (non cooldown), interrompi
-                    if tts_active and energy > 50:  # Soglia abbassata per maggiore sensibilità
+                    if tts_active and energy > 70:  # Soglia per barge-in (70 = meno sensibile)
                         # #region agent log - H6: tentativo interrupt
                         try:
                             with open("/app/config/debug.log", "a") as _f:
@@ -3744,11 +3775,28 @@ FORMATO TTS:
                         silence_frames = 0
                         speech_frames = 0
                         
-                        if len(audio_bytes) > 3200:  # Almeno 100ms di audio
+                        if len(audio_bytes) > MIN_AUDIO_BYTES:  # Almeno 500ms di audio
+                            # Calcola statistiche audio per debug
+                            audio_duration_ms = len(audio_bytes) / 32  # 16kHz, 16bit = 32 bytes/ms
+                            audio_samples = [int.from_bytes(audio_bytes[i:i+2], 'little', signed=True) for i in range(0, min(len(audio_bytes), 10000), 2)]
+                            avg_energy = sum(abs(s) for s in audio_samples) / len(audio_samples) if audio_samples else 0
+                            max_energy = max(abs(s) for s in audio_samples) if audio_samples else 0
+                            
+                            # #region agent log
+                            import json as _json
+                            _log_path = "/app/.cursor/debug.log"
+                            try:
+                                import os as _os
+                                _os.makedirs("/app/.cursor", exist_ok=True)
+                                with open(_log_path, "a") as _f:
+                                    _f.write(_json.dumps({"location":"main.py:transcribe_chunk","message":"Audio chunk ready for Whisper","data":{"bytes":len(audio_bytes),"duration_ms":round(audio_duration_ms),"avg_energy":round(avg_energy),"max_energy":max_energy,"speech_frames_accumulated":speech_frames,"silence_frames_trigger":SILENCE_THRESHOLD},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-AUDIO"})+"\n")
+                            except: pass
+                            # #endregion
+                            
                             if is_sip_participant:
-                                logger.info(f"📞 [SIP-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere con Whisper")
+                                logger.info(f"📞 [SIP-AUDIO] {participant_identity}: {len(audio_bytes)} bytes ({audio_duration_ms:.0f}ms), energy avg={avg_energy:.0f} max={max_energy}")
                             else:
-                                logger.info(f"🎤 [MULTI-AUDIO] {participant_identity}: {len(audio_bytes)} bytes da trascrivere")
+                                logger.info(f"🎤 [MULTI-AUDIO] {participant_identity}: {len(audio_bytes)} bytes ({audio_duration_ms:.0f}ms), energy avg={avg_energy:.0f}")
                             
                             # Trascrivi con WhisperSTT (metodo dedicato senza invio automatico)
                             try:

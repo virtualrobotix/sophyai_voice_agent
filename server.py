@@ -196,6 +196,22 @@ async def health():
     return {"status": "ok", "service": "voice-agent", "https": True}
 
 
+# #region agent log
+@app.post("/api/debug-log")
+async def frontend_debug_log(request: Request):
+    """Endpoint per raccogliere log di debug dal frontend"""
+    try:
+        data = await request.json()
+        log_path = Path(__file__).parent / ".cursor" / "debug.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a") as f:
+            f.write(json.dumps(data) + "\n")
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+# #endregion
+
+
 @app.get("/api/status")
 async def get_status():
     """Verifica lo stato di tutti i servizi"""
@@ -2475,7 +2491,13 @@ async def get_sip_config():
 
 @app.post("/api/sip/config")
 async def save_sip_config(sip_config: SIPConfig):
-    """Salva la configurazione SIP."""
+    """Salva la configurazione SIP e registra trunk/dispatch rules via API LiveKit."""
+    # #region agent log
+    import json as _json
+    _log_path = Path(__file__).parent / ".cursor" / "debug.log"
+    _log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:entry","message":"SIP config save started","data":{"trunk_host":sip_config.trunk_host,"trunk_numbers":sip_config.trunk_numbers,"room_prefix":sip_config.room_prefix},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
+    # #endregion
     
     # Salva nel database
     db = await get_database()
@@ -2562,11 +2584,193 @@ async def save_sip_config(sip_config: SIPConfig):
         logger.error(f"Errore scrittura sip-config.yaml: {e}")
         raise HTTPException(status_code=500, detail=f"Errore salvataggio file: {e}")
     
+    # ==================== REGISTRA TRUNK E DISPATCH RULES VIA API LIVEKIT ====================
+    api_result = {"trunk_created": False, "dispatch_rule_created": False, "errors": []}
+    
+    if sip_config.trunk_numbers:
+        try:
+            internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+            lk_api = api.LiveKitAPI(
+                url=internal_url,
+                api_key=config.livekit.api_key,
+                api_secret=config.livekit.api_secret
+            )
+            
+            # #region agent log
+            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:api_connect","message":"LiveKit API connected","data":{"url":internal_url},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+            # #endregion
+            
+            # 1. Elenca e elimina trunk esistenti per evitare duplicati
+            try:
+                existing_trunks = await lk_api.sip.list_sip_inbound_trunk(api.ListSIPInboundTrunkRequest())
+                # #region agent log
+                with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:list_trunks","message":"Existing trunks listed","data":{"count":len(existing_trunks.items) if existing_trunks.items else 0},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+                # #endregion
+                
+                for trunk in (existing_trunks.items or []):
+                    try:
+                        await lk_api.sip.delete_sip_trunk(api.DeleteSIPTrunkRequest(sip_trunk_id=trunk.sip_trunk_id))
+                        logger.info(f"📞 Trunk eliminato: {trunk.sip_trunk_id}")
+                    except Exception as e:
+                        logger.warning(f"Errore eliminazione trunk {trunk.sip_trunk_id}: {e}")
+            except Exception as e:
+                logger.warning(f"Errore lista trunk esistenti: {e}")
+            
+            # 2. Elenca e elimina dispatch rules esistenti
+            try:
+                existing_rules = await lk_api.sip.list_sip_dispatch_rule(api.ListSIPDispatchRuleRequest())
+                # #region agent log
+                with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:list_rules","message":"Existing dispatch rules listed","data":{"count":len(existing_rules.items) if existing_rules.items else 0},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C"})+"\n")
+                # #endregion
+                
+                for rule in (existing_rules.items or []):
+                    try:
+                        await lk_api.sip.delete_sip_dispatch_rule(api.DeleteSIPDispatchRuleRequest(sip_dispatch_rule_id=rule.sip_dispatch_rule_id))
+                        logger.info(f"📞 Dispatch rule eliminata: {rule.sip_dispatch_rule_id}")
+                    except Exception as e:
+                        logger.warning(f"Errore eliminazione rule {rule.sip_dispatch_rule_id}: {e}")
+            except Exception as e:
+                logger.warning(f"Errore lista dispatch rules esistenti: {e}")
+            
+            # 3. Crea nuovo trunk inbound
+            numbers = [n.strip() for n in sip_config.trunk_numbers.split(",") if n.strip()]
+            allowed_addresses = [sip_config.trunk_host] if sip_config.trunk_host else []
+            
+            trunk_info = api.SIPInboundTrunkInfo(
+                name=sip_config.trunk_name or "trunk-principale",
+                numbers=numbers,
+                allowed_addresses=allowed_addresses
+            )
+            
+            # Aggiungi autenticazione se configurata
+            if sip_config.trunk_username and sip_config.trunk_password:
+                trunk_info.auth_username = sip_config.trunk_username
+                trunk_info.auth_password = sip_config.trunk_password
+            
+            create_trunk_request = api.CreateSIPInboundTrunkRequest(trunk=trunk_info)
+            created_trunk = await lk_api.sip.create_sip_inbound_trunk(create_trunk_request)
+            
+            trunk_id = created_trunk.sip_trunk_id
+            api_result["trunk_created"] = True
+            api_result["trunk_id"] = trunk_id
+            logger.info(f"📞 Trunk SIP creato: {trunk_id}")
+            
+            # #region agent log
+            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:trunk_created","message":"SIP trunk created via API","data":{"trunk_id":trunk_id,"numbers":numbers},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+            # #endregion
+            
+            # 4. Crea dispatch rule
+            room_prefix = sip_config.room_prefix or "sip-call-"
+            
+            dispatch_rule = api.SIPDispatchRule(
+                dispatch_rule_direct=api.SIPDispatchRuleDirect(
+                    room_name=f"{room_prefix}{{call_id}}",
+                    pin=""
+                )
+            )
+            
+            # CreateSIPDispatchRuleRequest vuole i parametri direttamente, non un SIPDispatchRuleInfo
+            create_rule_request = api.CreateSIPDispatchRuleRequest(
+                rule=dispatch_rule,
+                trunk_ids=[trunk_id],
+                name="default-inbound"
+            )
+            created_rule = await lk_api.sip.create_sip_dispatch_rule(create_rule_request)
+            
+            api_result["dispatch_rule_created"] = True
+            api_result["dispatch_rule_id"] = created_rule.sip_dispatch_rule_id
+            logger.info(f"📞 Dispatch rule creata: {created_rule.sip_dispatch_rule_id}")
+            
+            # #region agent log
+            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:rule_created","message":"Dispatch rule created via API","data":{"rule_id":created_rule.sip_dispatch_rule_id,"room_prefix":room_prefix},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C"})+"\n")
+            # #endregion
+            
+            await lk_api.aclose()
+            
+        except Exception as e:
+            error_msg = str(e)
+            api_result["errors"].append(error_msg)
+            logger.error(f"📞 Errore registrazione SIP via API: {e}")
+            # #region agent log
+            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:api_error","message":"API error during SIP registration","data":{"error":error_msg},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
+            # #endregion
+    
+    # #region agent log
+    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:exit","message":"SIP config save completed","data":api_result,"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
+    # #endregion
+    
+    # Costruisci messaggio di risposta
+    if api_result["trunk_created"] and api_result["dispatch_rule_created"]:
+        message = f"Configurazione SIP salvata e registrata via API LiveKit. Trunk ID: {api_result.get('trunk_id', 'N/A')}"
+    elif api_result["errors"]:
+        message = f"Configurazione salvata ma errore API: {api_result['errors'][0][:100]}"
+    else:
+        message = "Configurazione SIP salvata. Configura trunk_numbers per registrare via API."
+    
     return {
         "status": "ok",
-        "message": "Configurazione SIP salvata. Riavvia il servizio SIP per applicare.",
-        "config_file": str(sip_config_path)
+        "message": message,
+        "config_file": str(sip_config_path),
+        "api_result": api_result
     }
+
+
+@app.get("/api/sip/trunks")
+async def list_sip_trunks():
+    """Elenca i trunk SIP registrati in LiveKit."""
+    # #region agent log
+    import json as _json
+    _log_path = Path(__file__).parent / ".cursor" / "debug.log"
+    _log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:entry","message":"Listing SIP trunks","data":{},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+    # #endregion
+    
+    try:
+        internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
+        lk_api = api.LiveKitAPI(
+            url=internal_url,
+            api_key=config.livekit.api_key,
+            api_secret=config.livekit.api_secret
+        )
+        
+        # Lista trunk inbound
+        trunks_response = await lk_api.sip.list_sip_inbound_trunk(api.ListSIPInboundTrunkRequest())
+        trunks = []
+        for t in (trunks_response.items or []):
+            trunks.append({
+                "id": t.sip_trunk_id,
+                "name": t.name,
+                "numbers": list(t.numbers) if t.numbers else [],
+                "allowed_addresses": list(t.allowed_addresses) if t.allowed_addresses else []
+            })
+        
+        # Lista dispatch rules
+        rules_response = await lk_api.sip.list_sip_dispatch_rule(api.ListSIPDispatchRuleRequest())
+        rules = []
+        for r in (rules_response.items or []):
+            rules.append({
+                "id": r.sip_dispatch_rule_id,
+                "name": r.name,
+                "trunk_ids": list(r.trunk_ids) if r.trunk_ids else []
+            })
+        
+        await lk_api.aclose()
+        
+        # #region agent log
+        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:exit","message":"Trunks and rules listed","data":{"trunks_count":len(trunks),"rules_count":len(rules)},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+        # #endregion
+        
+        return {
+            "trunks": trunks,
+            "dispatch_rules": rules
+        }
+        
+    except Exception as e:
+        logger.error(f"Errore lista trunk SIP: {e}")
+        # #region agent log
+        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:error","message":"Error listing trunks","data":{"error":str(e)},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
+        # #endregion
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/sip/test")

@@ -155,29 +155,18 @@ services:
       - "host.docker.internal:host-gateway"
 
   # LiveKit SIP Bridge - per chiamate telefoniche
+  # Usa network_mode: host per evitare problemi NAT con SIP/RTP
   sip:
     image: livekit/sip:latest
     container_name: livekit-sip
     restart: unless-stopped
-    ports:
-      - "5060:5060/udp"
-      - "5060:5060/tcp"
-      - "5061:5061/tcp"
-      - "10000-10100:10000-10100/udp"
+    network_mode: host
     environment:
-      - LIVEKIT_URL=ws://host.docker.internal:7880
+      - LIVEKIT_URL=ws://127.0.0.1:7880
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret_dev_key_change_in_production
-      - SIP_PORT=5060
-      - SIP_PORT_TLS=5061
-      - RTP_PORT_LOW=10000
-      - RTP_PORT_HIGH=10100
     volumes:
       - ./sip-config.yaml:/sip/config.yaml:ro
-    networks:
-      - voiceagent
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   # Voice Agent - si connette a LiveKit locale
   agent:
