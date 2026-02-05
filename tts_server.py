@@ -39,9 +39,9 @@ class TTSRequest(BaseModel):
     """Request per sintesi TTS"""
     text: str
     language: str = "it"
-    speaker: str = "carter"
+    speaker: str = "ryan"  # Default compatibile con Qwen TTS
     speed: float = 1.0
-    engine: str = "vibevoice"  # vibevoice, edge, chatterbox
+    engine: str = "edge"  # edge, qwen, piper, kokoro, vibevoice, chatterbox
     # Parametri Chatterbox
     model: str = None  # "standard" o "multilingual"
     device: str = None  # "auto", "cuda", "cpu", "mps"
@@ -595,6 +595,24 @@ async def synthesize_qwen(text: str, language: str = "it", speaker: str = "Ryan"
     }
     
     qwen_language = LANGUAGE_MAP.get(language, "Italian")
+    
+    # Speaker validi per Qwen TTS
+    QWEN_SPEAKERS = ['aiden', 'dylan', 'eric', 'ono_anna', 'ryan', 'serena', 'sohee', 'uncle_fu', 'vivian']
+    # Mapping speaker alternativi
+    SPEAKER_MAP = {
+        'carter': 'ryan',  # fallback per VibeVoice speaker
+        'default': 'ryan',
+        'male': 'ryan',
+        'female': 'serena',
+        'italian': 'ryan',  # Ryan ha buon supporto italiano
+    }
+    
+    # Normalizza speaker
+    speaker_lower = speaker.lower()
+    if speaker_lower not in QWEN_SPEAKERS:
+        mapped = SPEAKER_MAP.get(speaker_lower, 'ryan')
+        logger.info(f"🔄 Qwen TTS: mapping speaker '{speaker}' -> '{mapped}'")
+        speaker = mapped
     
     logger.info(f"🎤 Qwen TTS: speaker={speaker}, language={qwen_language}")
     

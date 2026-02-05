@@ -109,6 +109,39 @@ services:
     profiles:
       - nvidia
 
+  # VibeVoice TTS Server - Container isolato con transformers compatibile
+  # Richiede transformers 4.45.0 per evitare bug tensor size mismatch
+  vibevoice:
+    build:
+      context: .
+      dockerfile: Dockerfile.vibevoice
+    container_name: voice-agent-vibevoice
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - HF_HOME=/app/models
+    volumes:
+      - vibevoice_models:/app/models
+      - ./vibevoice_voices:/app/voices:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    networks:
+      - voiceagent
+    profiles:
+      - nvidia
+
   # Web Server (Frontend + API) con HTTPS
   web:
     build:
@@ -218,3 +251,4 @@ volumes:
   postgres_data:
   whisper_models:
   tts_models:
+  vibevoice_models:

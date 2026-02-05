@@ -1,5 +1,8 @@
-# TTS Server con supporto CUDA
+# TTS Server con supporto CUDA - Tutti gli engine
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+
+# Evita prompt interattivi durante l'installazione
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Installa Python 3.12 e dipendenze sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,10 +16,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     espeak-ng \
+    sox \
+    libsox-fmt-all \
     git \
     curl \
+    wget \
     build-essential \
     ninja-build \
+    pkg-config \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Usa Python 3.12 come default
@@ -28,49 +36,110 @@ WORKDIR /app
 # Installa pip per Python 3.12
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
 
+# Aggiorna pip e installa build tools
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel build
+
 # Installa PyTorch con CUDA 12.1
 RUN pip3 install --no-cache-dir \
     torch \
     torchaudio \
     --index-url https://download.pytorch.org/whl/cu121
 
-# Installa dipendenze Python per TTS
+# Installa dipendenze Python base per TTS
 RUN pip3 install --no-cache-dir \
     fastapi \
-    uvicorn \
+    uvicorn[standard] \
     python-multipart \
     numpy \
-    edge-tts \
     soundfile \
     scipy \
     pydantic \
-    huggingface_hub
+    huggingface_hub \
+    requests \
+    aiohttp \
+    loguru \
+    transformers \
+    accelerate \
+    safetensors \
+    sentencepiece
 
-# Kokoro TTS (opzionale)
-RUN pip3 install --no-cache-dir kokoro>=0.3.4 || echo "Kokoro non installato"
+# ========================================
+# TTS ENGINE 1: Edge TTS (Microsoft Cloud) - SEMPRE FUNZIONA
+# ========================================
+RUN pip3 install --no-cache-dir edge-tts && \
+    python3 -c "import edge_tts; print('✅ Edge TTS installato')"
 
-# Qwen TTS (Alibaba - self-hosted)
-RUN pip3 install --no-cache-dir qwen-tts || echo "Qwen TTS non installato"
+# ========================================
+# TTS ENGINE 2: Kokoro TTS (Self-hosted) - PRIORITÀ ALTA
+# ========================================
+RUN pip3 install --no-cache-dir "kokoro>=0.3.4" && \
+    python3 -c "import kokoro; print('✅ Kokoro TTS installato')"
 
-# FlashAttention 2 per prestazioni ottimali (richiede CUDA devel)
-RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || echo "FlashAttention non installato"
+# ========================================
+# TTS ENGINE 3: Qwen TTS (Alibaba - Self-hosted) - PRIORITÀ ALTA
+# ========================================
+RUN pip3 install --no-cache-dir qwen-tts && \
+    python3 -c "from qwen_tts import Qwen3TTSModel; print('✅ Qwen TTS installato')"
+
+# ========================================
+# TTS ENGINE 4: Piper TTS (Self-hosted, veloce)
+# ========================================
+RUN pip3 install --no-cache-dir piper-tts pathvalidate && \
+    python3 -c "from piper import PiperVoice; print('✅ Piper TTS installato')"
+
+# ========================================
+# TTS ENGINE 5: Chatterbox TTS (Self-hosted, voice cloning) - OPZIONALE
+# ========================================
+RUN pip3 install --no-cache-dir chatterbox-tts || \
+    echo "⚠️ Chatterbox TTS non installato (opzionale)"
+
+# ========================================
+# TTS ENGINE 6: Coqui TTS (Self-hosted, alta qualità) - OPZIONALE  
+# ========================================
+RUN pip3 install --no-cache-dir TTS || \
+    echo "⚠️ Coqui TTS non installato (opzionale)"
+
+# ========================================
+# FlashAttention 2 per prestazioni ottimali (opzionale)
+# ========================================
+RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || \
+    echo "⚠️ FlashAttention non installato (non critico)"
 
 # Copia il server TTS e moduli necessari
 COPY tts_server.py .
 COPY agent/tts/ ./agent/tts/
 
 # Directory per i modelli
-RUN mkdir -p /app/models
+RUN mkdir -p /app/models /app/models/piper
 ENV HF_HOME=/app/models
+
+# Pre-download modelli Piper italiano
+RUN mkdir -p /app/models/piper && \
+    curl -L -o /app/models/piper/it_IT-riccardo-x_low.onnx \
+    "https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx" && \
+    curl -L -o /app/models/piper/it_IT-riccardo-x_low.onnx.json \
+    "https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx.json" && \
+    echo "✅ Modello Piper italiano scaricato" || echo "⚠️ Download modello Piper fallito"
+
+# Verifica finale installazioni
+RUN echo "=== VERIFICA INSTALLAZIONI ===" && \
+    python3 -c "import edge_tts; print('✅ edge-tts')" && \
+    python3 -c "import kokoro; print('✅ kokoro')" && \
+    python3 -c "from qwen_tts import Qwen3TTSModel; print('✅ qwen-tts')" && \
+    python3 -c "from piper import PiperVoice; print('✅ piper-tts')" && \
+    (python3 -c "from chatterbox.tts import ChatterboxTTS; print('✅ chatterbox-tts')" || echo "❌ chatterbox-tts") && \
+    (python3 -c "from TTS.api import TTS; print('✅ coqui-tts')" || echo "❌ coqui-tts") && \
+    echo "=== FINE VERIFICA ==="
 
 # Variabili di default
 ENV DEFAULT_TTS=edge
 ENV TTS_PORT=8092
+ENV CUDA_VISIBLE_DEVICES=0
 
 EXPOSE 8092
 
 # Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8092/health || exit 1
 
 CMD ["python3", "tts_server.py"]

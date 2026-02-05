@@ -1,0 +1,65 @@
+# Dockerfile per VibeVoice TTS - Container isolato
+# Usa transformers ~4.45.0 compatibile con VibeVoice
+
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Installa Python 3.11 (più compatibile con transformers 4.45)
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3-pip \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Usa Python 3.11 come default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+RUN python3 -m pip install --upgrade pip
+
+WORKDIR /app
+
+# Installa PyTorch 2.5+ con CUDA (supporta XPU)
+RUN pip3 install --no-cache-dir \
+    torch==2.5.1 \
+    torchaudio==2.5.1 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Installa transformers versione compatibile con VibeVoice
+RUN pip3 install --no-cache-dir \
+    transformers==4.45.0 \
+    accelerate \
+    safetensors \
+    scipy \
+    numpy
+
+# Installa VibeVoice da GitHub (ultima versione)
+RUN pip3 install --no-cache-dir git+https://github.com/microsoft/VibeVoice.git
+
+# Usa transformers 4.51.3 come richiesto da VibeVoice (ha FlashAttentionKwargs)
+RUN pip3 install --no-cache-dir --force-reinstall transformers==4.51.3
+
+# Fix numpy compatibility
+RUN pip3 install --no-cache-dir numpy==1.26.4
+
+# Installa FastAPI per servire il TTS
+RUN pip3 install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    pydantic
+
+# Copia script server
+COPY vibevoice_server.py /app/vibevoice_server.py
+
+# Crea directory per voice presets
+RUN mkdir -p /app/voices
+
+EXPOSE 8501
+
+CMD ["python3", "/app/vibevoice_server.py"]
