@@ -211,6 +211,24 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Ollama Preload - Carica il modello LLM in GPU all'avvio
+  # Invia una richiesta a Ollama per pre-caricare il modello con keep_alive=-1
+  # così il modello resta in GPU e le chiamate non devono aspettare
+  ollama-preload:
+    image: python:3.11-slim
+    container_name: voice-agent-ollama-preload
+    restart: "no"
+    network_mode: host
+    environment:
+      - OLLAMA_HOST=http://127.0.0.1:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gpt-oss:20b}
+    volumes:
+      - ./ollama-preload.sh:/ollama-preload.sh:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1 && /ollama-preload.sh
+
   # SIP Init - Configura trunk e dispatch rules all'avvio
   # Le configurazioni SIP non sono persistenti in LiveKit, questo le ricrea
   sip-init:

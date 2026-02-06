@@ -84,7 +84,8 @@ Evita di usare formattazioni come elenchi puntati o markdown, preferisci frasi s
         
         response = self.client.chat(
             model=self.model,
-            messages=messages
+            messages=messages,
+            keep_alive=-1
         )
         
         assistant_message = response["message"]["content"]
@@ -127,7 +128,8 @@ Evita di usare formattazioni come elenchi puntati o markdown, preferisci frasi s
         async for part in await self.async_client.chat(
             model=self.model,
             messages=messages,
-            stream=True
+            stream=True,
+            keep_alive=-1
         ):
             chunk = part["message"]["content"]
             full_response += chunk

@@ -16,6 +16,16 @@ if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
     echo "⚠️  Ollama non è in esecuzione. Avvialo con:"
     echo "   ollama serve"
     echo ""
+else
+    echo "✅ Ollama in esecuzione"
+    # Pre-carica il modello LLM in GPU
+    echo "🔄 Pre-caricamento modello LLM in GPU..."
+    OLLAMA_MODEL="${OLLAMA_MODEL:-gpt-oss:20b}"
+    if [ -f "$DIR/ollama-preload.sh" ]; then
+        OLLAMA_HOST=http://localhost:11434 OLLAMA_MODEL="$OLLAMA_MODEL" "$DIR/ollama-preload.sh" &
+        PRELOAD_PID=$!
+        echo "   Preload avviato in background (PID: $PRELOAD_PID)"
+    fi
 fi
 
 # Directory del progetto

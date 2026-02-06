@@ -1090,7 +1090,8 @@ class OllamaLLMStream(llm.LLMStream):
             response = await client.chat(
                 model=self._llm._model_name,
                 messages=messages,
-                stream=True
+                stream=True,
+                keep_alive=-1
             )
             
             logger.info("OllamaLLM: risposta ricevuta, inizio streaming")
@@ -2578,7 +2579,8 @@ class MultimodalLLM:
                 model=model,
                 prompt=prompt,
                 images=[image_bytes],
-                stream=False
+                stream=False,
+                keep_alive=-1
             )
             
             if hasattr(response, 'response'):
@@ -2603,7 +2605,8 @@ class MultimodalLLM:
                             "content": prompt,
                             "images": [image_bytes]
                         }
-                    ]
+                    ],
+                    keep_alive=-1
                 )
                 
                 if hasattr(response, 'message') and hasattr(response.message, 'content'):
