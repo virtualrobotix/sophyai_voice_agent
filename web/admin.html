@@ -3,33 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Log Chiamate</title>
+    <title id="page-title">Receptionist AI - Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-card: #1a1a24;
-            --bg-elevated: #22222e;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0b0;
-            --text-muted: #606070;
-            --border: #2a2a3a;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.3);
-            --success: #22c55e;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
             --warning: #f59e0b;
-            --error: #ef4444;
-            --radius: 12px;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 16px;
+            --radius-sm: 8px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'DM Sans', sans-serif;
@@ -38,196 +34,612 @@
             min-height: 100vh;
         }
 
-        .container {
-            max-width: 1400px;
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .logo-text { font-size: 1.2rem; font-weight: 700; }
+        .logo-subtitle { font-size: 0.75rem; color: var(--text-muted); }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+        /* Tabs */
+        .tabs-container {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 24px;
         }
 
-        header {
+        .tab-content.active { display: block; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 24px;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border);
         }
 
-        h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
-        }
-
-        .header-actions {
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(139, 92, 246, 0.15);
+            border-radius: 10px;
             display: flex;
-            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border-radius: var(--radius);
+        .card-title { font-size: 1.1rem; font-weight: 600; }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-secondary); }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-secondary);
             border: 1px solid var(--border);
-            background: var(--bg-elevated);
+            border-radius: var(--radius-sm);
             color: var(--text-primary);
-            cursor: pointer;
-            font-size: 0.875rem;
+            font-size: 0.95rem;
+            font-family: inherit;
             transition: all 0.2s;
         }
 
-        .btn:hover {
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-textarea { min-height: 120px; resize: vertical; }
+
+        /* Model Grid */
+        .model-grid { display: grid; gap: 12px; max-height: 400px; overflow-y: auto; }
+
+        .model-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-item:hover { border-color: var(--accent); }
+        .model-item.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
+
+        .model-info { flex: 1; }
+        .model-name { font-weight: 600; margin-bottom: 4px; }
+        .model-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 12px;
             background: var(--bg-card);
-            border-color: var(--accent);
+            border: 1px solid var(--border);
+        }
+        .badge-vision { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #60a5fa; }
+        .badge-tools { background: rgba(249, 115, 22, 0.2); border-color: #f97316; color: #fb923c; }
+        .badge-json { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+        .badge-context { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #a78bfa; }
+        .model-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+        .model-cost { font-size: 0.8rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+
+        /* Provider Toggle */
+        .provider-toggle {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            padding: 4px;
+            margin-bottom: 20px;
         }
 
-        .btn-primary {
-            background: var(--accent);
-            border-color: var(--accent);
+        .provider-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-family: inherit;
         }
 
-        .btn-primary:hover {
-            background: #5558e3;
+        .provider-btn.active { background: var(--accent); color: white; }
+
+        /* Search */
+        .search-container {
+            position: relative;
+            margin-bottom: 16px;
         }
 
-        /* Stats Cards */
+        .search-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Sort */
+        .sort-select {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
-            margin-bottom: 32px;
         }
 
-        .stat-card {
+        .stat-box {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent);
+        }
+
+        .stat-box.stt { border-left-color: #22c55e; }
+        .stat-box.llm { border-left-color: #f59e0b; }
+        .stat-box.tts { border-left-color: #8b5cf6; }
+        .stat-box.latency { border-left-color: #ef4444; }
+
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-value.stt { color: #22c55e; }
+        .stat-value.llm { color: #f59e0b; }
+        .stat-value.tts { color: #8b5cf6; }
+        .stat-value.latency { color: #ef4444; }
+        .stat-unit { font-size: 0.9rem; color: var(--text-muted); }
+        .stat-details { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #7c3aed; }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); }
+
+        .btn-group { display: flex; gap: 12px; margin-top: 16px; }
+
+        /* API Key Input */
+        .api-key-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .api-key-container .form-group { flex: 1; margin-bottom: 0; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+        }
+
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--danger); }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* TTS Options */
+        .tts-grid { display: grid; gap: 12px; }
+
+        .tts-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tts-option:hover { border-color: var(--accent); }
+        .tts-option.selected { border-color: var(--accent); background: rgba(139, 92, 246, 0.1); }
+        .tts-option-icon { font-size: 1.5rem; }
+        .tts-option-info { flex: 1; }
+        .tts-option-name { font-weight: 600; }
+        .tts-option-desc { font-size: 0.85rem; color: var(--text-muted); }
+        .tts-badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 100px; font-weight: 600; }
+        .tts-badge.local { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .tts-badge.cloud { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+        /* TTS Test */
+        .tts-test-area {
+            margin-top: 20px;
             padding: 20px;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: 12px;
+        }
+        
+        /* ElevenLabs Panel */
+        .elevenlabs-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+        }
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .voice-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .voice-item:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary);
+        }
+        .voice-item.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--primary);
+        }
+        .voice-item .voice-icon {
+            font-size: 18px;
+        }
+        .voice-item .voice-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .voice-item .voice-name {
+            font-weight: 500;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .voice-item .voice-labels {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        .voice-item .voice-preview {
+            opacity: 0;
+            padding: 4px;
+            border-radius: 50%;
+            transition: opacity 0.2s;
+        }
+        .voice-item:hover .voice-preview {
+            opacity: 1;
+        }
+        
+        /* Cost Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
         }
 
-        .stat-card .label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-bottom: 8px;
+        /* ==================== Log Chiamate Styles ==================== */
+        .logs-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
-        .stat-card .value {
-            font-size: 2rem;
-            font-weight: 600;
+        .logs-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
         }
 
-        .stat-card .value.success { color: var(--success); }
-        .stat-card .value.warning { color: var(--warning); }
-        .stat-card .value.error { color: var(--error); }
+        .logs-stat-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+        }
 
-        /* Filters */
-        .filters {
+        .logs-stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .logs-stat-value.logs-success { color: var(--success); }
+        .logs-stat-value.logs-warning { color: var(--warning); }
+        .logs-stat-value.logs-error { color: var(--danger); }
+
+        .logs-filters {
             display: flex;
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
+            align-items: flex-end;
         }
 
-        .filter-group {
+        .logs-filter-group {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
 
-        .filter-group label {
+        .logs-filter-group label {
             font-size: 0.75rem;
             color: var(--text-muted);
         }
 
-        .filter-group select,
-        .filter-group input {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg-elevated);
-            color: var(--text-primary);
-            font-size: 0.875rem;
-        }
-
         /* Calls Table */
-        .calls-table {
+        .log-calls-table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--bg-card);
-            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
             overflow: hidden;
+            margin-top: 8px;
         }
 
-        .calls-table th,
-        .calls-table td {
-            padding: 16px;
+        .log-calls-table th,
+        .log-calls-table td {
+            padding: 14px 16px;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
 
-        .calls-table th {
-            background: var(--bg-elevated);
+        .log-calls-table th {
+            background: var(--bg-card);
             font-weight: 500;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .calls-table tr:hover {
-            background: var(--bg-elevated);
+        .log-calls-table tr:hover {
+            background: rgba(139, 92, 246, 0.05);
         }
 
-        .calls-table tr:last-child td {
+        .log-calls-table tr:last-child td {
             border-bottom: none;
         }
 
-        .status-badge {
+        .log-status-badge {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        .status-badge.active {
-            background: rgba(34, 197, 94, 0.2);
+        .log-status-badge.active {
+            background: rgba(16, 185, 129, 0.2);
             color: var(--success);
         }
 
-        .status-badge.completed {
-            background: rgba(99, 102, 241, 0.2);
+        .log-status-badge.completed {
+            background: rgba(139, 92, 246, 0.2);
             color: var(--accent);
         }
 
-        .status-badge.failed {
+        .log-status-badge.failed {
             background: rgba(239, 68, 68, 0.2);
-            color: var(--error);
+            color: var(--danger);
         }
 
-        .status-badge.missed {
+        .log-status-badge.missed {
             background: rgba(245, 158, 11, 0.2);
             color: var(--warning);
         }
 
-        .call-number {
-            font-family: monospace;
-            font-size: 0.9rem;
+        .log-call-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
         }
 
-        .call-duration {
+        .log-call-duration {
             color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .btn-view {
-            padding: 6px 12px;
+        .btn-view-call {
+            padding: 6px 14px;
             font-size: 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-view-call:hover {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .logs-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
         }
 
         /* Call Detail Modal */
-        .modal-overlay {
+        .log-modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -235,25 +647,27 @@
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s;
+            backdrop-filter: blur(4px);
         }
 
-        .modal-overlay.active {
+        .log-modal-overlay.active {
             opacity: 1;
             visibility: visible;
         }
 
-        .modal {
+        .log-modal {
             background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: var(--radius);
-            max-width: 800px;
-            width: 90%;
-            max-height: 80vh;
+            max-width: 850px;
+            width: 92%;
+            max-height: 85vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        .modal-header {
+        .log-modal-header {
             padding: 20px 24px;
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -261,252 +675,2479 @@
             align-items: center;
         }
 
-        .modal-header h2 {
-            font-size: 1.25rem;
+        .log-modal-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
         }
 
-        .modal-close {
+        .log-modal-close {
             background: none;
             border: none;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             font-size: 1.5rem;
             cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
         }
 
-        .modal-body {
+        .log-modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .log-modal-body {
             padding: 24px;
             overflow-y: auto;
             flex: 1;
         }
 
-        .call-info {
+        .log-call-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 24px;
         }
 
-        .call-info-item {
-            background: var(--bg-elevated);
+        .log-call-info-item {
+            background: var(--bg-secondary);
             padding: 12px 16px;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
         }
 
-        .call-info-item .label {
+        .log-call-info-item .label {
             font-size: 0.75rem;
             color: var(--text-muted);
             margin-bottom: 4px;
         }
 
-        .call-info-item .value {
+        .log-call-info-item .value {
             font-size: 0.9rem;
         }
 
-        /* Messages */
-        .messages-section h3 {
+        .log-messages-section h3 {
             margin-bottom: 16px;
             font-size: 1rem;
             color: var(--text-secondary);
         }
 
-        .message {
+        .log-message {
             padding: 12px 16px;
             margin-bottom: 8px;
-            border-radius: 8px;
-            background: var(--bg-elevated);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
         }
 
-        .message.user {
-            background: rgba(99, 102, 241, 0.1);
+        .log-message.user {
+            background: rgba(139, 92, 246, 0.08);
             border-left: 3px solid var(--accent);
         }
 
-        .message.assistant {
-            background: rgba(34, 197, 94, 0.1);
+        .log-message.assistant {
+            background: rgba(16, 185, 129, 0.08);
             border-left: 3px solid var(--success);
         }
 
-        .message .role {
+        .log-message .role {
             font-size: 0.75rem;
             color: var(--text-muted);
             margin-bottom: 4px;
             text-transform: uppercase;
+            font-weight: 600;
         }
 
-        .message .content {
+        .log-message .content {
             font-size: 0.9rem;
             line-height: 1.5;
         }
 
-        .message .timestamp {
+        .log-message .timestamp {
             font-size: 0.7rem;
             color: var(--text-muted);
             margin-top: 8px;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .no-messages {
+        .log-no-messages {
             text-align: center;
             color: var(--text-muted);
             padding: 40px;
         }
 
-        /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 24px;
-        }
-
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        /* Empty State */
-        .empty-state {
+        .log-empty-state {
             text-align: center;
             padding: 60px;
             color: var(--text-muted);
         }
 
-        .empty-state .icon {
+        .log-empty-state .icon {
             font-size: 3rem;
             margin-bottom: 16px;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
+        /* Listen/Debug iframe */
+        .listen-iframe-container {
+            position: relative;
+        }
 
-            .stats-grid {
+        .listen-iframe-container.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 999;
+            background: var(--bg-primary);
+            padding: 0;
+        }
+
+        .listen-iframe-container.fullscreen iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0;
+        }
+
+        @media (max-width: 768px) {
+            .logs-stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
-            .calls-table {
+            .log-calls-table {
                 display: block;
                 overflow-x: auto;
             }
-
-            .call-info {
+            .log-call-info {
                 grid-template-columns: 1fr;
+            }
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📞 Log Chiamate</h1>
-            <div class="header-actions">
-                <button class="btn" onclick="refreshData()">🔄 Aggiorna</button>
-                <a href="/" class="btn">← Torna all'App</a>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">S</div>
+            <div>
+                <div class="logo-text" id="logo-text">Receptionist AI</div>
+                <div class="logo-subtitle">Pannello Admin</div>
             </div>
-        </header>
+        </div>
+        <a href="/" class="back-btn">← Torna alla Chat</a>
+    </div>
 
-        <!-- Stats -->
-        <div class="stats-grid" id="stats-grid">
-            <div class="stat-card">
-                <div class="label">Chiamate Totali</div>
-                <div class="value" id="stat-total">-</div>
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <div class="tabs">
+            <button class="tab active" data-tab="stats" onclick="switchTab('stats')">📊 Statistiche</button>
+            <button class="tab" data-tab="logs" onclick="switchTab('logs')">📋 Log Chiamate</button>
+            <button class="tab" data-tab="whisper" onclick="switchTab('whisper')">🎤 Whisper</button>
+            <button class="tab" data-tab="llm" onclick="switchTab('llm')">🧠 LLM</button>
+            <button class="tab" data-tab="tts" onclick="switchTab('tts')">🔊 TTS</button>
+            <button class="tab" data-tab="voice" onclick="switchTab('voice')">🎙️ Voice</button>
+            <button class="tab" data-tab="sip" onclick="switchTab('sip')">📞 SIP</button>
+            <button class="tab" data-tab="listen" onclick="switchTab('listen')">🎧 Ascolto Live</button>
+        </div>
+    </div>
+
+    <!-- Stats Tab -->
+    <div class="tab-content active" id="tab-stats">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">⚡</div>
+                <h2 class="card-title">Performance</h2>
             </div>
-            <div class="stat-card">
-                <div class="label">Completate</div>
-                <div class="value success" id="stat-completed">-</div>
+            <div class="stats-grid">
+                <div class="stat-box stt">
+                    <div class="stat-label">🎤 STT (Whisper)</div>
+                    <div class="stat-value stt" id="stat-stt">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-stt-detail">In attesa...</div>
+                </div>
+                <div class="stat-box llm">
+                    <div class="stat-label">🧠 LLM</div>
+                    <div class="stat-value llm" id="stat-llm">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-llm-detail">In attesa...</div>
+                </div>
+                <div class="stat-box tts">
+                    <div class="stat-label">🔊 TTS</div>
+                    <div class="stat-value tts" id="stat-tts">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-tts-detail">In attesa...</div>
+                </div>
+                <div class="stat-box latency">
+                    <div class="stat-label">⚡ Latenza E2E</div>
+                    <div class="stat-value latency" id="stat-latency">--</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-details" id="stat-latency-detail">Domanda → Risposta</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="label">Attive Ora</div>
-                <div class="value warning" id="stat-active">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Oggi</div>
-                <div class="value" id="stat-today">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Durata Media</div>
-                <div class="value" id="stat-avg-duration">-</div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="resetStats()">🗑️ Reset Stats</button>
+                <button class="btn btn-secondary" onclick="fetchStats()">🔄 Aggiorna</button>
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filters">
-            <div class="filter-group">
-                <label>Stato</label>
-                <select id="filter-status" onchange="loadCalls()">
-                    <option value="">Tutti</option>
-                    <option value="active">Attive</option>
-                    <option value="completed">Completate</option>
-                    <option value="failed">Fallite</option>
-                    <option value="missed">Perse</option>
+        <!-- Log Conversazioni -->
+        <div class="card" style="margin-top: 16px;">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <h2 class="card-title">Log Conversazioni</h2>
+            </div>
+            <div id="conversations-container" style="max-height: 500px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                            <th style="padding: 8px 6px; color: var(--text-muted); font-weight: 500;">Ora</th>
+                            <th style="padding: 8px 6px; color: var(--text-muted); font-weight: 500;">Utente</th>
+                            <th style="padding: 8px 6px; color: var(--text-muted); font-weight: 500;">Risposta</th>
+                            <th style="padding: 8px 6px; color: #22c55e; font-weight: 500;">STT</th>
+                            <th style="padding: 8px 6px; color: #f97316; font-weight: 500;">LLM</th>
+                            <th style="padding: 8px 6px; color: #eab308; font-weight: 500;">TTS</th>
+                            <th style="padding: 8px 6px; color: #a855f7; font-weight: 500;">E2E</th>
+                            <th style="padding: 8px 6px; color: #06b6d4; font-weight: 500;">STT→TTS</th>
+                            <th style="padding: 8px 6px; color: var(--text-muted); font-weight: 500;">Componenti</th>
+                        </tr>
+                    </thead>
+                    <tbody id="conversations-body">
+                        <tr><td colspan="9" style="padding: 20px; text-align: center; color: var(--text-muted);">In attesa di conversazioni...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Whisper Tab -->
+    <div class="tab-content" id="tab-whisper">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎤</div>
+                <h2 class="card-title">Configurazione Whisper STT</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Modello</label>
+                <select class="form-select" id="whisper-model" onchange="saveWhisperSettings()">
+                    <option value="tiny">Tiny (39M) - Velocissimo</option>
+                    <option value="base">Base (74M) - Veloce</option>
+                    <option value="small">Small (244M) - Bilanciato</option>
+                    <option value="medium" selected>Medium (769M) - Preciso</option>
+                    <option value="large-v3">Large-v3 (1.5B) - Massima precisione</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label>Risultati</label>
-                <select id="filter-limit" onchange="loadCalls()">
-                    <option value="25">25</option>
-                    <option value="50" selected>50</option>
-                    <option value="100">100</option>
+            
+            <div class="form-group">
+                <label class="form-label">Lingua</label>
+                <select class="form-select" id="whisper-language" onchange="saveWhisperSettings()">
+                    <option value="it" selected>Italiano</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="zh">中文</option>
                 </select>
             </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <input type="checkbox" id="whisper-auto-detect" onchange="saveWhisperSettings()">
+                    Rilevamento automatico lingua
+                </label>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveWhisperSettings()">💾 Salva</button>
+            </div>
         </div>
+    </div>
 
-        <!-- Calls Table -->
-        <div id="calls-container">
-            <div class="loading">Caricamento...</div>
+    <!-- LLM Tab -->
+    <div class="tab-content" id="tab-llm">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🧠</div>
+                <h2 class="card-title">Configurazione LLM</h2>
+            </div>
+            
+            <!-- Provider Toggle -->
+            <div class="provider-toggle">
+                <button class="provider-btn active" data-provider="ollama" onclick="switchProvider('ollama')">
+                    🦙 Ollama (Locale)
+                </button>
+                <button class="provider-btn" data-provider="openrouter" onclick="switchProvider('openrouter')">
+                    🌐 OpenRouter (Cloud)
+                </button>
+                <button class="provider-btn" data-provider="remote" onclick="switchProvider('remote')">
+                    🖥️ Server Remoto
+                </button>
+            </div>
+            
+            <!-- Ollama Section -->
+            <div id="ollama-section">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="ollama-search" placeholder="Cerca modello..." oninput="filterOllamaModels()">
+                </div>
+                <div class="model-grid" id="ollama-models">
+                    <div class="loading"></div>
+                </div>
+            </div>
+            
+            <!-- OpenRouter Section -->
+            <div id="openrouter-section" style="display: none;">
+                <div class="api-key-container">
+                    <div class="form-group">
+                        <label class="form-label">API Key</label>
+                        <input type="password" class="form-input" id="openrouter-key" placeholder="sk-or-...">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveOpenRouterKey()">💾</button>
+                </div>
+                
+                <div style="display: flex; gap: 12px; margin: 16px 0;">
+                    <div class="search-container" style="flex: 1; margin-bottom: 0;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="openrouter-search" placeholder="Cerca modello..." oninput="searchOpenRouterModels()">
+                    </div>
+                    <select class="sort-select" id="openrouter-sort" onchange="filterAndRenderOpenRouter()">
+                        <option value="name">Nome</option>
+                        <option value="cost">Costo (min)</option>
+                        <option value="cost_desc">Costo (max)</option>
+                        <option value="context">Context (max)</option>
+                    </select>
+                </div>
+                
+                <div class="cost-slider-container" style="margin: 16px 0; padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-weight: 500;">💰 Costo massimo</label>
+                        <span id="max-cost-value" style="font-weight: 600; color: var(--primary);">$100.00</span>
+                    </div>
+                    <input type="range" id="openrouter-max-cost" min="0" max="100" value="100" step="0.5" 
+                           style="width: 100%; cursor: pointer;" oninput="updateCostSlider()">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        <span>$0 (Gratuiti)</span>
+                        <span>$100/1M tokens</span>
+                    </div>
+                </div>
+                
+                <div class="model-grid" id="openrouter-models">
+                    <div class="loading"></div>
+                </div>
+            </div>
+            
+            <!-- Remote Server Section -->
+            <div id="remote-section" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">URL Server</label>
+                    <input type="text" class="form-input" id="remote-server-url" placeholder="http://10.0.0.133:5006">
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        URL base del server LLM remoto (es. http://192.168.1.100:5006)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Token di Autenticazione</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="password" class="form-input" id="remote-server-token" placeholder="mysecrettoken" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="toggleTokenVisibility()" title="Mostra/Nascondi">👁️</button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        Bearer Token per l'autenticazione (opzionale)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Collection</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-input" id="remote-server-collection" placeholder="fctsa" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="loadRemoteCollections()" title="Carica collections">🔄</button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                        Nome della collection/knowledge base da usare
+                    </small>
+                </div>
+                
+                <div id="remote-collections-list" style="display: none; margin: 12px 0;">
+                    <label class="form-label">Collections disponibili:</label>
+                    <div id="remote-collections-grid" class="model-grid" style="max-height: 150px; overflow-y: auto;">
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick="testRemoteServer()">
+                        🔌 Test Connessione
+                    </button>
+                    <button class="btn btn-primary" onclick="saveRemoteServer()">
+                        💾 Salva e Usa
+                    </button>
+                </div>
+                
+                <div id="remote-test-result" style="margin-top: 12px; display: none;">
+                </div>
+                
+                <div class="info-box" style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; border-left: 3px solid var(--accent);">
+                    <div style="font-weight: 600; margin-bottom: 8px;">📋 Formato API supportato</div>
+                    <code style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); display: block; white-space: pre-wrap;">POST /chat
+Content-Type: application/json
+Authorization: Bearer &lt;token&gt;
+
+{"message": "ciao", "collection": "fctsa"}</code>
+                </div>
+            </div>
         </div>
+        
+        <!-- Prompt Configuration -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📝</div>
+                <h2 class="card-title">System Prompt</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Prompt di sistema</label>
+                <textarea class="form-textarea" id="system-prompt" rows="8" placeholder="Inserisci il prompt di sistema..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Context Injection (informazioni aggiuntive)</label>
+                <textarea class="form-textarea" id="context-injection" rows="4" placeholder="Informazioni extra da aggiungere al contesto..."></textarea>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="savePromptSettings()">💾 Salva Prompt</button>
+            </div>
+        </div>
+    </div>
 
-        <!-- Pagination -->
-        <div class="pagination" id="pagination"></div>
+    <!-- TTS Tab -->
+    <div class="tab-content" id="tab-tts">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🔊</div>
+                <h2 class="card-title">Configurazione TTS</h2>
+            </div>
+            
+            <div class="tts-grid" id="tts-grid">
+                <div class="tts-option selected" data-engine="edge" onclick="selectTTS('edge')">
+                    <span class="tts-option-icon">🎙️</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Edge TTS (Microsoft)</div>
+                        <div class="tts-option-desc">Alta qualità, italiano naturale</div>
+                    </div>
+                    <span class="tts-badge cloud">Cloud</span>
+                </div>
+                
+                <div class="tts-option" data-engine="kokoro" onclick="selectTTS('kokoro')">
+                    <span class="tts-option-icon">🎵</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Kokoro TTS</div>
+                        <div class="tts-option-desc">Alta qualità, multilingua (82M)</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="piper" onclick="selectTTS('piper')">
+                    <span class="tts-option-icon">🔈</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Piper TTS</div>
+                        <div class="tts-option-desc">Veloce e leggero</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="vibevoice" onclick="selectTTS('vibevoice')">
+                    <span class="tts-option-icon">🎤</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">VibeVoice (Microsoft)</div>
+                        <div class="tts-option-desc">Espressivo, multi-speaker</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="chatterbox" onclick="selectTTS('chatterbox')">
+                    <span class="tts-option-icon">🎭</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Chatterbox</div>
+                        <div class="tts-option-desc">Multilingua, voice cloning</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="qwen" onclick="selectTTS('qwen')">
+                    <span class="tts-option-icon">🤖</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">Qwen TTS (Alibaba)</div>
+                        <div class="tts-option-desc">Alta qualità, 10 lingue</div>
+                    </div>
+                    <span class="tts-badge local">Self-Hosted</span>
+                </div>
+                
+                <div class="tts-option" data-engine="elevenlabs" onclick="selectTTS('elevenlabs')">
+                    <span class="tts-option-icon">🌟</span>
+                    <div class="tts-option-info">
+                        <div class="tts-option-name">ElevenLabs</div>
+                        <div class="tts-option-desc">Premium, ultra-realistico</div>
+                    </div>
+                    <span class="tts-badge cloud" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Premium</span>
+                </div>
+            </div>
+            
+            <!-- ElevenLabs Configuration Panel -->
+            <div id="elevenlabs-config" class="elevenlabs-panel" style="display: none;">
+                <div class="card-header" style="padding: 0; margin-bottom: 16px;">
+                    <div class="card-icon">🌟</div>
+                    <h3 style="font-size: 16px; margin: 0;">Configurazione ElevenLabs</h3>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">API Key</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="password" class="form-input" id="elevenlabs-key" placeholder="xi-...">
+                        <button class="btn btn-primary" onclick="saveElevenLabsKey()">💾</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Modello</label>
+                    <select class="form-select" id="elevenlabs-model" onchange="saveElevenLabsSettings()">
+                        <option value="eleven_multilingual_v2">Multilingual v2 (Migliore)</option>
+                        <option value="eleven_turbo_v2_5">Turbo v2.5 (Veloce)</option>
+                        <option value="eleven_turbo_v2">Turbo v2</option>
+                        <option value="eleven_monolingual_v1">Monolingual v1 (Solo EN)</option>
+                        <option value="eleven_flash_v2_5">Flash v2.5 (Streaming)</option>
+                        <option value="eleven_flash_v2">Flash v2 (Streaming)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Voce</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input" id="elevenlabs-voice-search" placeholder="Cerca voce..." oninput="searchElevenLabsVoices()">
+                        <button class="btn btn-secondary" onclick="loadElevenLabsVoices()">🔄</button>
+                    </div>
+                    <div class="voice-grid" id="elevenlabs-voices">
+                        <div style="color: var(--text-muted); padding: 12px;">Inserisci API Key per caricare le voci</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Stability: <span id="stability-value">50%</span></label>
+                    <input type="range" id="elevenlabs-stability" min="0" max="100" value="50" oninput="updateElevenLabsSlider('stability')">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                        <span>Variabile</span>
+                        <span>Stabile</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Similarity Boost: <span id="similarity-value">75%</span></label>
+                    <input type="range" id="elevenlabs-similarity" min="0" max="100" value="75" oninput="updateElevenLabsSlider('similarity')">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                        <span>Creativo</span>
+                        <span>Fedele</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Style Exaggeration: <span id="style-value">0%</span></label>
+                    <input type="range" id="elevenlabs-style" min="0" max="100" value="0" oninput="updateElevenLabsSlider('style')">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="elevenlabs-boost" onchange="saveElevenLabsSettings()">
+                        <span>Speaker Boost (migliora chiarezza)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label class="form-label">Lingua TTS</label>
+                <select class="form-select" id="tts-language">
+                    <option value="it" selected>Italiano</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveTTSSettings()">💾 Salva</button>
+            </div>
+            
+            <!-- TTS Test -->
+            <div class="tts-test-area">
+                <div class="form-group">
+                    <label class="form-label">Testa TTS</label>
+                    <textarea class="form-textarea" id="tts-test-text" rows="2">Ciao! Questo è un test del TTS.</textarea>
+                </div>
+                <button class="btn btn-secondary" onclick="testTTS()">▶️ Testa</button>
+                <div id="tts-test-status" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Activation Tab -->
+    <div class="tab-content" id="tab-voice">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎙️</div>
+                <h2 class="card-title">Configurazione Voice Activation</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" id="wake-timeout-label">Timeout "Hey Assistant" (secondi)</label>
+                <input type="range" id="wake-timeout" min="5" max="60" value="20" 
+                       style="width: 100%;" oninput="updateVoiceSlider('wake-timeout')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>5s</span>
+                    <span id="wake-timeout-value" style="font-weight: 600; color: var(--accent);">20s</span>
+                    <span>60s</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    <span id="wake-timeout-hint">Tempo di inattività dopo il quale l'utente deve dire nuovamente il wake word</span>
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Sensibilità VAD Barge-in</label>
+                <input type="range" id="vad-threshold" min="10" max="200" value="40" 
+                       style="width: 100%;" oninput="updateVoiceSlider('vad-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>🔇 Sensibile (10)</span>
+                    <span id="vad-threshold-value" style="font-weight: 600; color: var(--accent);">40</span>
+                    <span>Robusto (200) 🔊</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Soglia energia per interrompere il TTS quando parli (più basso = più sensibile)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Sensibilità Rilevamento Parlato</label>
+                <input type="range" id="speech-threshold" min="20" max="500" value="100" 
+                       style="width: 100%;" oninput="updateVoiceSlider('speech-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>🔇 Sensibile (20)</span>
+                    <span id="speech-threshold-value" style="font-weight: 600; color: var(--accent);">100</span>
+                    <span>Robusto (500) 🔊</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Soglia energia per rilevare che stai parlando (più basso = più sensibile)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Soglia Silenzio (frames)</label>
+                <input type="range" id="silence-threshold" min="10" max="100" value="30" 
+                       style="width: 100%;" oninput="updateVoiceSlider('silence-threshold')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>Veloce (10)</span>
+                    <span id="silence-threshold-value" style="font-weight: 600; color: var(--accent);">30</span>
+                    <span>Paziente (100)</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Frames di silenzio prima di terminare l'ascolto (~50ms per frame)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Cooldown dopo TTS (secondi)</label>
+                <input type="range" id="tts-cooldown" min="0" max="10" value="5" step="0.5"
+                       style="width: 100%;" oninput="updateVoiceSlider('tts-cooldown')">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                    <span>0s</span>
+                    <span id="tts-cooldown-value" style="font-weight: 600; color: var(--accent);">5s</span>
+                    <span>10s</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Tempo di attesa dopo il TTS per evitare eco (audio bufferizzato)
+                </small>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveVoiceSettings()">💾 Salva</button>
+                <button class="btn btn-secondary" onclick="resetVoiceDefaults()">🔄 Reset Default</button>
+                <button class="btn btn-primary" onclick="saveAndRestartAgent()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    🚀 Salva e Riavvia Agent
+                </button>
+            </div>
+            
+            <div class="info-box" style="margin-top: 20px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border-left: 3px solid var(--accent);">
+                <div style="font-weight: 600; margin-bottom: 8px;">💡 Suggerimenti</div>
+                <ul style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li id="tip-vad"><strong>VAD Barge-in</strong>: Se l'assistente non si ferma quando parli, abbassa questo valore</li>
+                    <li><strong>Rilevamento Parlato</strong>: Se devi urlare per attivare, abbassa questo valore</li>
+                    <li id="tip-cooldown"><strong>Cooldown TTS</strong>: Se l'assistente rileva l'eco delle sue risposte, aumenta questo valore</li>
+                    <li id="tip-timeout"><strong>Timeout Wake Word</strong>: Tempo di silenzio prima che devi riattivare con il wake word</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIP Configuration Tab -->
+    <div class="tab-content" id="tab-sip">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📞</div>
+                <h2 class="card-title">Stato Servizio SIP</h2>
+            </div>
+            
+            <div id="sip-status-container">
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-box" id="sip-status-box" style="border-left-color: var(--text-muted);">
+                        <div class="stat-label">📡 Stato Servizio</div>
+                        <div class="stat-value" id="sip-service-status" style="font-size: 1.2rem;">--</div>
+                        <div class="stat-details" id="sip-status-message">Verifica in corso...</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #3b82f6;">
+                        <div class="stat-label">🔌 Porta SIP (UDP)</div>
+                        <div class="stat-value" id="sip-port-5060" style="font-size: 1.2rem; color: var(--text-muted);">--</div>
+                        <div class="stat-details">5060</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #8b5cf6;">
+                        <div class="stat-label">🔒 Porta SIP (TLS)</div>
+                        <div class="stat-value" id="sip-port-5061" style="font-size: 1.2rem; color: var(--text-muted);">--</div>
+                        <div class="stat-details">5061</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #f59e0b;">
+                        <div class="stat-label">📋 Trunk Configurati</div>
+                        <div class="stat-value" id="sip-trunks-count" style="font-size: 1.2rem; color: var(--text-muted);">0</div>
+                        <div class="stat-details">Provider SIP</div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="checkSIPStatus()">🔄 Aggiorna Stato</button>
+                    <button class="btn btn-secondary" onclick="testSIPConnection()">🔌 Test Connessione</button>
+                </div>
+                <div id="sip-test-result" style="margin-top: 12px; display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">⚙️</div>
+                <h2 class="card-title">Configurazione SIP Bridge</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">🔧 Porte SIP</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta SIP (UDP)</label>
+                        <input type="number" class="form-input" id="sip-port" value="5060" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Porta per il traffico SIP non cifrato</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta SIP TLS</label>
+                        <input type="number" class="form-input" id="sip-port-tls" value="5061" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Porta per il traffico SIP cifrato (TLS)</small>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">📡 Porte RTP (Media)</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Range Porte RTP - Inizio</label>
+                        <input type="number" class="form-input" id="rtp-port-start" value="10000" min="1024" max="65535">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Range Porte RTP - Fine</label>
+                        <input type="number" class="form-input" id="rtp-port-end" value="10100" min="1024" max="65535">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Range di porte UDP per il traffico audio RTP</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🌐</div>
+                <h2 class="card-title">Configurazione Trunk SIP</h2>
+            </div>
+            
+            <div class="info-box" style="margin-bottom: 20px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 3px solid #3b82f6;">
+                <div style="font-weight: 600; margin-bottom: 4px;">ℹ️ Cos'è un Trunk SIP?</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Un trunk SIP connette il tuo sistema telefonico a un provider VoIP (es. Twilio, Vonage, VoIP.ms). 
+                    Configura questi parametri per ricevere/effettuare chiamate telefoniche.
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Nome Trunk</label>
+                        <input type="text" class="form-input" id="trunk-name" placeholder="trunk-principale">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Nome identificativo del trunk</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Host Provider SIP</label>
+                        <input type="text" class="form-input" id="trunk-host" placeholder="sip.provider.com">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Indirizzo del server SIP del provider</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Porta</label>
+                        <input type="number" class="form-input" id="trunk-port" value="5060" min="1" max="65535">
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" id="trunk-username" placeholder="username">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Credenziali fornite dal provider</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" class="form-input" id="trunk-password" placeholder="password" style="flex: 1;">
+                            <button class="btn btn-secondary" onclick="toggleSIPPasswordVisibility()" title="Mostra/Nascondi">👁️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Numeri di Telefono</label>
+                        <input type="text" class="form-input" id="trunk-numbers" placeholder="+39XXXXXXXXXX, +39YYYYYYYYYY">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Numeri associati al trunk (separati da virgola)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <h2 class="card-title">Dispatch Rules & Audio</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">📥 Regole Chiamate Inbound</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Prefisso Room</label>
+                        <input type="text" class="form-input" id="room-prefix" value="sip-call-">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Nome room LiveKit per le chiamate (es. sip-call-12345)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="enable-recording">
+                            <span>Abilita registrazione chiamate</span>
+                        </label>
+                        <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+                            Le chiamate verranno registrate (richiede storage configurato)
+                        </small>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="font-size: 1rem; margin-bottom: 16px; color: var(--text-secondary);">🔊 Codec Audio</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Codec Preferiti</label>
+                        <input type="text" class="form-input" id="audio-codecs" value="opus,pcmu,pcma">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">
+                            Codec in ordine di preferenza (separati da virgola).<br>
+                            • <strong>opus</strong>: Alta qualità, bassa latenza<br>
+                            • <strong>pcmu</strong>: G.711 μ-law (USA)<br>
+                            • <strong>pcma</strong>: G.711 A-law (Europa)
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="saveSIPConfig()">💾 Salva Configurazione</button>
+                <button class="btn btn-secondary" onclick="loadSIPConfig()">🔄 Ricarica</button>
+            </div>
+            
+            <div id="sip-save-result" style="margin-top: 12px; display: none;"></div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📚</div>
+                <h2 class="card-title">Documentazione SIP</h2>
+            </div>
+            
+            <div class="info-box" style="padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px;">
+                <h4 style="margin-bottom: 12px;">🚀 Come configurare SIP con LiveKit</h4>
+                <ol style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li>Scegli un provider SIP (Twilio, Vonage, VoIP.ms, ecc.)</li>
+                    <li>Registra un numero di telefono con il provider</li>
+                    <li>Ottieni le credenziali SIP (host, username, password)</li>
+                    <li>Configura il trunk qui sopra con le credenziali</li>
+                    <li>Configura il provider per inoltrare le chiamate al tuo server LiveKit</li>
+                    <li>Avvia il servizio SIP di LiveKit: <code>docker-compose up -d livekit-sip</code></li>
+                </ol>
+                
+                <div style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">📋 Provider SIP Popolari</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
+                        <a href="https://www.twilio.com/sip-trunking" target="_blank" style="color: var(--accent); text-decoration: none;">Twilio</a>
+                        <a href="https://www.vonage.com/communications-apis/sip-trunking/" target="_blank" style="color: var(--accent); text-decoration: none;">Vonage</a>
+                        <a href="https://voip.ms/" target="_blank" style="color: var(--accent); text-decoration: none;">VoIP.ms</a>
+                        <a href="https://www.plivo.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Plivo</a>
+                        <a href="https://www.bandwidth.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Bandwidth</a>
+                        <a href="https://www.telnyx.com/" target="_blank" style="color: var(--accent); text-decoration: none;">Telnyx</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Chiamate Tab -->
+    <div class="tab-content" id="tab-logs">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <div>
+                    <div class="card-title">Log Chiamate</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Storico e dettaglio di tutte le chiamate</div>
+                </div>
+                <button class="btn btn-primary" onclick="refreshCallData()" style="margin-left: auto;">🔄 Aggiorna</button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="logs-stats-grid" id="logs-stats-grid">
+                <div class="logs-stat-card">
+                    <div class="logs-stat-label">Chiamate Totali</div>
+                    <div class="logs-stat-value" id="log-stat-total">-</div>
+                </div>
+                <div class="logs-stat-card">
+                    <div class="logs-stat-label">Completate</div>
+                    <div class="logs-stat-value logs-success" id="log-stat-completed">-</div>
+                </div>
+                <div class="logs-stat-card">
+                    <div class="logs-stat-label">Attive Ora</div>
+                    <div class="logs-stat-value logs-warning" id="log-stat-active">-</div>
+                </div>
+                <div class="logs-stat-card">
+                    <div class="logs-stat-label">Oggi</div>
+                    <div class="logs-stat-value" id="log-stat-today">-</div>
+                </div>
+                <div class="logs-stat-card">
+                    <div class="logs-stat-label">Durata Media</div>
+                    <div class="logs-stat-value" id="log-stat-avg-duration">-</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="logs-filters">
+                <div class="logs-filter-group">
+                    <label>Stato</label>
+                    <select id="log-filter-status" class="form-select" onchange="loadCallLogs()" style="width: auto;">
+                        <option value="">Tutti</option>
+                        <option value="active">Attive</option>
+                        <option value="completed">Completate</option>
+                        <option value="failed">Fallite</option>
+                        <option value="missed">Perse</option>
+                    </select>
+                </div>
+                <div class="logs-filter-group">
+                    <label>Risultati</label>
+                    <select id="log-filter-limit" class="form-select" onchange="loadCallLogs()" style="width: auto;">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Calls Table -->
+            <div id="log-calls-container">
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);">Seleziona questo tab per caricare i dati</div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="logs-pagination" id="log-pagination"></div>
+        </div>
+    </div>
+
+    <!-- Ascolto Live Tab -->
+    <div class="tab-content" id="tab-listen">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎧</div>
+                <div>
+                    <div class="card-title">Ascolto e Debug Live</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Connettiti alla stanza per ascoltare e fare debug delle conversazioni in tempo reale</div>
+                </div>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Accedi alla pagina principale dell'applicazione per entrare in una stanza e ascoltare le conversazioni in corso.
+                    Puoi usare questa funzione per fare debug e monitorare la qualità delle risposte dell'assistente.
+                </p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a href="/" target="_blank" class="btn btn-primary" style="text-decoration: none;">🌐 Apri App (HTTPS)</a>
+                    <button class="btn btn-secondary" onclick="openListenPage()">📡 Apri in Finestra</button>
+                </div>
+            </div>
+            <div class="listen-iframe-container" id="listen-iframe-container">
+                <iframe id="listen-iframe" src="" style="width: 100%; height: 75vh; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-secondary);"></iframe>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 12px;">
+                <button class="btn btn-secondary" onclick="loadListenPage()">🔄 Ricarica Pagina</button>
+                <button class="btn btn-secondary" onclick="toggleFullscreen()">⛶ Schermo Intero</button>
+            </div>
+        </div>
     </div>
 
     <!-- Call Detail Modal -->
-    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2 id="modal-title">Dettaglio Chiamata</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="log-modal-overlay" id="log-modal-overlay" onclick="closeCallModal(event)">
+        <div class="log-modal" onclick="event.stopPropagation()">
+            <div class="log-modal-header">
+                <h2 id="log-modal-title">Dettaglio Chiamata</h2>
+                <button class="log-modal-close" onclick="closeCallModal()">&times;</button>
             </div>
-            <div class="modal-body" id="modal-body">
+            <div class="log-modal-body" id="log-modal-body">
                 <!-- Content loaded dynamically -->
             </div>
         </div>
     </div>
 
-    <script>
-        let currentOffset = 0;
-        let currentLimit = 50;
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
-        // Load calls on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            loadCalls();
-            // Auto-refresh every 30 seconds
-            setInterval(refreshData, 30000);
+    <script>
+        // ==================== State ====================
+        let ollamaModels = [];
+        let openrouterModels = [];
+        let selectedTTS = 'edge';
+        
+        const stats = {
+            stt: { values: [], avg: 0, last: 0, count: 0 },
+            llm: { values: [], avg: 0, last: 0, count: 0, ttft: 0 },
+            tts: { values: [], avg: 0, last: 0, count: 0 },
+            latency: { values: [], avg: 0, last: 0, count: 0 }
+        };
+
+        // Branding configuration (caricata dinamicamente)
+        const branding = {
+            appName: 'Receptionist AI',
+            assistantName: 'Receptionist',
+            assistantTriggers: ['@receptionist', 'receptionist', 'hey receptionist']
+        };
+
+        // Carica configurazione branding dal server
+        async function loadBranding() {
+            try {
+                const resp = await fetch('/api/branding');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    branding.appName = data.app_name || branding.appName;
+                    branding.assistantName = data.assistant_name || branding.assistantName;
+                    branding.assistantTriggers = data.assistant_triggers || branding.assistantTriggers;
+                    
+                    // Aggiorna elementi UI
+                    document.getElementById('page-title').textContent = branding.appName + ' - Impostazioni';
+                    document.getElementById('logo-text').textContent = branding.appName;
+                    
+                    // Aggiorna label wake timeout
+                    const wakeLabel = document.getElementById('wake-timeout-label');
+                    if (wakeLabel) {
+                        wakeLabel.textContent = `Timeout "Hey ${branding.assistantName}" (secondi)`;
+                    }
+                    
+                    console.log('✅ Branding caricato:', branding);
+                }
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare branding, uso default:', e);
+            }
+        }
+
+        // ==================== Init ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Carica le impostazioni in modo resiliente - non bloccare se i servizi non sono attivi
+            try {
+                await loadBranding();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare branding, uso default:', e);
+            }
+            
+            try {
+                await loadSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare settings, usa valori default:', e);
+                showToast('Alcuni servizi non sono attivi. Puoi comunque configurare i parametri.', 'warning');
+            }
+            
+            try {
+                await loadOllamaModels();
+            } catch (e) {
+                console.warn('⚠️ Ollama non disponibile:', e);
+                document.getElementById('ollama-models').innerHTML = '<div style="color: var(--warning);">⚠️ Ollama non raggiungibile. Avvia il servizio per vedere i modelli.</div>';
+            }
+            
+            try {
+                await loadPromptSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare prompt settings:', e);
+            }
+            
+            try {
+                await loadVoiceSettings();
+            } catch (e) {
+                console.warn('⚠️ Impossibile caricare voice settings:', e);
+            }
+            
+            // Polling stats (non critico)
+            startStatsPolling();
+            
+            // Controlla se siamo in tab SIP dall'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab) {
+                switchTab(tab);
+            }
         });
 
-        async function loadCalls() {
-            const status = document.getElementById('filter-status').value;
-            currentLimit = parseInt(document.getElementById('filter-limit').value);
+        // ==================== Tabs ====================
+        // La funzione switchTab è definita alla fine del file con il supporto per SIP
+
+        // ==================== Settings ====================
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const settings = await resp.json();
+                
+                // Whisper
+                if (settings.whisper_model) {
+                    document.getElementById('whisper-model').value = settings.whisper_model;
+                }
+                if (settings.whisper_language) {
+                    document.getElementById('whisper-language').value = settings.whisper_language;
+                }
+                document.getElementById('whisper-auto-detect').checked = settings.whisper_auto_detect === 'true';
+                
+                // TTS
+                if (settings.tts_engine) {
+                    selectTTS(settings.tts_engine);
+                }
+                if (settings.tts_language) {
+                    document.getElementById('tts-language').value = settings.tts_language;
+                }
+                
+                // ElevenLabs
+                if (settings.elevenlabs_model) {
+                    document.getElementById('elevenlabs-model').value = settings.elevenlabs_model;
+                }
+                if (settings.elevenlabs_voice) {
+                    selectedElevenLabsVoice = settings.elevenlabs_voice;
+                }
+                if (settings.elevenlabs_stability) {
+                    document.getElementById('elevenlabs-stability').value = settings.elevenlabs_stability;
+                    document.getElementById('stability-value').textContent = `${settings.elevenlabs_stability}%`;
+                }
+                if (settings.elevenlabs_similarity) {
+                    document.getElementById('elevenlabs-similarity').value = settings.elevenlabs_similarity;
+                    document.getElementById('similarity-value').textContent = `${settings.elevenlabs_similarity}%`;
+                }
+                if (settings.elevenlabs_style) {
+                    document.getElementById('elevenlabs-style').value = settings.elevenlabs_style;
+                    document.getElementById('style-value').textContent = `${settings.elevenlabs_style}%`;
+                }
+                if (settings.elevenlabs_boost === 'true') {
+                    document.getElementById('elevenlabs-boost').checked = true;
+                }
+                
+                // LLM Provider
+                if (settings.llm_provider === 'openrouter') {
+                    switchProvider('openrouter');
+                } else if (settings.llm_provider === 'remote') {
+                    switchProvider('remote');
+                }
+                
+                // Ollama model
+                if (settings.ollama_model) {
+                    window.savedOllamaModel = settings.ollama_model;
+                }
+                
+                // OpenRouter
+                if (settings.openrouter_model) {
+                    window.savedOpenRouterModel = settings.openrouter_model;
+                }
+                if (settings.openrouter_api_key) {
+                    const keyInput = document.getElementById('openrouter-key');
+                    if (keyInput) keyInput.value = settings.openrouter_api_key;
+                }
+                
+                // Remote Server
+                if (settings.remote_server_url) {
+                    document.getElementById('remote-server-url').value = settings.remote_server_url;
+                }
+                if (settings.remote_server_token) {
+                    document.getElementById('remote-server-token').value = settings.remote_server_token;
+                }
+                if (settings.remote_server_collection) {
+                    document.getElementById('remote-server-collection').value = settings.remote_server_collection;
+                }
+                
+                // System prompt e context
+                if (settings.system_prompt) {
+                    const promptInput = document.getElementById('system-prompt');
+                    if (promptInput) promptInput.value = settings.system_prompt;
+                }
+                if (settings.context_injection) {
+                    const contextInput = document.getElementById('context-injection');
+                    if (contextInput) contextInput.value = settings.context_injection;
+                }
+                
+            } catch (e) {
+                console.error('Errore caricamento settings:', e);
+            }
+        }
+
+        async function saveWhisperSettings() {
+            const settings = {
+                whisper_model: document.getElementById('whisper-model').value,
+                whisper_language: document.getElementById('whisper-language').value,
+                whisper_auto_detect: document.getElementById('whisper-auto-detect').checked ? 'true' : 'false'
+            };
+            
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                showToast('Impostazioni Whisper salvate', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        async function saveTTSSettings() {
+            const settings = {
+                tts_engine: selectedTTS,
+                tts_language: document.getElementById('tts-language').value
+            };
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings',message:'Saving TTS settings',data:{selectedTTS:selectedTTS,language:settings.tts_language},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
+            // #endregion
+            
+            try {
+                // 1. Salva nel database
+                const dbResp = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:dbSaved',message:'DB save response',data:{status:dbResp.status,ok:dbResp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
+                // #endregion
+                
+                // 2. Salva anche nella config file per l'agent
+                const fileResp = await fetch('/api/tts/current', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        engine: selectedTTS,
+                        language: settings.tts_language
+                    })
+                });
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:fileSaved',message:'File save response',data:{status:fileResp.status,ok:fileResp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
+                // #endregion
+                
+                showToast('Impostazioni TTS salvate! Riavvio agent...', 'success');
+                
+                // 3. Riavvia automaticamente l'agent per applicare le modifiche
+                try {
+                    const restartResp = await fetch('/api/agent/restart', { method: 'POST' });
+                    const restartResult = await restartResp.json();
+                    
+                    // #region agent log
+                    fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:restart',message:'Agent restart result',data:{status:restartResult.status,message:restartResult.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
+                    // #endregion
+                    
+                    if (restartResult.status === 'ok') {
+                        showToast('TTS aggiornato e agent riavviato!', 'success');
+                    } else {
+                        showToast('TTS salvato ma errore riavvio: ' + restartResult.message, 'error');
+                    }
+                } catch (restartErr) {
+                    showToast('TTS salvato ma errore riavvio agent: ' + restartErr.message, 'error');
+                }
+            } catch (e) {
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+
+        // ==================== LLM Provider ====================
+        function switchProvider(provider) {
+            document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-provider="${provider}"]`).classList.add('active');
+            
+            document.getElementById('ollama-section').style.display = provider === 'ollama' ? 'block' : 'none';
+            document.getElementById('openrouter-section').style.display = provider === 'openrouter' ? 'block' : 'none';
+            document.getElementById('remote-section').style.display = provider === 'remote' ? 'block' : 'none';
+            
+            if (provider === 'openrouter' && openrouterModels.length === 0) {
+                loadOpenRouterModels();
+            }
+            
+            if (provider === 'remote' && !window.remoteConfigLoaded) {
+                loadRemoteConfig();
+            }
+        }
+
+        // ==================== Ollama ====================
+        async function loadOllamaModels() {
+            try {
+                const resp = await fetch('/api/ollama/models');
+                const data = await resp.json();
+                ollamaModels = data.models || [];
+                renderOllamaModels(ollamaModels);
+            } catch (e) {
+                document.getElementById('ollama-models').innerHTML = '<div style="color: var(--danger);">Errore caricamento modelli Ollama</div>';
+            }
+        }
+
+        // Variabile per memorizzare i modelli Ollama visualizzati
+        let displayedOllamaModels = [];
+
+        function renderOllamaModels(models) {
+            const container = document.getElementById('ollama-models');
+            if (models.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessun modello trovato</div>';
+                displayedOllamaModels = [];
+                return;
+            }
+
+            displayedOllamaModels = models;
+            const savedModel = window.savedOllamaModel || '';
+
+            container.innerHTML = models.map((m, idx) => `
+                <div class="model-item ${m.name === savedModel || m.id === savedModel ? 'selected' : ''}" onclick="selectOllamaModelByIndex(${idx}, this)">
+                    <div class="model-info">
+                        <div class="model-name">${escapeHtml(m.name)} ${m.name === savedModel || m.id === savedModel ? '✓' : ''}</div>
+                        <div class="model-desc">${formatBytes(m.size)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterOllamaModels() {
+            const search = document.getElementById('ollama-search').value.toLowerCase();
+            const filtered = ollamaModels.filter(m => m.name.toLowerCase().includes(search));
+            renderOllamaModels(filtered);
+        }
+
+        async function selectOllamaModelByIndex(idx, element) {
+            const model = displayedOllamaModels[idx];
+            if (!model) {
+                showToast('Errore: modello non trovato', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/ollama/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: model.name || model.id })
+                });
+                if (!resp.ok) throw new Error('Errore API');
+
+                // Salva modello selezionato
+                window.savedOllamaModel = model.name || model.id;
+                
+                showToast(`Modello ${model.name} selezionato`, 'success');
+
+                document.querySelectorAll('#ollama-models .model-item').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                
+                // Aggiorna check nei nomi
+                renderOllamaModels(displayedOllamaModels);
+            } catch (e) {
+                console.error('Errore selezione Ollama:', e);
+                showToast('Errore selezione modello', 'error');
+            }
+        }
+
+        // ==================== OpenRouter ====================
+        let allOpenRouterModels = []; // Tutti i modelli caricati dal server
+        
+        async function loadOpenRouterModels() {
+            const search = document.getElementById('openrouter-search')?.value || '';
+            
+            try {
+                const resp = await fetch(`/api/openrouter/models?search=${encodeURIComponent(search)}&sort_by=name`);
+                const data = await resp.json();
+                allOpenRouterModels = data.models || [];
+                filterAndRenderOpenRouter();
+            } catch (e) {
+                document.getElementById('openrouter-models').innerHTML = '<div style="color: var(--danger);">Errore caricamento modelli</div>';
+            }
+        }
+        
+        function updateCostSlider() {
+            const slider = document.getElementById('openrouter-max-cost');
+            const valueDisplay = document.getElementById('max-cost-value');
+            const value = parseFloat(slider.value);
+            
+            if (value === 0) {
+                valueDisplay.textContent = '🆓 Gratuiti';
+                valueDisplay.style.color = '#10b981';
+            } else {
+                valueDisplay.textContent = `$${value.toFixed(2)}`;
+                valueDisplay.style.color = 'var(--primary)';
+            }
+            
+            filterAndRenderOpenRouter();
+        }
+        
+        function filterAndRenderOpenRouter() {
+            const maxCost = parseFloat(document.getElementById('openrouter-max-cost')?.value || 100);
+            const sort = document.getElementById('openrouter-sort')?.value || 'name';
+            
+            // Filtra per costo massimo
+            let filtered = allOpenRouterModels.filter(m => m.total_cost <= maxCost);
+            
+            // Ordina
+            switch(sort) {
+                case 'cost':
+                    filtered.sort((a, b) => a.total_cost - b.total_cost);
+                    break;
+                case 'cost_desc':
+                    filtered.sort((a, b) => b.total_cost - a.total_cost);
+                    break;
+                case 'context':
+                    filtered.sort((a, b) => (b.context_length || 0) - (a.context_length || 0));
+                    break;
+                default: // name
+                    filtered.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            renderOpenRouterModels(filtered);
+        }
+
+        function renderOpenRouterModels(models) {
+            const container = document.getElementById('openrouter-models');
+            if (models.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessun modello trovato con questi criteri</div>';
+                displayedOpenRouterModels = [];
+                return;
+            }
+
+            // Salva i modelli visualizzati per la selezione
+            displayedOpenRouterModels = models.slice(0, 50);
+            const savedModel = window.savedOpenRouterModel || '';
+
+            container.innerHTML = displayedOpenRouterModels.map((m, idx) => `
+                <div class="model-item ${m.id === savedModel ? 'selected' : ''}" onclick="selectOpenRouterModelByIndex(${idx}, this)">
+                    <div class="model-info">
+                        <div class="model-name">${escapeHtml(m.name)} ${m.id === savedModel ? '✓' : ''}</div>
+                        <div class="model-badges">
+                            ${m.supports_vision ? '<span class="badge badge-vision">👁️ Vision</span>' : ''}
+                            ${m.supports_tools ? '<span class="badge badge-tools">🔧 Tools</span>' : ''}
+                            ${m.supports_json_mode ? '<span class="badge badge-json">📋 JSON</span>' : ''}
+                            <span class="badge badge-context">📝 ${formatContextLength(m.context_length)}</span>
+                        </div>
+                        <div class="model-desc">${escapeHtml(m.description?.substring(0, 100) || '')}</div>
+                        <div class="model-cost" style="color: ${m.total_cost === 0 ? '#10b981' : 'var(--text-muted)'}">
+                            ${m.total_cost === 0 ? '🆓 Gratuito' : '$' + m.total_cost.toFixed(4) + '/1M tokens'}
+                            ${m.modality ? ' • ' + m.modality : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatContextLength(tokens) {
+            if (!tokens) return '?';
+            if (tokens >= 1000000) return (tokens / 1000000).toFixed(1) + 'M';
+            if (tokens >= 1000) return Math.round(tokens / 1000) + 'K';
+            return tokens.toString();
+        }
+
+        function searchOpenRouterModels() {
+            clearTimeout(window.openrouterSearchTimeout);
+            window.openrouterSearchTimeout = setTimeout(loadOpenRouterModels, 300);
+        }
+
+        async function saveOpenRouterKey() {
+            const key = document.getElementById('openrouter-key').value;
+            try {
+                await fetch('/api/openrouter/key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: key })
+                });
+                showToast('API Key salvata', 'success');
+                loadOpenRouterModels();
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        // Variabile per memorizzare i modelli filtrati visualizzati
+        let displayedOpenRouterModels = [];
+
+        async function selectOpenRouterModelByIndex(idx, element) {
+            const model = displayedOpenRouterModels[idx];
+            if (!model) {
+                showToast('Errore: modello non trovato', 'error');
+                return;
+            }
+
+            try {
+                // Passa tutti i dettagli del modello al backend
+                const resp = await fetch('/api/openrouter/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: model.id,
+                        name: model.name,
+                        context_length: model.context_length,
+                        supports_vision: model.supports_vision,
+                        supports_tools: model.supports_tools,
+                        supports_json_mode: model.supports_json_mode,
+                        modality: model.modality,
+                        prompt_cost: model.prompt_cost,
+                        completion_cost: model.completion_cost
+                    })
+                });
+                if (!resp.ok) throw new Error('Errore API');
+
+                // Salva modello selezionato
+                window.savedOpenRouterModel = model.id;
+                
+                // Mostra toast con dettagli
+                const visionText = model.supports_vision ? ' (Vision ✓)' : '';
+                const toolsText = model.supports_tools ? ' (Tools ✓)' : '';
+                showToast(`${model.name}${visionText}${toolsText} - ${formatContextLength(model.context_length)} context`, 'success');
+
+                document.querySelectorAll('#openrouter-models .model-item').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                
+                // Aggiorna check nei nomi
+                renderOpenRouterModels(displayedOpenRouterModels);
+            } catch (e) {
+                console.error('Errore selezione OpenRouter:', e);
+                showToast('Errore selezione modello', 'error');
+            }
+        }
+
+        // ==================== Prompt ====================
+        async function loadPromptSettings() {
+            try {
+                const [promptResp, contextResp] = await Promise.all([
+                    fetch('/api/prompt'),
+                    fetch('/api/context')
+                ]);
+                
+                const promptData = await promptResp.json();
+                const contextData = await contextResp.json();
+                
+                document.getElementById('system-prompt').value = promptData.prompt || '';
+                document.getElementById('context-injection').value = contextData.context || '';
+            } catch (e) {
+                console.error('Errore caricamento prompt:', e);
+            }
+        }
+
+        async function savePromptSettings() {
+            const prompt = document.getElementById('system-prompt').value;
+            const context = document.getElementById('context-injection').value;
+            
+            try {
+                await Promise.all([
+                    fetch('/api/prompt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt })
+                    }),
+                    fetch('/api/context', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ context })
+                    })
+                ]);
+                showToast('Prompt salvato', 'success');
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+
+        // ==================== TTS ====================
+        let elevenLabsVoices = [];
+        let selectedElevenLabsVoice = '';
+        
+        function selectTTS(engine) {
+            selectedTTS = engine;
+            document.querySelectorAll('.tts-option').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`[data-engine="${engine}"]`)?.classList.add('selected');
+            
+            // Mostra/nascondi pannello ElevenLabs
+            const elevenLabsConfig = document.getElementById('elevenlabs-config');
+            if (engine === 'elevenlabs') {
+                elevenLabsConfig.style.display = 'block';
+                loadElevenLabsVoices();
+            } else {
+                elevenLabsConfig.style.display = 'none';
+            }
+        }
+        
+        function updateElevenLabsSlider(type) {
+            const slider = document.getElementById(`elevenlabs-${type}`);
+            const valueDisplay = document.getElementById(`${type}-value`);
+            valueDisplay.textContent = `${slider.value}%`;
+            saveElevenLabsSettings();
+        }
+        
+        async function saveElevenLabsKey() {
+            const key = document.getElementById('elevenlabs-key').value;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ elevenlabs_api_key: key })
+                });
+                showToast('API Key ElevenLabs salvata', 'success');
+                loadElevenLabsVoices();
+            } catch (e) {
+                showToast('Errore salvataggio', 'error');
+            }
+        }
+        
+        async function loadElevenLabsVoices() {
+            const container = document.getElementById('elevenlabs-voices');
+            container.innerHTML = '<div class="loading"></div>';
+            
+            try {
+                const resp = await fetch('/api/elevenlabs/voices');
+                const data = await resp.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<div style="color: var(--warning);">${data.error}</div>`;
+                    return;
+                }
+                
+                elevenLabsVoices = data.voices || [];
+                renderElevenLabsVoices(elevenLabsVoices);
+            } catch (e) {
+                container.innerHTML = '<div style="color: var(--danger);">Errore caricamento voci</div>';
+            }
+        }
+        
+        function renderElevenLabsVoices(voices) {
+            const container = document.getElementById('elevenlabs-voices');
+            if (voices.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">Nessuna voce trovata</div>';
+                return;
+            }
+            
+            container.innerHTML = voices.map(v => `
+                <div class="voice-item ${v.voice_id === selectedElevenLabsVoice ? 'selected' : ''}" 
+                     onclick="selectElevenLabsVoice('${v.voice_id}', this)">
+                    <span class="voice-icon">${getVoiceIcon(v.labels)}</span>
+                    <div class="voice-info">
+                        <div class="voice-name">${escapeHtml(v.name)}</div>
+                        <div class="voice-labels">${formatVoiceLabels(v.labels)}</div>
+                    </div>
+                    ${v.preview_url ? `<button class="voice-preview" onclick="event.stopPropagation(); playVoicePreview('${v.preview_url}')">▶️</button>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function getVoiceIcon(labels) {
+            if (!labels) return '🎤';
+            const gender = labels.gender?.toLowerCase();
+            const accent = labels.accent?.toLowerCase() || '';
+            
+            if (accent.includes('italian') || accent.includes('italian')) return '🇮🇹';
+            if (accent.includes('british')) return '🇬🇧';
+            if (accent.includes('american')) return '🇺🇸';
+            if (gender === 'female') return '👩';
+            if (gender === 'male') return '👨';
+            return '🎤';
+        }
+        
+        function formatVoiceLabels(labels) {
+            if (!labels) return '';
+            const parts = [];
+            if (labels.gender) parts.push(labels.gender);
+            if (labels.accent) parts.push(labels.accent);
+            if (labels.age) parts.push(labels.age);
+            return parts.join(' • ');
+        }
+        
+        function searchElevenLabsVoices() {
+            const search = document.getElementById('elevenlabs-voice-search').value.toLowerCase();
+            const filtered = elevenLabsVoices.filter(v => 
+                v.name.toLowerCase().includes(search) ||
+                (v.labels?.accent || '').toLowerCase().includes(search) ||
+                (v.labels?.gender || '').toLowerCase().includes(search)
+            );
+            renderElevenLabsVoices(filtered);
+        }
+        
+        function selectElevenLabsVoice(voiceId, element) {
+            selectedElevenLabsVoice = voiceId;
+            document.querySelectorAll('.voice-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            saveElevenLabsSettings();
+            
+            const voice = elevenLabsVoices.find(v => v.voice_id === voiceId);
+            showToast(`Voce "${voice?.name}" selezionata`, 'success');
+        }
+        
+        function playVoicePreview(url) {
+            const audio = new Audio(url);
+            audio.play();
+        }
+        
+        async function saveElevenLabsSettings() {
+            const settings = {
+                elevenlabs_model: document.getElementById('elevenlabs-model').value,
+                elevenlabs_voice: selectedElevenLabsVoice,
+                elevenlabs_stability: document.getElementById('elevenlabs-stability').value,
+                elevenlabs_similarity: document.getElementById('elevenlabs-similarity').value,
+                elevenlabs_style: document.getElementById('elevenlabs-style').value,
+                elevenlabs_boost: document.getElementById('elevenlabs-boost').checked ? 'true' : 'false'
+            };
+            
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+            } catch (e) {
+                console.error('Errore salvataggio settings ElevenLabs:', e);
+            }
+        }
+        
+        async function loadElevenLabsSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const data = await resp.json();
+                
+                if (data.elevenlabs_model) {
+                    document.getElementById('elevenlabs-model').value = data.elevenlabs_model;
+                }
+                if (data.elevenlabs_voice) {
+                    selectedElevenLabsVoice = data.elevenlabs_voice;
+                }
+                if (data.elevenlabs_stability) {
+                    document.getElementById('elevenlabs-stability').value = data.elevenlabs_stability;
+                    document.getElementById('stability-value').textContent = `${data.elevenlabs_stability}%`;
+                }
+                if (data.elevenlabs_similarity) {
+                    document.getElementById('elevenlabs-similarity').value = data.elevenlabs_similarity;
+                    document.getElementById('similarity-value').textContent = `${data.elevenlabs_similarity}%`;
+                }
+                if (data.elevenlabs_style) {
+                    document.getElementById('elevenlabs-style').value = data.elevenlabs_style;
+                    document.getElementById('style-value').textContent = `${data.elevenlabs_style}%`;
+                }
+                if (data.elevenlabs_boost === 'true') {
+                    document.getElementById('elevenlabs-boost').checked = true;
+                }
+            } catch (e) {
+                console.error('Errore caricamento settings ElevenLabs:', e);
+            }
+        }
+
+        async function testTTS() {
+            const text = document.getElementById('tts-test-text').value;
+            const status = document.getElementById('tts-test-status');
+            status.innerHTML = '<div class="loading"></div> Generazione audio...';
+            
+            try {
+                const resp = await fetch('/api/tts/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        engine: selectedTTS,
+                        text: text,
+                        language: document.getElementById('tts-language').value
+                    })
+                });
+                
+                if (!resp.ok) throw new Error(await resp.text());
+                
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                status.innerHTML = `<audio controls autoplay src="${url}"></audio>`;
+            } catch (e) {
+                status.innerHTML = `<div style="color: var(--danger);">Errore: ${e.message}</div>`;
+            }
+        }
+
+        // ==================== Stats ====================
+        function startStatsPolling() {
+            fetchStats();
+            fetchConversations();
+            setInterval(fetchStats, 2000);
+            setInterval(fetchConversations, 3000);
+        }
+
+        async function fetchStats() {
+            try {
+                const resp = await fetch('/api/timing');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                if (data.stt?.time_ms > 0) updateStat('stt', data.stt.time_ms, data.stt.count);
+                if (data.llm?.time_ms > 0) updateStat('llm', data.llm.time_ms, data.llm.count, data.llm.ttft_ms);
+                if (data.tts?.time_ms > 0) updateStat('tts', data.tts.time_ms, data.tts.count, null, data.tts.audio_sec);
+                if (data.latency?.e2e_ms > 0) updateStat('latency', data.latency.e2e_ms, data.latency.count, null, null, data.latency.to_first_audio_ms);
+            } catch (e) {}
+        }
+
+        function updateStat(type, value, count, ttft = null, audioSec = null, speechToTts = null) {
+            stats[type].values.push(value);
+            if (stats[type].values.length > 20) stats[type].values.shift();
+            stats[type].avg = Math.round(stats[type].values.reduce((a, b) => a + b, 0) / stats[type].values.length);
+            stats[type].last = value;
+            stats[type].count = count;
+            
+            document.getElementById(`stat-${type}`).textContent = stats[type].avg;
+            
+            let detail = `Ultimo: ${value}ms | n=${count}`;
+            if (ttft) detail += ` | TTFT: ${ttft}ms`;
+            if (audioSec) detail += ` | Audio: ${audioSec}s`;
+            if (speechToTts) detail += ` | STT→TTS: ${speechToTts}ms`;
+            document.getElementById(`stat-${type}-detail`).textContent = detail;
+        }
+
+        async function resetStats() {
+            try {
+                await fetch('/api/timing/reset', { method: 'POST' });
+                ['stt', 'llm', 'tts', 'latency'].forEach(type => {
+                    stats[type] = { values: [], avg: 0, last: 0, count: 0 };
+                    document.getElementById(`stat-${type}`).textContent = '--';
+                    document.getElementById(`stat-${type}-detail`).textContent = 'In attesa...';
+                });
+                // Pulisci anche lista conversazioni
+                document.getElementById('conversations-body').innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: var(--text-muted);">In attesa di conversazioni...</td></tr>';
+                showToast('Stats resettate', 'success');
+            } catch (e) {
+                showToast('Errore reset', 'error');
+            }
+        }
+
+        // ==================== Conversations Log ====================
+        let lastConversationCount = 0;
+
+        async function fetchConversations() {
+            try {
+                const resp = await fetch('/api/conversations');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                if (data.conversations && data.conversations.length !== lastConversationCount) {
+                    lastConversationCount = data.conversations.length;
+                    renderConversations(data.conversations);
+                }
+            } catch (e) {}
+        }
+
+        function renderConversations(conversations) {
+            const tbody = document.getElementById('conversations-body');
+            if (!conversations || conversations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: var(--text-muted);">In attesa di conversazioni...</td></tr>';
+                return;
+            }
+            
+            // Mostra le più recenti in cima
+            const sorted = [...conversations].reverse();
+            
+            tbody.innerHTML = sorted.map(conv => {
+                const ts = conv.timestamp ? new Date(conv.timestamp).toLocaleTimeString('it-IT') : '--';
+                const userText = escapeHtml(conv.user_text || '').substring(0, 40);
+                const agentText = escapeHtml(conv.agent_text || '').substring(0, 40);
+                
+                // Colora i valori in base alla performance
+                const sttColor = conv.stt_ms < 500 ? '#22c55e' : conv.stt_ms < 1000 ? '#eab308' : '#ef4444';
+                const llmColor = conv.llm_ms < 1000 ? '#22c55e' : conv.llm_ms < 2000 ? '#eab308' : '#ef4444';
+                const ttsColor = conv.tts_ms < 1000 ? '#22c55e' : conv.tts_ms < 2000 ? '#eab308' : '#ef4444';
+                const e2eColor = conv.e2e_ms < 3000 ? '#a855f7' : conv.e2e_ms < 5000 ? '#eab308' : '#ef4444';
+                const sttTtsColor = conv.speech_to_tts_ms < 2000 ? '#06b6d4' : conv.speech_to_tts_ms < 4000 ? '#eab308' : '#ef4444';
+                
+                // Badge componenti
+                const components = `<span style="font-size:0.7rem; opacity:0.7;">${conv.stt_type || '?'} / ${conv.llm_type || '?'} / ${conv.tts_type || '?'}</span>`;
+                
+                return `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 6px; color: var(--text-muted); white-space: nowrap;">${ts}</td>
+                    <td style="padding: 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(conv.user_text || '')}">${userText || '--'}</td>
+                    <td style="padding: 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(conv.agent_text || '')}">${agentText || '--'}</td>
+                    <td style="padding: 6px; color: ${sttColor}; font-weight: 600;">${conv.stt_ms || 0}ms</td>
+                    <td style="padding: 6px; color: ${llmColor}; font-weight: 600;">${conv.llm_ms || 0}ms</td>
+                    <td style="padding: 6px; color: ${ttsColor}; font-weight: 600;">${conv.tts_ms || 0}ms</td>
+                    <td style="padding: 6px; color: ${e2eColor}; font-weight: 600;">${conv.e2e_ms || 0}ms</td>
+                    <td style="padding: 6px; color: ${sttTtsColor}; font-weight: 600;">${conv.speech_to_tts_ms || 0}ms</td>
+                    <td style="padding: 6px;">${components}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ==================== Utils ====================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return 'N/A';
+            const gb = bytes / (1024 * 1024 * 1024);
+            if (gb >= 1) return `${gb.toFixed(1)} GB`;
+            const mb = bytes / (1024 * 1024);
+            return `${mb.toFixed(0)} MB`;
+        }
+
+        // ==================== Remote Server Functions ====================
+        window.remoteConfigLoaded = false;
+        
+        async function loadRemoteConfig() {
+            try {
+                const resp = await fetch('/api/remote/config');
+                const config = await resp.json();
+                
+                if (config.server_url) {
+                    document.getElementById('remote-server-url').value = config.server_url;
+                }
+                if (config.token) {
+                    document.getElementById('remote-server-token').value = config.token;
+                }
+                if (config.collection) {
+                    document.getElementById('remote-server-collection').value = config.collection;
+                }
+                
+                window.remoteConfigLoaded = true;
+            } catch (e) {
+                console.error('Errore caricamento config remote:', e);
+            }
+        }
+        
+        function toggleTokenVisibility() {
+            const tokenInput = document.getElementById('remote-server-token');
+            if (tokenInput.type === 'password') {
+                tokenInput.type = 'text';
+            } else {
+                tokenInput.type = 'password';
+            }
+        }
+        
+        async function testRemoteServer() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            const collection = document.getElementById('remote-server-collection').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('remote-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Test in corso...';
+            resultDiv.style.color = 'var(--text-secondary)';
+            
+            try {
+                const resp = await fetch('/api/remote/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        server_url: serverUrl,
+                        token: token,
+                        collection: collection
+                    })
+                });
+                
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    resultDiv.innerHTML = `
+                        <div style="color: var(--success); font-weight: 600;">✅ Connessione riuscita!</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                            ${result.message || 'Server raggiungibile'}
+                            ${result.response_preview ? `<br><em>"${escapeHtml(result.response_preview.substring(0, 100))}..."</em>` : ''}
+                        </div>
+                    `;
+                    showToast('Connessione riuscita!', 'success');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: var(--danger); font-weight: 600;">❌ Errore connessione</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                            ${result.message || 'Impossibile connettersi al server'}
+                            ${result.code ? ` (HTTP ${result.code})` : ''}
+                        </div>
+                    `;
+                    showToast('Test fallito: ' + result.message, 'error');
+                }
+                
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div style="color: var(--danger); font-weight: 600;">❌ Errore</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">${e.message}</div>
+                `;
+                showToast('Errore test: ' + e.message, 'error');
+            }
+        }
+        
+        async function loadRemoteCollections() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`/api/remote/collections?server_url=${encodeURIComponent(serverUrl)}&token=${encodeURIComponent(token)}`);
+                const data = await resp.json();
+                
+                if (data.collections && data.collections.length > 0) {
+                    const listDiv = document.getElementById('remote-collections-list');
+                    const gridDiv = document.getElementById('remote-collections-grid');
+                    
+                    listDiv.style.display = 'block';
+                    gridDiv.innerHTML = data.collections.map(coll => `
+                        <div class="model-item" style="cursor: pointer; padding: 8px 12px;" onclick="selectRemoteCollection('${escapeHtml(coll)}')">
+                            <span>📁 ${escapeHtml(coll)}</span>
+                        </div>
+                    `).join('');
+                    
+                    showToast(`${data.collections.length} collections trovate`, 'success');
+                } else {
+                    showToast('Nessuna collection trovata o endpoint non supportato', 'warning');
+                }
+                
+            } catch (e) {
+                showToast('Errore caricamento collections: ' + e.message, 'error');
+            }
+        }
+        
+        function selectRemoteCollection(collection) {
+            document.getElementById('remote-server-collection').value = collection;
+            showToast(`Collection "${collection}" selezionata`, 'success');
+        }
+        
+        // ==================== Voice Activation ====================
+        function updateVoiceSlider(id) {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(`${id}-value`);
+            const value = slider.value;
+            
+            if (id === 'wake-timeout') {
+                valueDisplay.textContent = `${value}s`;
+            } else if (id === 'tts-cooldown') {
+                valueDisplay.textContent = `${value}s`;
+            } else {
+                valueDisplay.textContent = value;
+            }
+        }
+        
+        async function loadVoiceSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                const settings = await resp.json();
+                
+                if (settings.wake_timeout_seconds) {
+                    document.getElementById('wake-timeout').value = settings.wake_timeout_seconds;
+                    document.getElementById('wake-timeout-value').textContent = `${settings.wake_timeout_seconds}s`;
+                }
+                if (settings.vad_energy_threshold) {
+                    document.getElementById('vad-threshold').value = settings.vad_energy_threshold;
+                    document.getElementById('vad-threshold-value').textContent = settings.vad_energy_threshold;
+                }
+                if (settings.speech_energy_threshold) {
+                    document.getElementById('speech-threshold').value = settings.speech_energy_threshold;
+                    document.getElementById('speech-threshold-value').textContent = settings.speech_energy_threshold;
+                }
+                if (settings.silence_threshold) {
+                    document.getElementById('silence-threshold').value = settings.silence_threshold;
+                    document.getElementById('silence-threshold-value').textContent = settings.silence_threshold;
+                }
+                if (settings.tts_cooldown_seconds) {
+                    document.getElementById('tts-cooldown').value = settings.tts_cooldown_seconds;
+                    document.getElementById('tts-cooldown-value').textContent = `${settings.tts_cooldown_seconds}s`;
+                }
+            } catch (e) {
+                console.error('Errore caricamento voice settings:', e);
+            }
+        }
+        
+        async function saveVoiceSettings() {
+            const settings = {
+                wake_timeout_seconds: document.getElementById('wake-timeout').value,
+                vad_energy_threshold: document.getElementById('vad-threshold').value,
+                speech_energy_threshold: document.getElementById('speech-threshold').value,
+                silence_threshold: document.getElementById('silence-threshold').value,
+                tts_cooldown_seconds: document.getElementById('tts-cooldown').value
+            };
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveVoiceSettings',message:'Saving VAD settings',data:settings,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-C'})}).catch(()=>{});
+            // #endregion
+            
+            try {
+                // 1. Salva nel database
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings })
+                });
+                
+                showToast('Impostazioni Voice salvate! Riavvio agent...', 'success');
+                
+                // 2. Riavvia automaticamente l'agent
+                try {
+                    const restartResp = await fetch('/api/agent/restart', { method: 'POST' });
+                    const restartResult = await restartResp.json();
+                    
+                    // #region agent log
+                    fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveVoiceSettings:restart',message:'Agent restart result',data:{status:restartResult.status,message:restartResult.message,savedSettings:settings},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-C'})}).catch(()=>{});
+                    // #endregion
+                    
+                    if (restartResult.status === 'ok') {
+                        showToast('Voice settings aggiornati e agent riavviato!', 'success');
+                    } else {
+                        showToast('Settings salvati ma errore riavvio: ' + restartResult.message, 'error');
+                    }
+                } catch (restartErr) {
+                    showToast('Settings salvati ma errore riavvio: ' + restartErr.message, 'error');
+                }
+            } catch (e) {
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+        
+        function resetVoiceDefaults() {
+            document.getElementById('wake-timeout').value = '20';
+            document.getElementById('wake-timeout-value').textContent = '20s';
+            document.getElementById('vad-threshold').value = '40';
+            document.getElementById('vad-threshold-value').textContent = '40';
+            document.getElementById('speech-threshold').value = '100';
+            document.getElementById('speech-threshold-value').textContent = '100';
+            document.getElementById('silence-threshold').value = '30';
+            document.getElementById('silence-threshold-value').textContent = '30';
+            document.getElementById('tts-cooldown').value = '5';
+            document.getElementById('tts-cooldown-value').textContent = '5s';
+            showToast('Valori di default ripristinati (non salvati)', 'success');
+        }
+        
+        async function saveAndRestartAgent() {
+            // Prima salva i settings
+            await saveVoiceSettings();
+            
+            showToast('⏳ Riavvio agent in corso...', 'success');
+            
+            try {
+                const resp = await fetch('/api/agent/restart', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    showToast('✅ Agent riavviato! I nuovi settings sono attivi.', 'success');
+                } else {
+                    showToast('❌ Errore: ' + result.message, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Errore riavvio: ' + e.message, 'error');
+            }
+        }
+        
+        async function restartAgentOnly() {
+            showToast('⏳ Riavvio agent in corso...', 'success');
+            
+            try {
+                const resp = await fetch('/api/agent/restart', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+                
+                if (result.status === 'ok') {
+                    showToast('✅ Agent riavviato!', 'success');
+                } else {
+                    showToast('❌ Errore: ' + result.message, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Errore riavvio: ' + e.message, 'error');
+            }
+        }
+        
+        async function saveRemoteServer() {
+            const serverUrl = document.getElementById('remote-server-url').value.trim();
+            const token = document.getElementById('remote-server-token').value.trim();
+            const collection = document.getElementById('remote-server-collection').value.trim();
+            
+            if (!serverUrl) {
+                showToast('Inserisci URL del server', 'error');
+                return;
+            }
+            
+            try {
+                const resp = await fetch('/api/remote/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        server_url: serverUrl,
+                        token: token,
+                        collection: collection
+                    })
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Errore salvataggio');
+                }
+                
+                showToast('Server remoto configurato! Riavvia l\'agent per applicare.', 'success');
+                
+            } catch (e) {
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+        
+        // ==================== SIP Configuration ====================
+        
+        async function checkSIPStatus() {
+            const statusBox = document.getElementById('sip-status-box');
+            const serviceStatus = document.getElementById('sip-service-status');
+            const statusMessage = document.getElementById('sip-status-message');
+            const port5060 = document.getElementById('sip-port-5060');
+            const port5061 = document.getElementById('sip-port-5061');
+            const trunksCount = document.getElementById('sip-trunks-count');
+            
+            serviceStatus.textContent = '⏳';
+            statusMessage.textContent = 'Verifica in corso...';
+            
+            try {
+                const resp = await fetch('/api/sip/status');
+                const status = await resp.json();
+                
+                if (status.available) {
+                    serviceStatus.textContent = '✅ Attivo';
+                    serviceStatus.style.color = 'var(--success)';
+                    statusBox.style.borderLeftColor = 'var(--success)';
+                } else {
+                    serviceStatus.textContent = '❌ Non attivo';
+                    serviceStatus.style.color = 'var(--danger)';
+                    statusBox.style.borderLeftColor = 'var(--danger)';
+                }
+                
+                statusMessage.textContent = status.message;
+                
+                // Aggiorna indicatori porte
+                port5060.textContent = status.details?.port_5060 ? '✅' : '❌';
+                port5060.style.color = status.details?.port_5060 ? 'var(--success)' : 'var(--danger)';
+                
+                port5061.textContent = status.details?.port_5061 ? '✅' : '❌';
+                port5061.style.color = status.details?.port_5061 ? 'var(--success)' : 'var(--danger)';
+                
+                trunksCount.textContent = status.details?.trunks_configured || 0;
+                trunksCount.style.color = status.details?.trunks_configured > 0 ? 'var(--success)' : 'var(--warning)';
+                
+            } catch (e) {
+                serviceStatus.textContent = '⚠️ Errore';
+                serviceStatus.style.color = 'var(--warning)';
+                statusMessage.textContent = 'Impossibile verificare lo stato: ' + e.message;
+            }
+        }
+        
+        async function testSIPConnection() {
+            const resultDiv = document.getElementById('sip-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Test in corso...';
+            
+            try {
+                const resp = await fetch('/api/sip/test', { method: 'POST' });
+                const result = await resp.json();
+                
+                let html = '<div style="margin-top: 8px;">';
+                
+                result.tests.forEach(test => {
+                    const icon = test.passed ? '✅' : '❌';
+                    const color = test.passed ? 'var(--success)' : 'var(--danger)';
+                    html += `<div style="margin: 4px 0; color: ${color};">${icon} ${test.name}: ${test.message}</div>`;
+                });
+                
+                html += '</div>';
+                
+                if (result.status === 'ok') {
+                    resultDiv.innerHTML = `<div style="color: var(--success); font-weight: 600;">✅ Tutti i test superati!</div>${html}`;
+                    showToast('Test SIP completato con successo', 'success');
+                } else if (result.status === 'partial') {
+                    resultDiv.innerHTML = `<div style="color: var(--warning); font-weight: 600;">⚠️ Alcuni test falliti</div>${html}`;
+                    showToast('Test SIP parzialmente riuscito', 'warning');
+                } else {
+                    resultDiv.innerHTML = `<div style="color: var(--danger); font-weight: 600;">❌ Test fallito</div>${html}`;
+                    showToast('Test SIP fallito', 'error');
+                }
+                
+            } catch (e) {
+                resultDiv.innerHTML = `<div style="color: var(--danger);">❌ Errore: ${e.message}</div>`;
+                showToast('Errore test SIP', 'error');
+            }
+        }
+        
+        async function loadSIPConfig() {
+            console.log('📞 Caricamento configurazione SIP...');
+            try {
+                const resp = await fetch('/api/sip/config');
+                const config = await resp.json();
+                console.log('📞 Configurazione ricevuta:', config);
+                
+                // Popola i campi del form
+                document.getElementById('sip-port').value = config.sip_port || 5060;
+                document.getElementById('sip-port-tls').value = config.sip_port_tls || 5061;
+                document.getElementById('rtp-port-start').value = config.rtp_port_start || 10000;
+                document.getElementById('rtp-port-end').value = config.rtp_port_end || 10100;
+                document.getElementById('trunk-name').value = config.trunk_name || '';
+                document.getElementById('trunk-host').value = config.trunk_host || '';
+                document.getElementById('trunk-port').value = config.trunk_port || 5060;
+                document.getElementById('trunk-username').value = config.trunk_username || '';
+                document.getElementById('trunk-password').value = config.trunk_password || '';
+                document.getElementById('trunk-numbers').value = config.trunk_numbers || '';
+                document.getElementById('room-prefix').value = config.room_prefix || 'sip-call-';
+                document.getElementById('enable-recording').checked = config.enable_recording || false;
+                document.getElementById('audio-codecs').value = config.audio_codecs || 'opus,pcmu,pcma';
+                
+                console.log('✅ Configurazione SIP caricata');
+                
+            } catch (e) {
+                console.error('Errore caricamento config SIP:', e);
+            }
+        }
+        
+        async function saveSIPConfig() {
+            const config = {
+                sip_port: parseInt(document.getElementById('sip-port').value) || 5060,
+                sip_port_tls: parseInt(document.getElementById('sip-port-tls').value) || 5061,
+                rtp_port_start: parseInt(document.getElementById('rtp-port-start').value) || 10000,
+                rtp_port_end: parseInt(document.getElementById('rtp-port-end').value) || 10100,
+                trunk_name: document.getElementById('trunk-name').value.trim(),
+                trunk_host: document.getElementById('trunk-host').value.trim(),
+                trunk_port: parseInt(document.getElementById('trunk-port').value) || 5060,
+                trunk_username: document.getElementById('trunk-username').value.trim(),
+                trunk_password: document.getElementById('trunk-password').value,
+                trunk_numbers: document.getElementById('trunk-numbers').value.trim(),
+                room_prefix: document.getElementById('room-prefix').value.trim() || 'sip-call-',
+                enable_recording: document.getElementById('enable-recording').checked,
+                audio_codecs: document.getElementById('audio-codecs').value.trim() || 'opus,pcmu,pcma'
+            };
+            
+            const resultDiv = document.getElementById('sip-save-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Salvataggio...';
+            
+            try {
+                const resp = await fetch('/api/sip/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Errore salvataggio');
+                }
+                
+                const result = await resp.json();
+                
+                resultDiv.innerHTML = `
+                    <div style="color: var(--success); font-weight: 600;">✅ ${result.message}</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                        File: ${result.config_file}
+                    </div>
+                `;
+                showToast('Configurazione SIP salvata!', 'success');
+                
+                // Aggiorna lo stato
+                checkSIPStatus();
+                
+            } catch (e) {
+                resultDiv.innerHTML = `<div style="color: var(--danger);">❌ Errore: ${e.message}</div>`;
+                showToast('Errore salvataggio: ' + e.message, 'error');
+            }
+        }
+        
+        function toggleSIPPasswordVisibility() {
+            const passwordInput = document.getElementById('trunk-password');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+            } else {
+                passwordInput.type = 'password';
+            }
+        }
+        
+        // Carica configurazione SIP al cambio tab
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // Carica dati specifici per tab
+            if (tabId === 'sip') {
+                loadSIPConfig();
+                checkSIPStatus();
+            }
+            if (tabId === 'logs') {
+                loadCallLogs();
+            }
+            if (tabId === 'listen') {
+                loadListenPage();
+            }
+        }
+
+        // ==================== Log Chiamate ====================
+        let logCurrentOffset = 0;
+        let logCurrentLimit = 50;
+        let logAutoRefreshInterval = null;
+
+        async function loadCallLogs() {
+            const status = document.getElementById('log-filter-status').value;
+            logCurrentLimit = parseInt(document.getElementById('log-filter-limit').value);
             
             try {
                 const params = new URLSearchParams({
-                    limit: currentLimit,
-                    offset: currentOffset
+                    limit: logCurrentLimit,
+                    offset: logCurrentOffset
                 });
                 if (status) params.append('status', status);
                 
                 const resp = await fetch(`/api/calls?${params}`);
                 const data = await resp.json();
                 
-                updateStats(data.stats);
-                renderCalls(data.calls);
-                renderPagination(data.pagination);
+                updateLogStats(data.stats);
+                renderLogCalls(data.calls);
+                renderLogPagination(data.pagination);
             } catch (e) {
                 console.error('Errore caricamento chiamate:', e);
-                document.getElementById('calls-container').innerHTML = `
-                    <div class="empty-state">
+                document.getElementById('log-calls-container').innerHTML = `
+                    <div class="log-empty-state">
                         <div class="icon">⚠️</div>
                         <div>Errore nel caricamento dei dati</div>
                     </div>
@@ -514,18 +3155,19 @@
             }
         }
 
-        function updateStats(stats) {
-            document.getElementById('stat-total').textContent = stats.total_calls;
-            document.getElementById('stat-completed').textContent = stats.completed_calls;
-            document.getElementById('stat-active').textContent = stats.active_calls;
-            document.getElementById('stat-today').textContent = stats.today_calls;
-            document.getElementById('stat-avg-duration').textContent = formatDuration(stats.avg_duration_seconds);
+        function updateLogStats(stats) {
+            if (!stats) return;
+            document.getElementById('log-stat-total').textContent = stats.total_calls || 0;
+            document.getElementById('log-stat-completed').textContent = stats.completed_calls || 0;
+            document.getElementById('log-stat-active').textContent = stats.active_calls || 0;
+            document.getElementById('log-stat-today').textContent = stats.today_calls || 0;
+            document.getElementById('log-stat-avg-duration').textContent = formatCallDuration(stats.avg_duration_seconds);
         }
 
-        function renderCalls(calls) {
+        function renderLogCalls(calls) {
             if (!calls || calls.length === 0) {
-                document.getElementById('calls-container').innerHTML = `
-                    <div class="empty-state">
+                document.getElementById('log-calls-container').innerHTML = `
+                    <div class="log-empty-state">
                         <div class="icon">📞</div>
                         <div>Nessuna chiamata trovata</div>
                     </div>
@@ -534,7 +3176,7 @@
             }
 
             const html = `
-                <table class="calls-table">
+                <table class="log-calls-table">
                     <thead>
                         <tr>
                             <th>Data/Ora</th>
@@ -549,57 +3191,57 @@
                     <tbody>
                         ${calls.map(call => `
                             <tr>
-                                <td>${formatDateTime(call.start_time)}</td>
+                                <td>${formatCallDateTime(call.start_time)}</td>
                                 <td>
-                                    <div class="call-number">${call.caller_number || '-'}</div>
+                                    <div class="log-call-number">${call.caller_number || '-'}</div>
                                     <div style="font-size: 0.75rem; color: var(--text-muted);">${call.caller_name || ''}</div>
                                 </td>
-                                <td>${call.room_name}</td>
-                                <td class="call-duration">${formatDuration(call.duration_seconds)}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${call.room_name || '-'}</td>
+                                <td class="log-call-duration">${formatCallDuration(call.duration_seconds)}</td>
                                 <td>${call.message_count || 0}</td>
-                                <td><span class="status-badge ${call.status}">${getStatusLabel(call.status)}</span></td>
-                                <td><button class="btn btn-view" onclick="viewCall('${call.call_id}')">👁️ Vedi</button></td>
+                                <td><span class="log-status-badge ${call.status}">${getCallStatusLabel(call.status)}</span></td>
+                                <td><button class="btn-view-call" onclick="viewCallDetail('${call.call_id}')">👁️ Vedi</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             `;
-            document.getElementById('calls-container').innerHTML = html;
+            document.getElementById('log-calls-container').innerHTML = html;
         }
 
-        function renderPagination(pagination) {
-            const container = document.getElementById('pagination');
-            if (!pagination.has_more && currentOffset === 0) {
+        function renderLogPagination(pagination) {
+            const container = document.getElementById('log-pagination');
+            if (!pagination || (!pagination.has_more && logCurrentOffset === 0)) {
                 container.innerHTML = '';
                 return;
             }
 
             container.innerHTML = `
-                <button class="btn" ${currentOffset === 0 ? 'disabled' : ''} onclick="prevPage()">← Precedente</button>
-                <button class="btn" ${!pagination.has_more ? 'disabled' : ''} onclick="nextPage()">Successivo →</button>
+                <button class="btn btn-secondary" ${logCurrentOffset === 0 ? 'disabled' : ''} onclick="logPrevPage()">← Precedente</button>
+                <button class="btn btn-secondary" ${!pagination.has_more ? 'disabled' : ''} onclick="logNextPage()">Successivo →</button>
             `;
         }
 
-        function prevPage() {
-            currentOffset = Math.max(0, currentOffset - currentLimit);
-            loadCalls();
+        function logPrevPage() {
+            logCurrentOffset = Math.max(0, logCurrentOffset - logCurrentLimit);
+            loadCallLogs();
         }
 
-        function nextPage() {
-            currentOffset += currentLimit;
-            loadCalls();
+        function logNextPage() {
+            logCurrentOffset += logCurrentLimit;
+            loadCallLogs();
         }
 
-        async function viewCall(callId) {
+        async function viewCallDetail(callId) {
             try {
                 const resp = await fetch(`/api/calls/${encodeURIComponent(callId)}`);
                 const data = await resp.json();
                 
                 renderCallDetail(data);
-                document.getElementById('modal-overlay').classList.add('active');
+                document.getElementById('log-modal-overlay').classList.add('active');
             } catch (e) {
                 console.error('Errore caricamento dettaglio:', e);
-                alert('Errore nel caricamento dei dettagli');
+                showToast('Errore nel caricamento dei dettagli', 'error');
             }
         }
 
@@ -607,64 +3249,66 @@
             const call = data.call;
             const messages = data.messages || [];
 
-            document.getElementById('modal-title').textContent = `Chiamata ${call.caller_number || call.call_id}`;
+            document.getElementById('log-modal-title').textContent = `Chiamata ${call.caller_number || call.call_id}`;
             
             const messagesHtml = messages.length > 0 
                 ? messages.map(m => `
-                    <div class="message ${m.role}">
+                    <div class="log-message ${m.role}">
                         <div class="role">${m.role === 'user' ? '👤 Utente' : '🤖 Assistente'}</div>
-                        <div class="content">${escapeHtml(m.content)}</div>
-                        <div class="timestamp">${formatDateTime(m.timestamp)}</div>
+                        <div class="content">${escapeCallHtml(m.content)}</div>
+                        <div class="timestamp">${formatCallDateTime(m.timestamp)}</div>
                     </div>
                 `).join('')
-                : '<div class="no-messages">Nessun messaggio registrato</div>';
+                : '<div class="log-no-messages">Nessun messaggio registrato</div>';
 
-            document.getElementById('modal-body').innerHTML = `
-                <div class="call-info">
-                    <div class="call-info-item">
+            document.getElementById('log-modal-body').innerHTML = `
+                <div class="log-call-info">
+                    <div class="log-call-info-item">
                         <div class="label">Chiamante</div>
                         <div class="value">${call.caller_number || '-'}</div>
                     </div>
-                    <div class="call-info-item">
+                    <div class="log-call-info-item">
                         <div class="label">Nome</div>
                         <div class="value">${call.caller_name || '-'}</div>
                     </div>
-                    <div class="call-info-item">
+                    <div class="log-call-info-item">
                         <div class="label">Inizio</div>
-                        <div class="value">${formatDateTime(call.start_time)}</div>
+                        <div class="value">${formatCallDateTime(call.start_time)}</div>
                     </div>
-                    <div class="call-info-item">
+                    <div class="log-call-info-item">
                         <div class="label">Fine</div>
-                        <div class="value">${call.end_time ? formatDateTime(call.end_time) : 'In corso'}</div>
+                        <div class="value">${call.end_time ? formatCallDateTime(call.end_time) : 'In corso'}</div>
                     </div>
-                    <div class="call-info-item">
+                    <div class="log-call-info-item">
                         <div class="label">Durata</div>
-                        <div class="value">${formatDuration(call.duration_seconds)}</div>
+                        <div class="value">${formatCallDuration(call.duration_seconds)}</div>
                     </div>
-                    <div class="call-info-item">
+                    <div class="log-call-info-item">
                         <div class="label">Stato</div>
-                        <div class="value"><span class="status-badge ${call.status}">${getStatusLabel(call.status)}</span></div>
+                        <div class="value"><span class="log-status-badge ${call.status}">${getCallStatusLabel(call.status)}</span></div>
                     </div>
                 </div>
                 
-                <div class="messages-section">
+                <div class="log-messages-section">
                     <h3>💬 Conversazione (${messages.length} messaggi)</h3>
                     ${messagesHtml}
                 </div>
             `;
         }
 
-        function closeModal(event) {
-            if (event && event.target !== document.getElementById('modal-overlay')) return;
-            document.getElementById('modal-overlay').classList.remove('active');
+        function closeCallModal(event) {
+            if (event && event.target !== document.getElementById('log-modal-overlay')) return;
+            document.getElementById('log-modal-overlay').classList.remove('active');
         }
 
-        function refreshData() {
-            loadCalls();
+        function refreshCallData() {
+            logCurrentOffset = 0;
+            loadCallLogs();
+            showToast('Dati aggiornati', 'success');
         }
 
-        // Utility functions
-        function formatDateTime(isoString) {
+        // Utility functions for logs
+        function formatCallDateTime(isoString) {
             if (!isoString) return '-';
             const date = new Date(isoString);
             return date.toLocaleString('it-IT', {
@@ -676,17 +3320,15 @@
             });
         }
 
-        function formatDuration(seconds) {
+        function formatCallDuration(seconds) {
             if (!seconds || seconds === 0) return '-';
             const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            if (mins > 0) {
-                return `${mins}m ${secs}s`;
-            }
+            const secs = Math.round(seconds % 60);
+            if (mins > 0) return `${mins}m ${secs}s`;
             return `${secs}s`;
         }
 
-        function getStatusLabel(status) {
+        function getCallStatusLabel(status) {
             const labels = {
                 'active': '🟢 Attiva',
                 'completed': '✅ Completata',
@@ -696,18 +3338,48 @@
             return labels[status] || status;
         }
 
-        function escapeHtml(text) {
+        function escapeCallHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Keyboard shortcuts
+        // Keyboard shortcut per chiudere modale
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeModal();
+                closeCallModal();
             }
         });
+
+        // ==================== Ascolto Live ====================
+        function loadListenPage() {
+            const iframe = document.getElementById('listen-iframe');
+            // Usa lo stesso protocollo/host della pagina corrente
+            iframe.src = window.location.origin + '/';
+        }
+
+        function openListenPage() {
+            window.open(window.location.origin + '/', '_blank');
+        }
+
+        function toggleFullscreen() {
+            const container = document.getElementById('listen-iframe-container');
+            container.classList.toggle('fullscreen');
+            
+            if (container.classList.contains('fullscreen')) {
+                // Aggiungi pulsante per uscire dal fullscreen
+                const exitBtn = document.createElement('button');
+                exitBtn.id = 'exit-fullscreen-btn';
+                exitBtn.className = 'btn btn-primary';
+                exitBtn.style.cssText = 'position: fixed; top: 16px; right: 16px; z-index: 1001;';
+                exitBtn.textContent = '✕ Esci';
+                exitBtn.onclick = toggleFullscreen;
+                container.appendChild(exitBtn);
+            } else {
+                const exitBtn = document.getElementById('exit-fullscreen-btn');
+                if (exitBtn) exitBtn.remove();
+            }
+        }
     </script>
 </body>
 </html>

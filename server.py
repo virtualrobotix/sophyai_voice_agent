@@ -177,17 +177,18 @@ async def root():
     return FileResponse("web/index.html")
 
 
-@app.get("/debug.html")
-async def debug_page():
-    """Serve la pagina di debug e impostazioni"""
-    return FileResponse("web/debug.html")
-
-
 @app.get("/admin.html")
 @app.get("/admin")
 async def admin_page():
-    """Serve la pagina admin per i log delle chiamate"""
+    """Serve la pagina admin unificata (impostazioni, log chiamate, ascolto live)"""
     return FileResponse("web/admin.html")
+
+
+@app.get("/debug.html")
+async def debug_redirect():
+    """Redirect dalla vecchia pagina debug alla nuova pagina admin"""
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url="/admin")
 
 
 @app.get("/api/health")
@@ -376,14 +377,58 @@ async def update_timing(data: dict):
 @app.post("/api/timing/reset")
 async def reset_timing():
     """Resetta tutte le statistiche di timing"""
-    global _timing_stats
+    global _timing_stats, _conversation_log
     _timing_stats = {
         "stt": {"time_ms": 0, "count": 0},
         "llm": {"time_ms": 0, "ttft_ms": 0, "count": 0},
         "tts": {"time_ms": 0, "audio_sec": 0, "count": 0},
         "latency": {"e2e_ms": 0, "to_first_audio_ms": 0, "count": 0}
     }
+    _conversation_log = []
     return {"status": "ok", "message": "Stats reset"}
+
+
+# Conversation log storage (in-memory, reset on restart)
+_conversation_log = []  # Lista di record conversazione con timing dettagliato
+_MAX_CONVERSATION_LOG = 100  # Mantieni max 100 conversazioni
+
+
+@app.get("/api/conversations")
+async def get_conversations():
+    """Restituisce il log delle conversazioni con timing dettagliato"""
+    return {"conversations": _conversation_log}
+
+
+@app.post("/api/conversations")
+async def add_conversation(data: dict):
+    """Aggiunge un record conversazione (chiamato dall'agent)"""
+    global _conversation_log
+    import datetime
+    
+    record = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "stt_ms": data.get("stt_ms", 0),
+        "llm_ms": data.get("llm_ms", 0),
+        "tts_ms": data.get("tts_ms", 0),
+        "e2e_ms": data.get("e2e_ms", 0),
+        "speech_to_tts_ms": data.get("speech_to_tts_ms", 0),
+        "stt_type": data.get("stt_type", "unknown"),
+        "llm_type": data.get("llm_type", "unknown"),
+        "tts_type": data.get("tts_type", "unknown"),
+        "user_text": data.get("user_text", "")[:100],
+        "agent_text": data.get("agent_text", "")[:100],
+        "sender": data.get("sender", "")
+    }
+    
+    _conversation_log.append(record)
+    
+    # Mantieni solo le ultime N conversazioni
+    if len(_conversation_log) > _MAX_CONVERSATION_LOG:
+        _conversation_log = _conversation_log[-_MAX_CONVERSATION_LOG:]
+    
+    logger.info(f"📊 [CONV] STT:{record['stt_ms']}ms LLM:{record['llm_ms']}ms TTS:{record['tts_ms']}ms E2E:{record['e2e_ms']}ms | {record['stt_type']}/{record['llm_type']}/{record['tts_type']}")
+    
+    return {"status": "ok"}
 
 
 @app.post("/api/agent/restart")

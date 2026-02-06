@@ -57,6 +57,9 @@ _sent_message_ids = set()  # Set di ID messaggi già inviati
 _last_user_message = ""  # Per evitare duplicati STT
 _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
 _last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
+_last_stt_time_ms = 0  # Ultimo tempo STT in ms (per conversation tracking)
+_last_tts_time_ms = 0  # Ultimo tempo TTS in ms (per conversation tracking)
+_component_info = {"stt": "whisper", "llm": "", "tts": ""}  # Info componenti attivi
 _message_counter = 0  # Contatore progressivo per ID messaggi
 
 # Variabili per tracciamento chiamate SIP
@@ -892,6 +895,28 @@ async def send_timing_to_server(timing_type: str, data: dict):
         logger.debug(f"Timing send error: {e}")
 
 
+async def send_conversation_to_server(conversation_data: dict):
+    """Invia record conversazione completo al web server"""
+    import aiohttp
+    import ssl
+    try:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.post(
+                "https://host.docker.internal:8443/api/conversations",
+                json=conversation_data,
+                timeout=aiohttp.ClientTimeout(total=2)
+            ) as resp:
+                if resp.status != 200:
+                    logger.debug(f"Conversation send failed: {resp.status}")
+    except Exception as e:
+        logger.debug(f"Conversation send error: {e}")
+
+
 async def send_transcript(text: str, role: str, message_id: str = None):
     """Invia trascrizione al frontend (con deduplicazione basata su ID)"""
     global _sent_messages, _sent_message_ids, _last_user_message
@@ -1421,11 +1446,17 @@ class ExternalTTSStream(tts.ChunkedStream):
             duration = len(pcm_data) / (24000 * 2) if pcm_data else 0
             logger.info(f"🎤 [{engine}] Tempo: {tts_time_ms:.0f}ms | Audio: {duration:.2f}s")
             
+            # ⏱️ Salva TTS time per conversation tracking
+            global _last_tts_time_ms
+            _last_tts_time_ms = tts_time_ms
+            
             # ⏱️ LATENCY: Tempo dalla fine domanda all'inizio risposta
             latency_ms = 0
+            speech_to_tts_ms = 0
             if _last_stt_end_time:
                 latency_ms = (t_tts_end - _last_stt_end_time) * 1000
-                logger.info(f"⚡ [LATENCY] Domanda→Risposta: {latency_ms:.0f}ms")
+                speech_to_tts_ms = (t_tts_start - _last_stt_end_time) * 1000
+                logger.info(f"⚡ [LATENCY] E2E: {latency_ms:.0f}ms | STT→TTS: {speech_to_tts_ms:.0f}ms")
             
             # Emetti l'audio
             if pcm_data:
@@ -1455,7 +1486,7 @@ class ExternalTTSStream(tts.ChunkedStream):
                     if latency_ms > 0:
                         asyncio.create_task(send_timing_to_server("latency", {
                             "e2e_ms": int(latency_ms),
-                            "to_first_audio_ms": int(tts_time_ms)
+                            "to_first_audio_ms": int(speech_to_tts_ms)
                         }))
                 else:
                     # Fallback API 1.0.x - usa _event_ch
@@ -1968,6 +1999,10 @@ class WhisperSTT(stt.STT):
         
         audio_duration_sec = len(audio_bytes) / 2 / sample_rate
         
+        # ⏱️ TIMING STT: Inizio
+        t_stt_start = time.time()
+        text = ""
+        
         try:
             # Crea file WAV in memoria
             wav_buffer = io.BytesIO()
@@ -2004,26 +2039,27 @@ class WhisperSTT(stt.STT):
                         lang_prob = result.get("language_probability", 0)
                         segments = result.get("segments", [])
                         
-                        # #region agent log
-                        import json as _json
-                        _log_path = "/app/.cursor/debug.log"
-                        try:
-                            import os as _os
-                            _os.makedirs("/app/.cursor", exist_ok=True)
-                            with open(_log_path, "a") as _f:
-                                _f.write(_json.dumps({"location":"WhisperSTT:transcribe_only","message":"Whisper response","data":{"text":text[:100] if text else "","language":detected_lang,"lang_prob":round(lang_prob,2),"num_segments":len(segments),"segments_preview":[{"text":s.get("text","")[:50],"start":s.get("start",0),"end":s.get("end",0)} for s in segments[:3]] if segments else []},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-WHISPER"})+"\n")
-                        except: pass
-                        # #endregion
-                        
                         logger.info(f"🎤 [WHISPER] Risposta: '{text}' (lang={detected_lang}, prob={lang_prob:.0%}, segments={len(segments)})")
-                        return text
                     else:
                         error_text = await response.text()
                         logger.warning(f"Whisper server error: {response.status} - {error_text[:100]}")
-                        return ""
+                        text = ""
         except Exception as e:
             logger.error(f"Errore transcribe_only: {e}")
-            return ""
+            text = ""
+        
+        # ⏱️ TIMING STT: Fine - imposta globali per latenza e invia stats
+        global _last_stt_end_time, _last_stt_time_ms
+        t_stt_end = time.time()
+        _last_stt_end_time = t_stt_end
+        stt_time_ms = (t_stt_end - t_stt_start) * 1000
+        _last_stt_time_ms = stt_time_ms
+        
+        if text:
+            logger.info(f"🎤 [STT] Tempo: {stt_time_ms:.0f}ms | Trascritto: \"{text[:50]}\"")
+            asyncio.create_task(send_timing_to_server("stt", {"time_ms": int(stt_time_ms)}))
+        
+        return text
     
     async def _recognize_impl(
         self,
@@ -3117,6 +3153,15 @@ async def load_settings_from_server() -> dict:
         "speech_energy_threshold": "25",
         "silence_threshold": "60",
         "tts_cooldown_seconds": "1.5",
+        # TTS defaults
+        "tts_engine": config.tts.default_engine,
+        "tts_language": "it",
+        # ElevenLabs defaults
+        "elevenlabs_api_key": "",
+        "elevenlabs_voice": "",
+        "elevenlabs_model": "eleven_multilingual_v2",
+        "elevenlabs_stability": "50",
+        "elevenlabs_similarity": "75",
     }
     
     try:
@@ -3247,6 +3292,15 @@ async def entrypoint(ctx: JobContext):
     db_settings = await load_settings_from_server()
     logger.info(f"📥 LLM Provider: {db_settings.get('llm_provider', 'ollama')}")
     
+    # #region agent log
+    import json as _json_debug
+    _debug_config_path = "/app/config/agent_debug.log"
+    try:
+        with open(_debug_config_path, "a") as _df:
+            _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:db_settings","message":"Settings caricati dal server","data":{"tts_engine":db_settings.get("tts_engine"),"tts_language":db_settings.get("tts_language"),"vad_energy_threshold":db_settings.get("vad_energy_threshold"),"speech_energy_threshold":db_settings.get("speech_energy_threshold"),"silence_threshold":db_settings.get("silence_threshold"),"tts_cooldown_seconds":db_settings.get("tts_cooldown_seconds"),"wake_timeout_seconds":db_settings.get("wake_timeout_seconds")},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D","runId":"post-fix"})+"\n")
+    except: pass
+    # #endregion
+    
     # Applica Voice Settings dalle impostazioni caricate
     global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
     try:
@@ -3256,6 +3310,13 @@ async def entrypoint(ctx: JobContext):
         SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '60'))
         TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '1.5'))
         logger.info(f"🎙️ Voice Settings: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
+        
+        # #region agent log
+        try:
+            with open(_debug_config_path, "a") as _df:
+                _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:vad_applied","message":"VAD settings applicati","data":{"WAKE_TIMEOUT":WAKE_TIMEOUT_SECONDS,"VAD_ENERGY":VAD_ENERGY_THRESHOLD,"SPEECH_ENERGY":SPEECH_ENERGY_THRESHOLD,"SILENCE":SILENCE_THRESHOLD,"TTS_COOLDOWN":TTS_COOLDOWN_SECONDS},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C","runId":"post-fix"})+"\n")
+        except: pass
+        # #endregion
     except Exception as e:
         logger.warning(f"⚠️ Errore parsing voice settings: {e}, uso default")
     
@@ -3380,13 +3441,19 @@ async def entrypoint(ctx: JobContext):
     except Exception as e:
         logger.warning(f"⚠️ Errore lettura config TTS: {e}")
     
-    # Seleziona TTS: priorità al file, poi variabile d'ambiente
+    # Seleziona TTS: priorità al file, poi database, poi variabile d'ambiente
     if tts_from_file:
         tts_engine = tts_from_file.get("engine", "edge").lower()
         tts_language = tts_from_file.get("language", "it")
+        logger.info(f"📁 TTS config da file: engine={tts_engine}, language={tts_language}")
+    elif db_settings.get("tts_engine"):
+        tts_engine = db_settings.get("tts_engine", "edge").lower()
+        tts_language = db_settings.get("tts_language", "it")
+        logger.info(f"🗄️ TTS config da database: engine={tts_engine}, language={tts_language}")
     else:
         tts_engine = config.tts.default_engine.lower()
         tts_language = config.tts.vibevoice_language
+        logger.info(f"⚙️ TTS config da env: engine={tts_engine}, language={tts_language}")
     
     # #region debug log - hypothesis D
     debug_log("D", "main.py:1028", "Configurazione TTS letta", {"engine": tts_engine, "language": tts_language, "from_file": bool(tts_from_file), "file_content": tts_from_file})
@@ -3396,7 +3463,7 @@ async def entrypoint(ctx: JobContext):
     logger.info(f"🔊 CONFIGURAZIONE TTS")
     logger.info(f"🔊 Engine selezionato: {tts_engine}")
     logger.info(f"🔊 Lingua: {tts_language}")
-    logger.info(f"🔊 Fonte config: {'file' if tts_from_file else 'env'}")
+    logger.info(f"🔊 Fonte config: {'file' if tts_from_file else ('db' if db_settings.get('tts_engine') else 'env')}")
     logger.info(f"🔊 ======================================")
     
     if tts_engine == "vibevoice":
@@ -3444,6 +3511,55 @@ async def entrypoint(ctx: JobContext):
         except Exception as e:
             logger.error(f"❌ Errore configurazione Piper: {e}")
             my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
+    elif tts_engine == "qwen":
+        try:
+            qwen_speed = tts_from_file.get("speed", 1.0) if tts_from_file else 1.0
+            qwen_speaker = tts_from_file.get("speaker", "Ryan") if tts_from_file else "Ryan"
+            my_tts = ExternalTTSLiveKit(
+                engine="qwen",
+                language=tts_language,
+                speaker=qwen_speaker,
+                speed=qwen_speed,
+                auto_language=True
+            )
+            logger.info(f"🔊 TTS attivo: Qwen (via server esterno)")
+            logger.info(f"🎤 Lingua: {tts_language}, Speaker: {qwen_speaker}")
+        except Exception as e:
+            logger.error(f"❌ Errore configurazione Qwen: {e}")
+            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
+    elif tts_engine == "elevenlabs":
+        try:
+            # ElevenLabs usa il server TTS esterno come proxy
+            el_voice = tts_from_file.get("voice", "") if tts_from_file else ""
+            el_model = tts_from_file.get("model", "eleven_multilingual_v2") if tts_from_file else "eleven_multilingual_v2"
+            
+            # Carica API key e voice dalle impostazioni DB
+            el_api_key = db_settings.get("elevenlabs_api_key", "")
+            el_voice_id = db_settings.get("elevenlabs_voice", el_voice)
+            el_stability = float(db_settings.get("elevenlabs_stability", "50")) / 100
+            el_similarity = float(db_settings.get("elevenlabs_similarity", "75")) / 100
+            
+            if el_api_key and el_voice_id:
+                from agent.tts.elevenlabs_livekit import ElevenLabsLiveKit
+                my_tts = ElevenLabsLiveKit(
+                    api_key=el_api_key,
+                    voice_id=el_voice_id,
+                    model=el_model,
+                    stability=el_stability,
+                    similarity_boost=el_similarity,
+                    language=tts_language,
+                    auto_language=True
+                )
+                logger.info(f"🌟 TTS attivo: ElevenLabs (model={el_model}, voice={el_voice_id})")
+            else:
+                logger.warning(f"⚠️ ElevenLabs: API key o voice mancante, fallback a EdgeTTS")
+                my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
+        except ImportError:
+            logger.warning(f"⚠️ ElevenLabs wrapper non disponibile, fallback a EdgeTTS")
+            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
+        except Exception as e:
+            logger.error(f"❌ Errore configurazione ElevenLabs: {e}")
+            my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
     elif tts_engine == "chatterbox":
         try:
             from agent.tts.chatterbox_tts import ChatterboxTTS
@@ -3487,6 +3603,28 @@ async def entrypoint(ctx: JobContext):
     # #region debug log - hypothesis B
     debug_log("B", "main.py:1111", "TTS finale prima di creare Agent", {"tts_type": type(my_tts).__name__, "tts_module": type(my_tts).__module__, "tts_str": str(my_tts)[:100]})
     # #endregion
+    
+    # #region agent log
+    try:
+        with open("/app/config/agent_debug.log", "a") as _df:
+            _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:tts_selected","message":"TTS engine finale selezionato","data":{"tts_engine_config":tts_engine,"tts_type_actual":type(my_tts).__name__,"tts_language":tts_language,"source":"file" if tts_from_file else ("db" if db_settings.get("tts_engine") else "env")},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-A","runId":"post-fix"})+"\n")
+    except: pass
+    # #endregion
+    
+    # ⏱️ Imposta info componenti per conversation tracking
+    global _component_info
+    _component_info["llm"] = f"{llm_provider}"
+    if llm_provider == "ollama":
+        _component_info["llm"] = f"ollama/{db_settings.get('ollama_model', config.ollama.model)}"
+    elif llm_provider == "openrouter":
+        _component_info["llm"] = f"openrouter/{db_settings.get('openrouter_model', 'gpt-3.5-turbo')}"
+    elif llm_provider == "remote":
+        _component_info["llm"] = "remote-server"
+    try:
+        _component_info["tts"] = tts_engine
+    except NameError:
+        _component_info["tts"] = "edge"
+    _component_info["stt"] = "whisper"
     
     # Configura Whisper STT usando settings dal database
     whisper_model = db_settings.get("whisper_model", config.whisper.model)
@@ -4210,9 +4348,47 @@ FORMATO TTS:
             # NOTA: Non usiamo await per non bloccare - il TTS gira in parallelo
             set_tts_speaking(True)
             
+            # Cattura dati per conversation tracking
+            _turn_stt_end = _last_stt_end_time
+            _turn_stt_ms = _last_stt_time_ms
+            _turn_llm_ms = (t_llm - t_start) * 1000
+            _turn_user_text = user_text
+            _turn_agent_text = response_text
+            
             async def speak_and_reset():
                 try:
+                    global _last_tts_time_ms
+                    _last_tts_time_ms = 0
+                    t_tts_start_wall = time.time()
                     await session.say(tts_text, allow_interruptions=True)
+                    t_tts_end_wall = time.time()
+                    
+                    # Usa il tempo TTS misurato internamente, o il wall clock come fallback
+                    tts_ms = _last_tts_time_ms if _last_tts_time_ms > 0 else (t_tts_end_wall - t_tts_start_wall) * 1000
+                    
+                    # Calcola latenze
+                    e2e_ms = 0
+                    speech_to_tts_ms = 0
+                    if _turn_stt_end:
+                        e2e_ms = (t_tts_end_wall - _turn_stt_end) * 1000
+                        speech_to_tts_ms = (t_tts_start_wall - _turn_stt_end) * 1000
+                    
+                    # Invia record conversazione completo
+                    asyncio.create_task(send_conversation_to_server({
+                        "stt_ms": int(_turn_stt_ms),
+                        "llm_ms": int(_turn_llm_ms),
+                        "tts_ms": int(tts_ms),
+                        "e2e_ms": int(e2e_ms),
+                        "speech_to_tts_ms": int(speech_to_tts_ms),
+                        "stt_type": _component_info.get("stt", "whisper"),
+                        "llm_type": _component_info.get("llm", "unknown"),
+                        "tts_type": _component_info.get("tts", "unknown"),
+                        "user_text": _turn_user_text[:100] if _turn_user_text else "",
+                        "agent_text": _turn_agent_text[:100] if _turn_agent_text else "",
+                        "sender": sender_identity or ""
+                    }))
+                    
+                    logger.info(f"📊 [CONV] STT:{int(_turn_stt_ms)}ms LLM:{int(_turn_llm_ms)}ms TTS:{int(tts_ms)}ms E2E:{int(e2e_ms)}ms STT→TTS:{int(speech_to_tts_ms)}ms")
                 finally:
                     set_tts_speaking(False)
             

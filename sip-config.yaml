@@ -2,76 +2,28 @@
 # Configurazione per il bridge SIP-WebRTC
 
 # Configurazione Redis (richiesto per LiveKit SIP)
-# Con network_mode: host, usa localhost
 redis:
   address: 127.0.0.1:6379
-
-# Configurazione server SIP
-sip:
-  # Porta UDP per SIP
-  port: 5060
-  # Porta TLS per SIP sicuro
-  port_tls: 5061
-  # IP pubblico per NAT traversal (richiesto per Twilio)
-  use_external_ip: false
-  
-# NAT Configuration - IP pubblico del server
-nat:
-  external_ip: "188.166.134.148"
-  
-# Range porte RTP per il media
-rtp:
-  port_range_start: 10000
-  port_range_end: 10100
-  external_ip: "188.166.134.148"
 
 # Configurazione LiveKit API
 api_key: devkey
 api_secret: secret_dev_key_change_in_production
 ws_url: ws://127.0.0.1:7880
 
-# Trunk SIP - Twilio AIMS
-trunks:
-  - name: "AIMS dev trunk"
-    host: "aims-dev-trunk.pstn.twilio.com"
-    port: 5060
-    # Numeri di telefono associati
-    numbers:
-      - "+3901119517814"
+# Porta SIP signaling
+sip_port: 5060
 
-# Regole di dispatch per chiamate inbound
-# Quando arriva una chiamata, viene creata una room e dispatchato l'agent
-dispatch_rules:
-  # Regola per tutte le chiamate inbound
-  - name: "default-inbound"
-    # Room prefix per le chiamate
-    room_prefix: "sip-call-"
-    # Metadati da passare all'agent
-    metadata:
-      source: "sip"
-      type: "phone-call"
-    # Abilita registrazione
-    enable_recording: false
+# Range porte RTP per il media
+rtp_port:
+  start: 10000
+  end: 20000
 
-# Configurazione audio
-audio:
-  # Codec preferiti
-  codecs:
-    - opus
-    - pcmu
-    - pcma
-  # Sample rate
-  sample_rate: 48000
+# NAT 1:1 - IP pubblico (dopo NAT/firewall)
+# Il server ha IP interno 159.223.228.197
+# Ma è raggiungibile dall'esterno su 188.166.134.148 (NAT)
+nat_1_to_1_ip: "188.166.134.148"
+media_nat_1_to_1_ip: "188.166.134.148"
 
 # Logging
 logging:
   level: info
-
-
-
-
-
-
-
-
-
