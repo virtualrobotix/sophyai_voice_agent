@@ -71,7 +71,7 @@ FORMATO TTS:
     ('remote_server_collection', ''),
     -- Voice Activation settings
     ('wake_timeout_seconds', '20'),
-    ('vad_energy_threshold', '40'),
+    ('vad_energy_threshold', '120'),
     ('speech_energy_threshold', '100'),
     ('silence_threshold', '30'),
     ('tts_cooldown_seconds', '5')

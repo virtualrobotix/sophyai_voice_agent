@@ -184,14 +184,14 @@ Quando l'agent sta parlando (TTS attivo), un thread VAD separato monitora l'audi
 │  VAD MONITOR (Thread separato)                                  │
 │                                                                  │
 │  • Calcola energia audio frame                                  │
-│  • Se energia > 70 (VAD_ENERGY_THRESHOLD)                       │
+│  • Se energia > 120 (VAD_ENERGY_THRESHOLD)                      │
 │    → consecutive_speech_frames++                                │
-│  • Se consecutive_speech_frames >= 3                            │
+│  • Se consecutive_speech_frames >= 6                            │
 │    → 🛑 BARGE-IN! Ferma TTS                                     │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**Tempo per barge-in**: ~150ms (3 frame × 50ms)
+**Tempo per barge-in**: ~300ms (6 frame × 50ms)
 
 ---
 
@@ -228,8 +228,8 @@ Questi parametri possono essere modificati tramite l'interfaccia web o API `/api
 
 | Proprietà | Valore |
 |-----------|--------|
-| **Default** | `70` |
-| **Range consigliato** | 20-150 |
+| **Default** | `120` |
+| **Range consigliato** | 80-180 |
 | **Unità** | Energia audio (media assoluta campioni) |
 
 **Cosa fa**: Soglia di energia per rilevare la voce dell'utente **durante il TTS** (barge-in). Quando l'energia audio supera questa soglia mentre l'agent sta parlando, il TTS viene interrotto.
@@ -237,9 +237,9 @@ Questi parametri possono essere modificati tramite l'interfaccia web o API `/api
 **Effetti**:
 | Valore | Comportamento |
 |--------|---------------|
-| 20-40 | Molto sensibile, si interrompe facilmente (anche con rumori) |
-| 50-70 | Bilanciato |
-| 80-150 | Poco sensibile, l'utente deve parlare forte per interrompere |
+| 20-60 | Molto sensibile, si interrompe facilmente (anche con rumori) |
+| 80-120 | Bilanciato, filtra rumore di fondo |
+| 130-180 | Poco sensibile, l'utente deve parlare forte per interrompere |
 
 ---
 
@@ -367,9 +367,9 @@ Questi parametri sono definiti nel codice sorgente (`agent/main.py`) e richiedon
 
 | Parametro | Valore | Descrizione |
 |-----------|--------|-------------|
-| `_min_speech_frames` | `3` | Frame consecutivi per triggerare barge-in (~150ms) |
-| `_interrupt_cooldown` | `0.5s` | Minimo tempo tra interrupt consecutivi |
-| `_audio_queue.maxsize` | `100` | Dimensione coda audio del VAD monitor |
+| `_min_speech_frames` | `6` | Frame consecutivi per triggerare barge-in (~300ms) |
+| `_interrupt_cooldown` | `1.0s` | Minimo tempo tra interrupt consecutivi |
+| `_audio_queue.maxsize` | `1000` | Dimensione coda audio del VAD monitor |
 
 ---
 
@@ -472,7 +472,7 @@ Audio telefonico spesso compresso, serve più tolleranza.
 
 ```json
 {
-  "vad_energy_threshold": "70",
+  "vad_energy_threshold": "120",
   "speech_energy_threshold": "25",
   "silence_threshold": "60",
   "tts_cooldown_seconds": "1.5"
@@ -502,7 +502,7 @@ Soglie alte per filtrare rumori di fondo.
 
 ```json
 {
-  "vad_energy_threshold": "100",
+  "vad_energy_threshold": "150",
   "speech_energy_threshold": "60",
   "silence_threshold": "50",
   "tts_cooldown_seconds": "2.0"
@@ -565,11 +565,11 @@ docker-compose restart agent
 
 | Parametro | Valore Attuale | Effetto |
 |-----------|----------------|---------|
-| `vad_energy_threshold` | 70 | Soglia barge-in |
+| `vad_energy_threshold` | 120 | Soglia barge-in |
 | `speech_energy_threshold` | 25 | Soglia inizio parlato |
 | `silence_threshold` | 60 (~3s) | Attesa fine frase |
 | `tts_cooldown_seconds` | 1.5 | Pausa post-TTS |
-| `MIN_SPEECH_FRAMES` | 30 (~1.5s) | Min parlato valido |
+| `MIN_SPEECH_FRAMES` | 30 (~1.5s) | Min parlato valido (utterance) |
 | `MIN_AUDIO_BYTES` | 32000 (~1s) | Min audio per Whisper |
 | Whisper `threshold` | 0.3 | Sensibilità VAD interno |
 

@@ -409,6 +409,7 @@ async def add_conversation(data: dict):
         "timestamp": datetime.datetime.now().isoformat(),
         "stt_ms": data.get("stt_ms", 0),
         "llm_ms": data.get("llm_ms", 0),
+        "llm_ttft_ms": data.get("llm_ttft_ms", 0),
         "tts_ms": data.get("tts_ms", 0),
         "e2e_ms": data.get("e2e_ms", 0),
         "speech_to_tts_ms": data.get("speech_to_tts_ms", 0),
@@ -486,7 +487,7 @@ async def startup_event():
         if db:
             voice_defaults = {
                 "wake_timeout_seconds": "20",
-                "vad_energy_threshold": "40",
+                "vad_energy_threshold": "120",
                 "speech_energy_threshold": "100",
                 "silence_threshold": "30",
                 "tts_cooldown_seconds": "5"
@@ -496,6 +497,12 @@ async def startup_event():
                 if existing is None:
                     await db.set_setting(key, default_value)
                     logger.info(f"📝 Aggiunto setting default: {key}={default_value}")
+            
+            # Migrazione: aggiorna vad_energy_threshold se troppo basso (< 120) al nuovo default
+            current_vad = await db.get_setting("vad_energy_threshold")
+            if current_vad and int(current_vad) < 120:
+                await db.set_setting("vad_energy_threshold", "120")
+                logger.info(f"📝 Migrazione: vad_energy_threshold aggiornato da {current_vad} a 120 (anti-interruzione)")
     except Exception as e:
         logger.warning(f"Database non disponibile all'avvio: {e}")
 
@@ -542,7 +549,7 @@ async def get_settings():
             "remote_server_collection": "",
             # Voice Activation defaults
             "wake_timeout_seconds": "20",
-            "vad_energy_threshold": "40",
+            "vad_energy_threshold": "120",
             "speech_energy_threshold": "100",
             "silence_threshold": "30",
             "tts_cooldown_seconds": "5"
@@ -2378,6 +2385,8 @@ class SIPConfig(BaseModel):
 async def get_sip_status():
     """Verifica lo stato dettagliato del servizio SIP di LiveKit."""
     import socket
+    import jwt
+    import time
     
     status = {
         "available": False,
@@ -2387,60 +2396,142 @@ async def get_sip_status():
             "port_5060": False,
             "port_5061": False,
             "trunks_configured": 0,
-            "dispatch_rules": 0
+            "dispatch_rules": 0,
+            "trunks": []
         },
         "config": None
     }
     
-    # Leggi configurazione SIP attuale
+    # Leggi configurazione SIP locale (per info)
     sip_config_path = Path(__file__).parent / "sip-config.yaml"
     if sip_config_path.exists():
         try:
             with open(sip_config_path, "r") as f:
                 sip_config = yaml.safe_load(f)
                 status["config"] = sip_config
-                
-                # Conta trunk e regole
-                trunks = sip_config.get("trunks", [])
-                status["details"]["trunks_configured"] = len(trunks) if trunks else 0
-                
-                dispatch_rules = sip_config.get("dispatch_rules", [])
-                status["details"]["dispatch_rules"] = len(dispatch_rules) if dispatch_rules else 0
         except Exception as e:
             logger.warning(f"Errore lettura sip-config.yaml: {e}")
     
-    # Verifica se il servizio SIP è in esecuzione controllando le porte
-    # LiveKit SIP non ha un endpoint HTTP health, verifichiamo direttamente le porte
+    # SIP gira con network_mode: host, quindi usa host.docker.internal o localhost
+    sip_host = os.getenv("SIP_HOST", "host.docker.internal")
     
-    # Test porta 5060 TCP (SIP signaling)
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-        result = sock.connect_ex(("livekit-sip", 5060))
-        if result == 0:
-            status["details"]["port_5060"] = True
-            status["details"]["service_running"] = True
-        sock.close()
-    except Exception as e:
-        logger.debug(f"Test porta 5060 fallito: {e}")
+    # Test porta 5060 TCP (SIP signaling) - prova diversi host
+    for host in [sip_host, "localhost", "127.0.0.1"]:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((host, 5060))
+            if result == 0:
+                status["details"]["port_5060"] = True
+                status["details"]["service_running"] = True
+                sock.close()
+                break
+            sock.close()
+        except Exception as e:
+            logger.debug(f"Test porta 5060 su {host} fallito: {e}")
     
-    # Test porta 5061 TLS (se configurato)
+    # Test porta 5061 TLS
+    for host in [sip_host, "localhost", "127.0.0.1"]:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((host, 5061))
+            if result == 0:
+                status["details"]["port_5061"] = True
+                sock.close()
+                break
+            sock.close()
+        except Exception as e:
+            logger.debug(f"Test porta 5061 su {host} fallito: {e}")
+    
+    # Ottieni trunk e dispatch rules REALI da LiveKit API
+    # Priorità: LIVEKIT_INTERNAL_URL > host.docker.internal > LIVEKIT_URL
+    internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "").replace("ws://", "http://").replace("wss://", "https://")
+    livekit_url = os.getenv("LIVEKIT_URL", "http://localhost:7880").replace("ws://", "http://").replace("wss://", "https://")
+    # Ordina per priorità: internal prima
+    livekit_urls = [u for u in [internal_url, "http://host.docker.internal:7880", livekit_url, "http://localhost:7880"] if u]
+    
+    api_key = os.getenv("LIVEKIT_API_KEY", "devkey")
+    api_secret = os.getenv("LIVEKIT_API_SECRET", "secret_dev_key_change_in_production")
+    
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-        result = sock.connect_ex(("livekit-sip", 5061))
-        if result == 0:
-            status["details"]["port_5061"] = True
-        sock.close()
+        # Genera JWT token per API
+        token = jwt.encode({
+            'iss': api_key,
+            'sub': 'sip-status',
+            'iat': int(time.time()),
+            'exp': int(time.time()) + 3600,
+            'video': {'roomAdmin': True, 'room': '*'},
+            'sip': {'admin': True, 'call': True}
+        }, api_secret, algorithm='HS256')
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        }
+        
+        # Lista trunk inbound - usa httpx (già importato)
+        trunk_found = False
+        for url in livekit_urls:
+            if trunk_found:
+                break
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    resp = await client.post(
+                        f"{url}/twirp/livekit.SIP/ListSIPInboundTrunk",
+                        headers=headers,
+                        json={}
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        items = data.get("items", [])
+                        logger.info(f"SIP: Trovati {len(items)} trunk da {url}")
+                        status["details"]["trunks_configured"] = len(items)
+                        status["details"]["trunks"] = [
+                            {
+                                "id": t.get("sip_trunk_id"),
+                                "name": t.get("name"),
+                                "numbers": t.get("numbers", [])
+                            }
+                            for t in items
+                        ]
+                        trunk_found = True
+            except Exception as e:
+                logger.debug(f"SIP: Errore ListSIPInboundTrunk su {url}: {e}")
+                continue
+        
+        # Lista dispatch rules
+        rules_found = False
+        for url in livekit_urls:
+            if rules_found:
+                break
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    resp = await client.post(
+                        f"{url}/twirp/livekit.SIP/ListSIPDispatchRule",
+                        headers=headers,
+                        json={}
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        items = data.get("items", [])
+                        status["details"]["dispatch_rules"] = len(items)
+                        rules_found = True
+            except Exception as e:
+                logger.debug(f"SIP: Errore ListSIPDispatchRule su {url}: {e}")
+                continue
+                
     except Exception as e:
-        logger.debug(f"Test porta 5061 fallito: {e}")
+        logger.warning(f"Errore recupero trunk/rules da LiveKit API: {e}")
     
     # Aggiorna stato finale
     if status["details"]["service_running"]:
         status["available"] = True
-        status["message"] = "SIP Bridge attivo (porta 5060)"
-        if status["details"]["port_5061"]:
-            status["message"] += " e TLS (porta 5061)"
+        status["message"] = "SIP Bridge attivo"
+        if status["details"]["trunks_configured"] > 0:
+            status["message"] += f" ({status['details']['trunks_configured']} trunk)"
+        else:
+            status["message"] += " (nessun trunk configurato)"
     else:
         status["message"] = "SIP Bridge non raggiungibile"
     

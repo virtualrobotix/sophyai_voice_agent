@@ -59,6 +59,7 @@ _detected_language = "it"  # Lingua rilevata da Whisper (default italiano)
 _last_stt_end_time = None  # Timestamp fine STT per calcolo latenza
 _last_stt_time_ms = 0  # Ultimo tempo STT in ms (per conversation tracking)
 _last_tts_time_ms = 0  # Ultimo tempo TTS in ms (per conversation tracking)
+_last_llm_ttft_ms = 0  # Ultimo LLM Time To First Token in ms
 _component_info = {"stt": "whisper", "llm": "", "tts": ""}  # Info componenti attivi
 _message_counter = 0  # Contatore progressivo per ID messaggi
 
@@ -91,7 +92,7 @@ _send_wake_callback = None  # Callback per inviare aggiornamenti wake al fronten
 # Questi valori vengono caricati dal database all'avvio
 # Default values (saranno sovrascritti da load_voice_settings_from_db)
 WAKE_TIMEOUT_SECONDS = 30  # Timeout di silenzio per disattivazione automatica
-VAD_ENERGY_THRESHOLD = 70  # Soglia energia per barge-in VAD (meno sensibile)
+VAD_ENERGY_THRESHOLD = 120  # Soglia energia per barge-in VAD (alzata per evitare falsi positivi)
 SPEECH_ENERGY_THRESHOLD = 25  # Soglia energia per rilevamento parlato (molto sensibile)
 SILENCE_THRESHOLD = 60  # Frames di silenzio prima di terminare ascolto (~3s per frasi complete)
 
@@ -293,9 +294,9 @@ class VADMonitor:
         self._audio_queue: queue.Queue = queue.Queue(maxsize=1000)  # Buffer limitato
         self._energy_threshold = energy_threshold
         self._last_interrupt_time = 0
-        self._interrupt_cooldown = 0.5  # Minimo 500ms tra interrupt
+        self._interrupt_cooldown = 1.0  # Minimo 1s tra interrupt (era 0.5s, troppo basso)
         self._consecutive_speech_frames = 0
-        self._min_speech_frames = 3  # Richiedi almeno 3 frame consecutivi con voce
+        self._min_speech_frames = 6  # Richiedi almeno 6 frame consecutivi con voce (~300ms, era 3)
     
     def start(self):
         """Avvia il thread di monitoraggio VAD"""
@@ -362,21 +363,40 @@ class VADMonitor:
                 energy = self._calculate_energy(audio_data)
                 
                 # Se TTS è attivo e c'è voce significativa
-                if is_tts_speaking() and energy > self._energy_threshold:
+                tts_on = is_tts_speaking()
+                if tts_on and energy > self._energy_threshold:
                     self._consecutive_speech_frames += 1
                     
                     # Log per debug (ogni 5 frame per non spammare)
                     if self._consecutive_speech_frames % 5 == 1:
-                        logger.debug(f"🎤 [VAD] Voce rilevata durante TTS: energia={energy:.0f}, frames={self._consecutive_speech_frames}")
+                        logger.debug(f"🎤 [VAD] Voce rilevata durante TTS: energia={energy:.0f}, threshold={self._energy_threshold}, frames={self._consecutive_speech_frames}/{self._min_speech_frames}")
                     
                     # Se abbastanza frame consecutivi con voce, interrompi
                     if self._consecutive_speech_frames >= self._min_speech_frames:
                         current_time = time.time()
                         if current_time - self._last_interrupt_time > self._interrupt_cooldown:
-                            logger.info(f"🎤 [VAD] BARGE-IN RILEVATO! Energia={energy:.0f}, frames={self._consecutive_speech_frames}")
+                            logger.info(f"🎤 [VAD] BARGE-IN RILEVATO! Energia={energy:.0f}, threshold={self._energy_threshold}, frames={self._consecutive_speech_frames}/{self._min_speech_frames}, cooldown={self._interrupt_cooldown}s")
+                            # #region agent log - DEBUG VAD barge-in trigger
+                            import json as _json
+                            try:
+                                with open("/app/config/debug.log", "a") as _f:
+                                    _f.write(_json.dumps({"hypothesisId":"VAD-BARGEIN","location":"VADMonitor._monitor_loop","message":"BARGE-IN TRIGGERED","data":{"energy":round(energy,1),"threshold":self._energy_threshold,"consecutive_frames":self._consecutive_speech_frames,"min_frames":self._min_speech_frames,"cooldown":self._interrupt_cooldown},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
+                            except: pass
+                            # #endregion
                             self._interrupt_callback()
                             self._last_interrupt_time = current_time
                             self._consecutive_speech_frames = 0  # Reset
+                elif tts_on and energy > 0:
+                    # #region agent log - DEBUG VAD energy sotto soglia durante TTS
+                    if frame_count % 40 == 0:  # Log ogni ~2s per non spammare
+                        import json as _json
+                        try:
+                            with open("/app/config/debug.log", "a") as _f:
+                                _f.write(_json.dumps({"hypothesisId":"VAD-BELOW","location":"VADMonitor._monitor_loop","message":"Energy sotto soglia durante TTS (NO interrupt)","data":{"energy":round(energy,1),"threshold":self._energy_threshold,"consecutive_frames":self._consecutive_speech_frames},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
+                        except: pass
+                    # #endregion
+                    # Reset contatore se non c'è voce o TTS non attivo
+                    self._consecutive_speech_frames = 0
                 else:
                     # Reset contatore se non c'è voce o TTS non attivo
                     self._consecutive_speech_frames = 0
@@ -1450,13 +1470,15 @@ class ExternalTTSStream(tts.ChunkedStream):
             global _last_tts_time_ms
             _last_tts_time_ms = tts_time_ms
             
-            # ⏱️ LATENCY: Tempo dalla fine domanda all'inizio risposta
+            # ⏱️ LATENCY: Calcola latenze dal fine parlato
             latency_ms = 0
-            speech_to_tts_ms = 0
+            first_audio_ms = 0
             if _last_stt_end_time:
+                # latency_ms = STT end → fine sintesi = tempo fino al primo audio udibile
                 latency_ms = (t_tts_end - _last_stt_end_time) * 1000
-                speech_to_tts_ms = (t_tts_start - _last_stt_end_time) * 1000
-                logger.info(f"⚡ [LATENCY] E2E: {latency_ms:.0f}ms | STT→TTS: {speech_to_tts_ms:.0f}ms")
+                # first_audio_ms = uguale a latency_ms (audio pushato subito dopo sintesi)
+                first_audio_ms = latency_ms
+                logger.info(f"⚡ [LATENCY] Primo audio: {first_audio_ms:.0f}ms dopo fine parlato")
             
             # Emetti l'audio
             if pcm_data:
@@ -1483,10 +1505,10 @@ class ExternalTTSStream(tts.ChunkedStream):
                         "time_ms": int(tts_time_ms),
                         "audio_sec": round(duration, 2)
                     }))
-                    if latency_ms > 0:
+                    if first_audio_ms > 0:
                         asyncio.create_task(send_timing_to_server("latency", {
                             "e2e_ms": int(latency_ms),
-                            "to_first_audio_ms": int(speech_to_tts_ms)
+                            "to_first_audio_ms": int(first_audio_ms)
                         }))
                 else:
                     # Fallback API 1.0.x - usa _event_ch
@@ -3305,7 +3327,7 @@ async def entrypoint(ctx: JobContext):
     global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
     try:
         WAKE_TIMEOUT_SECONDS = int(db_settings.get('wake_timeout_seconds', '30'))
-        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '70'))
+        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '120'))
         SPEECH_ENERGY_THRESHOLD = int(db_settings.get('speech_energy_threshold', '25'))
         SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '60'))
         TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '1.5'))
@@ -3376,6 +3398,8 @@ async def entrypoint(ctx: JobContext):
                 chunk = await self._wrapped.__anext__()
                 if self._first_chunk:
                     self._ttfb = (time.time() - self._t_start) * 1000
+                    global _last_llm_ttft_ms
+                    _last_llm_ttft_ms = self._ttfb
                     logger.info(f"🤖 [LLM] Time to first token: {self._ttfb:.0f}ms")
                     self._first_chunk = False
                 return chunk
@@ -3759,7 +3783,14 @@ FORMATO TTS:
         energy_threshold=VAD_ENERGY_THRESHOLD  # Soglia configurabile da database
     )
     _vad_monitor.start()
-    logger.info("🎤 [VAD] Monitor inizializzato e avviato")
+    logger.info(f"🎤 [VAD] Monitor inizializzato: threshold={VAD_ENERGY_THRESHOLD}, min_frames=6, cooldown=1.0s")
+    # #region agent log - DEBUG VAD init params
+    import json as _json_vad
+    try:
+        with open("/app/config/debug.log", "a") as _f:
+            _f.write(_json_vad.dumps({"hypothesisId":"VAD-INIT","location":"entrypoint:vad_init","message":"VAD Monitor inizializzato con nuovi parametri","data":{"energy_threshold":VAD_ENERGY_THRESHOLD,"min_speech_frames":6,"interrupt_cooldown":1.0,"speech_energy_threshold":SPEECH_ENERGY_THRESHOLD,"silence_threshold":SILENCE_THRESHOLD},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
+    except: pass
+    # #endregion
     
     # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings, session)
     VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings, session)
@@ -3858,11 +3889,11 @@ FORMATO TTS:
                     # #endregion
                     
                     # Se c'è voce significativa durante TTS (non cooldown), interrompi
-                    if tts_active and energy > 70:  # Soglia per barge-in (70 = meno sensibile)
+                    if tts_active and energy > VAD_ENERGY_THRESHOLD:  # Soglia configurabile da DB (era hardcoded 70)
                         # #region agent log - H6: tentativo interrupt
                         try:
                             with open("/app/config/debug.log", "a") as _f:
-                                _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_attempt", "message": "TENTATIVO INTERRUPT", "data": {"energy": round(energy, 1)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
+                                _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_attempt", "message": "TENTATIVO INTERRUPT INLINE", "data": {"energy": round(energy, 1), "vad_threshold": VAD_ENERGY_THRESHOLD}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
                         except: pass
                         # #endregion
                         
@@ -4352,6 +4383,7 @@ FORMATO TTS:
             _turn_stt_end = _last_stt_end_time
             _turn_stt_ms = _last_stt_time_ms
             _turn_llm_ms = (t_llm - t_start) * 1000
+            _turn_llm_ttft = _last_llm_ttft_ms  # TTFT catturato dal TimedLLMStream
             _turn_user_text = user_text
             _turn_agent_text = response_text
             
@@ -4371,12 +4403,14 @@ FORMATO TTS:
                     speech_to_tts_ms = 0
                     if _turn_stt_end:
                         e2e_ms = (t_tts_end_wall - _turn_stt_end) * 1000
+                        # Tempo dalla fine del parlato all'inizio della sintesi TTS
                         speech_to_tts_ms = (t_tts_start_wall - _turn_stt_end) * 1000
                     
                     # Invia record conversazione completo
                     asyncio.create_task(send_conversation_to_server({
                         "stt_ms": int(_turn_stt_ms),
                         "llm_ms": int(_turn_llm_ms),
+                        "llm_ttft_ms": int(_turn_llm_ttft),
                         "tts_ms": int(tts_ms),
                         "e2e_ms": int(e2e_ms),
                         "speech_to_tts_ms": int(speech_to_tts_ms),
@@ -4388,7 +4422,7 @@ FORMATO TTS:
                         "sender": sender_identity or ""
                     }))
                     
-                    logger.info(f"📊 [CONV] STT:{int(_turn_stt_ms)}ms LLM:{int(_turn_llm_ms)}ms TTS:{int(tts_ms)}ms E2E:{int(e2e_ms)}ms STT→TTS:{int(speech_to_tts_ms)}ms")
+                    logger.info(f"📊 [CONV] STT:{int(_turn_stt_ms)}ms TTFT:{int(_turn_llm_ttft)}ms LLM:{int(_turn_llm_ms)}ms TTS:{int(tts_ms)}ms E2E:{int(e2e_ms)}ms Inizio TTS:{int(speech_to_tts_ms)}ms")
                 finally:
                     set_tts_speaking(False)
             
