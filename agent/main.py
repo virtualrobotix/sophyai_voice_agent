@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import uuid
 import threading
 import queue
@@ -17,15 +18,7 @@ import json
 import aiohttp
 from loguru import logger
 
-# #region debug logging
-# Debug log disabilitato in Docker - usa solo logger
-def debug_log(hypothesis_id, location, message, data=None):
-    """Debug log - ora usa solo il logger standard"""
-    try:
-        logger.debug(f"[{hypothesis_id}] {location}: {message} | {data}")
-    except Exception:
-        pass  # Ignora errori di logging
-# #endregion
+
 from livekit.agents import (
     JobContext,
     JobRequest,
@@ -79,6 +72,12 @@ _agent_session_global = None  # Sessione agent per TTS
 _human_participants_count = 1  # Numero di partecipanti umani (esclude agent)
 _force_agent_response = False  # Se True, l'agent risponde sempre (toggle dal frontend)
 _room_context = None  # Riferimento al contesto della room per contare partecipanti
+
+# Webhook n8n per disponibilità camere
+ROOM_AVAILABILITY_WEBHOOK_URL = os.getenv(
+    "ROOM_AVAILABILITY_WEBHOOK_URL",
+    "https://n8n.immodrone.it/webhook/aida-search-room-v2",
+)
 
 # ==================== WAKE WORD SYSTEM ====================
 # Struttura per wake session per utente
@@ -138,13 +137,6 @@ def set_tts_speaking(speaking: bool):
     """Imposta lo stato di speaking del TTS usando un file flag"""
     import os
     
-    # #region agent log - H11: traccia chiamate set_tts_speaking
-    import json as _json
-    try:
-        with open("/app/config/debug.log", "a") as _f:
-            _f.write(_json.dumps({"hypothesisId": "H11", "location": "set_tts_speaking", "message": f"SET TTS SPEAKING = {speaking}", "data": {"speaking": speaking, "pid": os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-    except: pass
-    # #endregion
     
     try:
         if speaking:
@@ -172,14 +164,6 @@ def is_tts_speaking() -> bool:
     import os
     result = os.path.exists(_TTS_FLAG_FILE)
     
-    # #region agent log - H11: traccia lettura flag (solo se True)
-    if result:
-        import json as _json
-        try:
-            with open("/app/config/debug.log", "a") as _f:
-                _f.write(_json.dumps({"hypothesisId": "H11", "location": "is_tts_speaking", "message": "READ TTS FLAG = True (file exists)", "data": {"pid": os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-        except: pass
-    # #endregion
     
     return result
 
@@ -195,14 +179,6 @@ def is_in_tts_cooldown() -> bool:
         elapsed = time.time() - end_time
         in_cooldown = elapsed < TTS_COOLDOWN_SECONDS
         
-        # #region agent log - H14: traccia cooldown
-        if in_cooldown:
-            import json as _json
-            try:
-                with open("/app/config/debug.log", "a") as _f:
-                    _f.write(_json.dumps({"hypothesisId": "H14", "location": "is_in_tts_cooldown", "message": "IN TTS COOLDOWN", "data": {"elapsed": round(elapsed, 2), "remaining": round(TTS_COOLDOWN_SECONDS - elapsed, 2)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-            except: pass
-        # #endregion
         
         return in_cooldown
     except:
@@ -376,25 +352,10 @@ class VADMonitor:
                         current_time = time.time()
                         if current_time - self._last_interrupt_time > self._interrupt_cooldown:
                             logger.info(f"🎤 [VAD] BARGE-IN RILEVATO! Energia={energy:.0f}, threshold={self._energy_threshold}, frames={self._consecutive_speech_frames}/{self._min_speech_frames}, cooldown={self._interrupt_cooldown}s")
-                            # #region agent log - DEBUG VAD barge-in trigger
-                            import json as _json
-                            try:
-                                with open("/app/config/debug.log", "a") as _f:
-                                    _f.write(_json.dumps({"hypothesisId":"VAD-BARGEIN","location":"VADMonitor._monitor_loop","message":"BARGE-IN TRIGGERED","data":{"energy":round(energy,1),"threshold":self._energy_threshold,"consecutive_frames":self._consecutive_speech_frames,"min_frames":self._min_speech_frames,"cooldown":self._interrupt_cooldown},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
-                            except: pass
-                            # #endregion
                             self._interrupt_callback()
                             self._last_interrupt_time = current_time
                             self._consecutive_speech_frames = 0  # Reset
                 elif tts_on and energy > 0:
-                    # #region agent log - DEBUG VAD energy sotto soglia durante TTS
-                    if frame_count % 40 == 0:  # Log ogni ~2s per non spammare
-                        import json as _json
-                        try:
-                            with open("/app/config/debug.log", "a") as _f:
-                                _f.write(_json.dumps({"hypothesisId":"VAD-BELOW","location":"VADMonitor._monitor_loop","message":"Energy sotto soglia durante TTS (NO interrupt)","data":{"energy":round(energy,1),"threshold":self._energy_threshold,"consecutive_frames":self._consecutive_speech_frames},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
-                        except: pass
-                    # #endregion
                     # Reset contatore se non c'è voce o TTS non attivo
                     self._consecutive_speech_frames = 0
                 else:
@@ -1184,37 +1145,12 @@ class RemoteLLMStream(llm.LLMStream):
         self._llm = llm_instance
         self._chat_ctx = chat_ctx
     
-    # #region agent log - debug helper
-    def _debug_log(self, hypothesis_id, location, message, data=None):
-        import json, time, os
-        try:
-            log_path = "/app/config/debug.log"
-            os.makedirs(os.path.dirname(log_path), exist_ok=True)
-            with open(log_path, "a") as f:
-                f.write(json.dumps({"hypothesisId": hypothesis_id, "location": location, "message": message, "data": data, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-        except: pass
-    # #endregion
     
     async def _run(self) -> None:
         logger.info("RemoteLLMStream._run() iniziato")
-        # #region agent log - H1: entry point
-        self._debug_log("H1", "main.py:RemoteLLMStream._run:entry", "Inizio _run()", {"chat_ctx_items": len(list(self._chat_ctx.items))})
-        # #endregion
         
         # Estrai l'ultimo messaggio utente dal contesto
         user_message = ""
-        # #region agent log - H9: debug chat_ctx
-        import json as _json
-        try:
-            _log_path = "/app/config/debug.log"
-            ctx_items = list(self._chat_ctx.items)
-            ctx_debug = []
-            for msg in ctx_items:
-                ctx_debug.append({"role": getattr(msg, 'role', 'unknown'), "content_type": type(getattr(msg, 'content', None)).__name__, "content_preview": str(getattr(msg, 'content', ''))[:100]})
-            with open(_log_path, "a") as _f:
-                _f.write(_json.dumps({"hypothesisId": "H9", "location": "RemoteLLMStream:chat_ctx", "message": "Contenuto chat_ctx", "data": {"num_items": len(ctx_items), "items": ctx_debug}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-        except: pass
-        # #endregion
         
         for msg in reversed(list(self._chat_ctx.items)):
             if hasattr(msg, 'role') and msg.role == "user":
@@ -1232,22 +1168,13 @@ class RemoteLLMStream(llm.LLMStream):
         if not user_message:
             user_message = "Ciao"
         
-        # #region agent log - H2: messaggio estratto
-        self._debug_log("H2", "main.py:RemoteLLMStream._run:user_msg", "Messaggio utente estratto", {"user_message": user_message[:100], "length": len(user_message)})
-        # #endregion
         
         logger.info(f"RemoteLLM: invio messaggio al server remoto: {user_message[:50]}...")
         
         try:
             # Chiama il server remoto
-            # #region agent log - H2: pre-call
-            self._debug_log("H2", "main.py:RemoteLLMStream._run:pre_call", "Prima della chiamata al server remoto", {"server_url": self._llm._server_url})
-            # #endregion
             response = await self._llm._remote_llm.chat(user_message)
             
-            # #region agent log - H3: post-call
-            self._debug_log("H3", "main.py:RemoteLLMStream._run:post_call", "Risposta ricevuta", {"has_text": bool(response.text), "text_len": len(response.text) if response.text else 0})
-            # #endregion
             
             if response.text:
                 logger.info(f"RemoteLLM: risposta ricevuta ({len(response.text)} chars)")
@@ -1598,9 +1525,6 @@ class VibeVoiceLiveKit(tts.TTS):
         return self.language
     
     def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "VibeVoiceTTSStream":
-        # #region debug log - synthesize entry
-        debug_log("A", "main.py:304", "VibeVoiceLiveKit.synthesize() ENTRY", {"text": text[:50], "text_length": len(text), "language": self.language})
-        # #endregion
         # Se auto_language è attivo, usa la lingua rilevata
         current_lang = self.get_current_language()
         if current_lang != self.language:
@@ -1608,9 +1532,6 @@ class VibeVoiceLiveKit(tts.TTS):
             self.language = current_lang
         
         stream = VibeVoiceTTSStream(self, text, conn_options)
-        # #region debug log - synthesize exit
-        debug_log("A", "main.py:311", "VibeVoiceLiveKit.synthesize() EXIT", {"returned_stream": type(stream).__name__})
-        # #endregion
         return stream
 
 
@@ -1626,9 +1547,6 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
         import subprocess
         import uuid
         
-        # #region debug log - TTS stream start
-        debug_log("E", "main.py:303", "VibeVoiceTTSStream._run() ENTRY", {"text_length": len(self._text), "has_output_emitter": output_emitter is not None, "text_preview": self._text[:50]})
-        # #endregion
         
         try:
             t_tts_start = time.time()
@@ -1646,13 +1564,7 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
             
             # Prova il server TTS esterno
             try:
-                # #region debug log - check server
-                debug_log("B", "main.py:320", "PRIMA _check_server()", {})
-                # #endregion
                 server_available = await self._tts_instance._check_server()
-                # #region debug log - server check result
-                debug_log("B", "main.py:320", "DOPO _check_server()", {"server_available": server_available})
-                # #endregion
                 
                 if server_available:
                     # Usa il server TTS esterno
@@ -1665,37 +1577,22 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                             "engine": "vibevoice"
                         }
                         
-                        # #region debug log - TTS server request
-                        debug_log("B", "main.py:334", "PRIMA POST a TTS server", {"url": f"{self._tts_instance.tts_server_url}/synthesize", "payload_text": payload["text"]})
-                        # #endregion
                         async with session.post(
                             f"{self._tts_instance.tts_server_url}/synthesize",
                             json=payload,
                             timeout=aiohttp.ClientTimeout(total=60)
                         ) as resp:
-                            # #region debug log - TTS server response
-                            debug_log("B", "main.py:339", "DOPO POST a TTS server", {"status": resp.status, "headers": dict(resp.headers)})
-                            # #endregion
                             if resp.status == 200:
                                 pcm_data = await resp.read()
                                 engine = resp.headers.get("X-Engine", "unknown")
-                                # #region debug log - audio received
-                                debug_log("B", "main.py:342", "Audio ricevuto da TTS server", {"pcm_size": len(pcm_data) if pcm_data else 0, "engine": engine})
-                                # #endregion
                                 logger.info(f"🎤 [VibeVoice] Sintesi via TTS Server (engine={engine})")
                             else:
                                 error = await resp.text()
-                                # #region debug log - TTS server error
-                                debug_log("B", "main.py:345", "ERRORE TTS server", {"status": resp.status, "error": error})
-                                # #endregion
                                 raise Exception(f"TTS Server error: {error}")
                 else:
                     raise Exception("TTS Server non disponibile")
                     
             except Exception as e:
-                # #region debug log - fallback
-                debug_log("B", "main.py:349", "TTS Server fallback a Edge", {"error": str(e), "type": type(e).__name__})
-                # #endregion
                 # Fallback a Edge TTS locale
                 logger.warning(f"⚠️ TTS Server non disponibile ({e}), uso Edge TTS locale")
                 
@@ -1732,9 +1629,6 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
             tts_time_ms = (t_tts_end - t_tts_start) * 1000
             
             if pcm_data:
-                # #region debug log - audio ready
-                debug_log("C", "main.py:385", "PCM audio pronto per emissione", {"pcm_size": len(pcm_data), "samples": len(pcm_data) // 2})
-                # #endregion
                 req_id = str(uuid.uuid4())
                 seg_id = str(uuid.uuid4())
                 
@@ -1750,9 +1644,6 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                 
                 # Emetti audio
                 if output_emitter is not None:
-                    # #region debug log - emit via output_emitter
-                    debug_log("C", "main.py:400", "PRIMA output_emitter.initialize()", {"request_id": req_id})
-                    # #endregion
                     output_emitter.initialize(
                         request_id=req_id,
                         sample_rate=24000,
@@ -1764,31 +1655,17 @@ class VibeVoiceTTSStream(tts.ChunkedStream):
                     output_emitter.push(pcm_data)
                     output_emitter.end_segment()
                     output_emitter.end_input()
-                    # #region debug log - emit completed
-                    debug_log("C", "main.py:410", "DOPO output_emitter.end_input() - audio emesso", {})
-                    # #endregion
                 else:
-                    # #region debug log - emit via event_ch
-                    debug_log("C", "main.py:412", "PRIMA self._event_ch.send()", {"request_id": req_id})
-                    # #endregion
                     audio_event = tts.SynthesizedAudio(
                         frame=frame,
                         request_id=req_id,
                         is_final=True
                     )
                     await self._event_ch.send(audio_event)
-                    # #region debug log - event sent
-                    debug_log("C", "main.py:417", "DOPO self._event_ch.send() - audio event inviato", {})
-                    # #endregion
             else:
-                # #region debug log - no audio
-                debug_log("C", "main.py:384", "Nessun PCM audio generato", {})
-                # #endregion
+                pass
                     
         except Exception as e:
-            # #region debug log - exception
-            debug_log("D", "main.py:420", "ECCEZIONE in VibeVoiceTTSStream._run()", {"error": str(e), "type": type(e).__name__})
-            # #endregion
             logger.error(f"❌ [VibeVoice] Errore: {e}")
             raise
 
@@ -1826,9 +1703,6 @@ class EdgeTTS(tts.TTS):
         return self.VOICES_BY_LANGUAGE.get(language, self.default_voice)
     
     def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "EdgeTTSStream":
-        # #region debug log - EdgeTTS synthesize entry
-        debug_log("A", "main.py:529", "EdgeTTS.synthesize() ENTRY", {"text": text[:50], "text_length": len(text), "voice": self.voice})
-        # #endregion
         # Se auto_language è attivo, usa la lingua rilevata globalmente
         if self.auto_language:
             current_voice = self.get_voice_for_language(_detected_language)
@@ -1837,9 +1711,6 @@ class EdgeTTS(tts.TTS):
                 self.voice = current_voice
         
         stream = EdgeTTSStream(self, text, conn_options)
-        # #region debug log - EdgeTTS synthesize exit
-        debug_log("A", "main.py:537", "EdgeTTS.synthesize() EXIT", {"returned_stream": type(stream).__name__})
-        # #endregion
         return stream
 
 
@@ -1856,9 +1727,6 @@ class EdgeTTSStream(tts.ChunkedStream):
         import subprocess
         import uuid
         
-        # #region debug log - EdgeTTS stream start
-        debug_log("E", "main.py:548", "EdgeTTSStream._run() ENTRY", {"text_length": len(self._text), "has_output_emitter": output_emitter is not None, "text_preview": self._text[:50]})
-        # #endregion
         
         try:
             # ⏱️ TIMING: Inizio TTS
@@ -1913,14 +1781,8 @@ class EdgeTTSStream(tts.ChunkedStream):
                     )
                     
                     # Prova entrambi i metodi per compatibilità
-                    # #region debug log - audio emission
-                    debug_log("C", "main.py:603", "PRIMA emissione audio EdgeTTS", {"has_output_emitter": output_emitter is not None, "has_event_ch": hasattr(self, '_event_ch'), "pcm_size": len(pcm_data)})
-                    # #endregion
                     if output_emitter is not None:
                         # API 1.3.x
-                        # #region debug log - output_emitter path
-                        debug_log("C", "main.py:605", "Usando output_emitter path", {"request_id": req_id})
-                        # #endregion
                         output_emitter.initialize(
                             request_id=req_id,
                             sample_rate=24000,
@@ -1932,23 +1794,14 @@ class EdgeTTSStream(tts.ChunkedStream):
                         output_emitter.push(pcm_data)
                         output_emitter.end_segment()
                         output_emitter.end_input()
-                        # #region debug log - output_emitter completed
-                        debug_log("C", "main.py:615", "output_emitter.end_input() completato", {})
-                        # #endregion
                     else:
                         # API 1.0.x
-                        # #region debug log - event_ch path
-                        debug_log("C", "main.py:617", "Usando _event_ch path", {"request_id": req_id})
-                        # #endregion
                         audio_event = tts.SynthesizedAudio(
                             frame=frame,
                             request_id=req_id,
                             is_final=True
                         )
                         await self._event_ch.send(audio_event)
-                        # #region debug log - event_ch sent
-                        debug_log("C", "main.py:623", "_event_ch.send() completato", {})
-                        # #endregion
                     
                     # ⏱️ TIMING: Fine TTS
                     t_tts_end = time.time()
@@ -1977,9 +1830,6 @@ class EdgeTTSStream(tts.ChunkedStream):
                         }))
                     
         except Exception as e:
-            # #region debug log - EdgeTTS exception
-            debug_log("D", "main.py:638", "ECCEZIONE in EdgeTTSStream._run()", {"error": str(e), "type": type(e).__name__})
-            # #endregion
             logger.error(f"Errore Edge TTS: {e}")
             import traceback
             traceback.print_exc()
@@ -2186,9 +2036,6 @@ class WhisperSTT(stt.STT):
         
         logger.info(f"🎤 [STT] Tempo: {stt_time_ms:.0f}ms | Lingua: {detected_lang} | Trascritto: \"{text}\"")
         
-        # #region agent log
-        debug_log("H4-STT", "main.py:_recognize_impl", "STT completato", {"text": text[:100] if text else "", "lang": detected_lang, "time_ms": int(stt_time_ms)})
-        # #endregion
         
         # Invia timing stats al server
         asyncio.create_task(send_timing_to_server("stt", {"time_ms": int(stt_time_ms)}))
@@ -2362,9 +2209,6 @@ def create_chatterbox_livekit_wrapper(
             self.auto_language = _auto_language
         
         def synthesize(self, text: str, *, conn_options: APIConnectOptions = APIConnectOptions()) -> "ChatterboxTTSStream":
-            # #region debug log - hypothesis D
-            debug_log("D", "main.py:892", "ChatterboxLiveKit.synthesize chiamato", {"text_preview": text[:50], "tts_type": "ChatterboxLiveKit"})
-            # #endregion
             # Se auto_language è attivo, usa la lingua rilevata
             if self.auto_language:
                 current_lang = _detected_language or self.language
@@ -2926,6 +2770,95 @@ Scrivi solo testo semplice e discorsivo."""
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
         return ""
 
+    @function_tool(description="Controlla la disponibilità delle camere in hotel per un periodo. Usa questo tool quando l'utente chiede camere libere, disponibilità o vuole cercare camere tra una data di arrivo e una di partenza.")
+    async def check_room_availability(
+        self,
+        context: RunContext,
+        start_date: str,
+        end_date: str,
+        count: int = 2
+    ) -> str:
+        """Verifica disponibilità camere tramite webhook n8n.
+
+        Args:
+            context: Contesto di esecuzione dell'agent.
+            start_date: Data check-in in formato YYYY-MM-DD.
+            end_date: Data check-out in formato YYYY-MM-DD.
+            count: Numero ospiti/camere richieste.
+        """
+        try:
+            start_date = start_date.strip()
+            end_date = end_date.strip()
+
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", start_date):
+                return "La data di arrivo non e valida. Usa il formato anno mese giorno, per esempio duemilaventisei trattino zero cinque trattino diciannove."
+
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", end_date):
+                return "La data di partenza non e valida. Usa il formato anno mese giorno, per esempio duemilaventisei trattino zero cinque trattino ventisei."
+
+            if count <= 0:
+                count = 1
+
+            search_room_value = f'Start="{start_date}" End="{end_date}" Count="{count}"'
+
+            logger.info(
+                "🏨 check_room_availability: start={} end={} count={}",
+                start_date,
+                end_date,
+                count,
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    ROOM_AVAILABILITY_WEBHOOK_URL,
+                    params={"SEARCH_ROOM_SB": search_room_value},
+                    json={},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    status = response.status
+                    body_text = await response.text()
+
+            if status >= 400:
+                logger.error(
+                    "🏨 Webhook disponibilita camere errore: status={} body={}",
+                    status,
+                    body_text[:500],
+                )
+                return "Non riesco a verificare la disponibilita camere in questo momento. Riprova tra poco."
+
+            # Prova parsing JSON; in fallback usa testo grezzo
+            parsed_payload = None
+            try:
+                parsed_payload = json.loads(body_text) if body_text else {}
+            except Exception:
+                parsed_payload = None
+
+            if parsed_payload is None:
+                clean_text = body_text.strip()
+                if not clean_text:
+                    return "Ho inviato la richiesta disponibilita camere, ma il sistema non ha restituito dettagli."
+                return f"Risultato disponibilita camere: {clean_text}"
+
+            if isinstance(parsed_payload, dict):
+                for key in ("message", "result", "response", "text"):
+                    if key in parsed_payload and parsed_payload.get(key):
+                        return str(parsed_payload[key])
+                return json.dumps(parsed_payload, ensure_ascii=True)
+
+            if isinstance(parsed_payload, list):
+                if not parsed_payload:
+                    return "Non risultano camere disponibili nel periodo richiesto."
+                return json.dumps(parsed_payload, ensure_ascii=True)
+
+            return str(parsed_payload)
+
+        except asyncio.TimeoutError:
+            logger.warning("🏨 Timeout webhook disponibilita camere")
+            return "La verifica disponibilita camere sta impiegando troppo tempo. Riprova tra poco."
+        except Exception as e:
+            logger.error(f"Errore check_room_availability: {e}")
+            return "Si e verificato un errore durante il controllo disponibilita camere."
+
 
 async def handle_video_analysis(
     analysis_type: str,
@@ -3187,45 +3120,69 @@ async def load_settings_from_server() -> dict:
         "elevenlabs_model": "eleven_multilingual_v2",
         "elevenlabs_stability": "50",
         "elevenlabs_similarity": "75",
+        "sip_context_injection": "",
     }
     
+    server_candidates = []
+    web_server_url = os.getenv("WEB_SERVER_URL", "").strip()
+    if web_server_url:
+        server_candidates.append(web_server_url.rstrip("/"))
+    server_candidates.extend([
+        "http://voice-agent-web:8080",
+        "http://host.docker.internal:8080",
+        "https://host.docker.internal:8443",
+        "http://127.0.0.1:8080",
+    ])
+    # Dedup mantenendo ordine
+    server_candidates = list(dict.fromkeys(server_candidates))
+
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    connector = aiohttp.TCPConnector(ssl=ssl_context)
+
+    loaded = False
+    last_error = ""
     try:
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
-        connector = aiohttp.TCPConnector(ssl=ssl_context)
         async with aiohttp.ClientSession(connector=connector) as session:
-            # Carica settings
-            async with session.get(
-                "https://host.docker.internal:8443/api/settings",
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    settings.update(data)
-                    logger.info(f"📥 Settings caricati da database")
-            
-            # Carica prompt
-            async with session.get(
-                "https://host.docker.internal:8443/api/prompt",
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    settings["system_prompt"] = data.get("prompt", "")
-            
-            # Carica context
-            async with session.get(
-                "https://host.docker.internal:8443/api/context",
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    settings["context_injection"] = data.get("context", "")
-                    
+            for base_url in server_candidates:
+                try:
+                    async with session.get(
+                        f"{base_url}/api/settings",
+                        timeout=aiohttp.ClientTimeout(total=5)
+                    ) as resp:
+                        if resp.status != 200:
+                            raise RuntimeError(f"/api/settings status={resp.status}")
+                        data = await resp.json()
+                        settings.update(data)
+
+                    async with session.get(
+                        f"{base_url}/api/prompt",
+                        timeout=aiohttp.ClientTimeout(total=5)
+                    ) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            settings["system_prompt"] = data.get("prompt", "")
+
+                    async with session.get(
+                        f"{base_url}/api/context",
+                        timeout=aiohttp.ClientTimeout(total=5)
+                    ) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            settings["context_injection"] = data.get("context", "")
+
+                    loaded = True
+                    logger.info(f"📥 Settings caricati da database via {base_url}")
+                    break
+                except Exception as endpoint_error:
+                    last_error = str(endpoint_error)
+                    continue
     except Exception as e:
-        logger.warning(f"⚠️ Impossibile caricare settings da DB: {e}")
+        last_error = str(e)
+
+    if not loaded:
+        logger.warning(f"⚠️ Impossibile caricare settings da DB: {last_error}")
     
     return settings
 
@@ -3236,30 +3193,17 @@ async def request_handler(request: JobRequest) -> AutoSubscribe:
     Accetta automaticamente i job nelle room SIP per permettere all'agent
     di rispondere alle chiamate telefoniche.
     """
-    # #region agent log
-    import json as _json
-    from pathlib import Path as _Path
-    _log_path = _Path(__file__).parent.parent / ".cursor" / "debug.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:entry","message":"Job request received","data":{"room_name":request.room.name,"job_id":request.id},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
-    # #endregion
     
     room_name = request.room.name
     
     # Accetta automaticamente job in room SIP
     if room_name.startswith("sip-") or room_name == "sip-call":
         logger.info(f"📞 Accetto automaticamente job SIP per room: {room_name}")
-        # #region agent log
-        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:sip_accept","message":"Accepting SIP job","data":{"room_name":room_name},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
-        # #endregion
         await request.accept()
         return AutoSubscribe.SUBSCRIBE_ALL
     
     # Per altre room, accetta normalmente (dispatch esplicito)
     logger.info(f"✅ Accetto job per room: {room_name}")
-    # #region agent log
-    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"agent/main.py:request_handler:normal_accept","message":"Accepting normal job","data":{"room_name":room_name},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-E"})+"\n")
-    # #endregion
     await request.accept()
     return AutoSubscribe.SUBSCRIBE_ALL
 
@@ -3275,7 +3219,7 @@ async def entrypoint(ctx: JobContext):
                        if p.kind == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT]
     if existing_agents:
         logger.warning(f"⚠️ Room {ctx.room.name} ha già {len(existing_agents)} agent(s), questo agent si disconnette")
-        await ctx.disconnect()
+        ctx.shutdown(reason="duplicate-agent")
         return
     
     logger.info(f"Agent connesso alla room: {ctx.room.name}")
@@ -3316,15 +3260,32 @@ async def entrypoint(ctx: JobContext):
     # Carica impostazioni dal database
     db_settings = await load_settings_from_server()
     logger.info(f"📥 LLM Provider: {db_settings.get('llm_provider', 'ollama')}")
-    
-    # #region agent log
-    import json as _json_debug
-    _debug_config_path = "/app/config/agent_debug.log"
+
+    # Risolvi contesto: per SIP usa il numero chiamato, per web usa il default
     try:
-        with open(_debug_config_path, "a") as _df:
-            _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:db_settings","message":"Settings caricati dal server","data":{"tts_engine":db_settings.get("tts_engine"),"tts_language":db_settings.get("tts_language"),"vad_energy_threshold":db_settings.get("vad_energy_threshold"),"speech_energy_threshold":db_settings.get("speech_energy_threshold"),"silence_threshold":db_settings.get("silence_threshold"),"tts_cooldown_seconds":db_settings.get("tts_cooldown_seconds"),"wake_timeout_seconds":db_settings.get("wake_timeout_seconds")},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D","runId":"post-fix"})+"\n")
-    except: pass
-    # #endregion
+        import aiohttp
+        import os
+        web_base = os.getenv("WEB_SERVER_URL", "http://voice-agent-web:8080").rstrip("/")
+
+        if _is_sip_call:
+            resolve_url = f"{web_base}/api/sip/context/resolve?room_name={urllib.parse.quote(room_name, safe='')}"
+        else:
+            resolve_url = f"{web_base}/api/sip/context/resolve?called_number=__default__"
+
+        async with aiohttp.ClientSession() as _ctx_session:
+            async with _ctx_session.get(resolve_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                if resp.status == 200:
+                    payload = await resp.json()
+                    sip_context = (payload.get("context") or "").strip()
+                    if sip_context:
+                        db_settings["sip_context_injection"] = sip_context
+                        logger.info(
+                            f"🏨 Context risolto per {'SIP ' + str(payload.get('matched_number')) if _is_sip_call else 'default'}: "
+                            f"{len(sip_context)} caratteri"
+                        )
+    except Exception as e:
+        logger.warning(f"⚠️ Impossibile risolvere context per room {room_name}: {e}")
+    
     
     # Applica Voice Settings dalle impostazioni caricate
     global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
@@ -3336,18 +3297,14 @@ async def entrypoint(ctx: JobContext):
         TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '1.5'))
         logger.info(f"🎙️ Voice Settings: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
         
-        # #region agent log
-        try:
-            with open(_debug_config_path, "a") as _df:
-                _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:vad_applied","message":"VAD settings applicati","data":{"WAKE_TIMEOUT":WAKE_TIMEOUT_SECONDS,"VAD_ENERGY":VAD_ENERGY_THRESHOLD,"SPEECH_ENERGY":SPEECH_ENERGY_THRESHOLD,"SILENCE":SILENCE_THRESHOLD,"TTS_COOLDOWN":TTS_COOLDOWN_SECONDS},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C","runId":"post-fix"})+"\n")
-        except: pass
-        # #endregion
     except Exception as e:
         logger.warning(f"⚠️ Errore parsing voice settings: {e}, uso default")
     
     # Inizializza LLM in base al provider configurato
     llm_provider = db_settings.get("llm_provider", "ollama")
     
+    llm_chat_extra_kwargs = None
+
     if llm_provider == "remote" and db_settings.get("remote_server_url"):
         # Usa Server Remoto Custom con adapter LiveKit-compatible
         remote_url = db_settings.get("remote_server_url", "")
@@ -3376,12 +3333,20 @@ async def entrypoint(ctx: JobContext):
         # Usa Ollama (default)
         ollama_base_url = config.ollama.host + "/v1"
         ollama_model = db_settings.get("ollama_model", config.ollama.model)
+        ollama_extra_body = None
+        if str(ollama_model).lower().startswith("qwen3"):
+            # Qwen3 in modalita' "thinking" aumenta molto la latenza e causa timeout.
+            ollama_extra_body = {"think": False}
+            llm_chat_extra_kwargs = {"extra_body": ollama_extra_body}
         
-        base_llm = openai.LLM(
-            model=ollama_model,
-            base_url=ollama_base_url,
-            api_key="ollama",  # Ollama non richiede API key
-        )
+        ollama_llm_kwargs = {
+            "model": ollama_model,
+            "base_url": ollama_base_url,
+            "api_key": "ollama",  # Ollama non richiede API key
+        }
+        if ollama_extra_body:
+            ollama_llm_kwargs["extra_body"] = ollama_extra_body
+        base_llm = openai.LLM(**ollama_llm_kwargs)
         logger.info(f"🦙 LLM: Ollama ({ollama_model})")
     
     # Wrapper per timing LLM - usa callback su eventi stream
@@ -3482,9 +3447,6 @@ async def entrypoint(ctx: JobContext):
         tts_language = config.tts.vibevoice_language
         logger.info(f"⚙️ TTS config da env: engine={tts_engine}, language={tts_language}")
     
-    # #region debug log - hypothesis D
-    debug_log("D", "main.py:1028", "Configurazione TTS letta", {"engine": tts_engine, "language": tts_language, "from_file": bool(tts_from_file), "file_content": tts_from_file})
-    # #endregion
     
     logger.info(f"🔊 ======================================")
     logger.info(f"🔊 CONFIGURAZIONE TTS")
@@ -3607,16 +3569,10 @@ async def entrypoint(ctx: JobContext):
                 auto_language=True
             )
             logger.info(f"🎭 TTS attivo: Chatterbox (model={chatterbox_model}, language={chatterbox_language})")
-            # #region debug log - hypothesis A
-            debug_log("A", "main.py:1098", "Chatterbox TTS creato con successo", {"tts_type": type(my_tts).__name__, "model": chatterbox_model, "language": chatterbox_language})
-            # #endregion
         except Exception as e:
             logger.error(f"❌ Errore configurazione Chatterbox: {e}")
             import traceback
             traceback.print_exc()
-            # #region debug log - hypothesis A
-            debug_log("A", "main.py:1100", "Chatterbox fallito, fallback a EdgeTTS", {"error": str(e), "error_type": type(e).__name__})
-            # #endregion
             my_tts = EdgeTTS(voice=config.tts.edge_voice, auto_language=True)
     else:
         # Default: Edge TTS
@@ -3627,16 +3583,6 @@ async def entrypoint(ctx: JobContext):
     
     logger.info(f"🔊 ======================================")
     
-    # #region debug log - hypothesis B
-    debug_log("B", "main.py:1111", "TTS finale prima di creare Agent", {"tts_type": type(my_tts).__name__, "tts_module": type(my_tts).__module__, "tts_str": str(my_tts)[:100]})
-    # #endregion
-    
-    # #region agent log
-    try:
-        with open("/app/config/agent_debug.log", "a") as _df:
-            _df.write(_json_debug.dumps({"location":"agent/main.py:entrypoint:tts_selected","message":"TTS engine finale selezionato","data":{"tts_engine_config":tts_engine,"tts_type_actual":type(my_tts).__name__,"tts_language":tts_language,"source":"file" if tts_from_file else ("db" if db_settings.get("tts_engine") else "env")},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-A","runId":"post-fix"})+"\n")
-    except: pass
-    # #endregion
     
     # ⏱️ Imposta info componenti per conversation tracking
     global _component_info
@@ -3693,6 +3639,13 @@ Hai accesso a webcam e screen sharing. Quando l'utente ti chiede di:
 - Descrivere l'ambiente o la stanza: usa describe_environment
 Usa sempre le funzioni appropriate quando l'utente fa richieste visive.
 
+CAPACITÀ HOTEL:
+Quando l'utente chiede disponibilità camere, camere libere o ricerca camere tra date specifiche,
+usa la funzione check_room_availability passando:
+- start_date in formato YYYY-MM-DD
+- end_date in formato YYYY-MM-DD
+- count come numero richiesto
+
 STILE:
 - Rispondi come un amico esperto: diretto, chiaro, utile
 - Se non sai qualcosa, dillo in 5 parole
@@ -3714,6 +3667,11 @@ FORMATO TTS:
     if context_injection:
         system_prompt = f"{system_prompt}\n\n--- INFORMAZIONI AGGIUNTIVE ---\n{context_injection}"
         logger.info(f"📝 Context injection aggiunto: {len(context_injection)} caratteri")
+
+    sip_context_injection = db_settings.get("sip_context_injection", "").strip()
+    if sip_context_injection:
+        system_prompt = f"{system_prompt}\n\n--- CONTESTO SIP PER NUMERO CHIAMATO ---\n{sip_context_injection}"
+        logger.info(f"🏨 Context SIP aggiunto: {len(sip_context_injection)} caratteri")
     
     logger.info(f"📝 System prompt: {len(system_prompt)} caratteri")
     
@@ -3730,9 +3688,6 @@ FORMATO TTS:
         tts=my_tts,
     )
     
-    # #region debug log - hypothesis C
-    debug_log("C", "main.py:1151", "Agent creato, verifico TTS passato", {"agent_tts_type": type(agent.tts).__name__ if hasattr(agent, 'tts') else "no_tts_attr"})
-    # #endregion
     
     # Verifica tools registrati
     if hasattr(agent, '_tools') and agent._tools:
@@ -3787,13 +3742,6 @@ FORMATO TTS:
     )
     _vad_monitor.start()
     logger.info(f"🎤 [VAD] Monitor inizializzato: threshold={VAD_ENERGY_THRESHOLD}, min_frames=6, cooldown=1.0s")
-    # #region agent log - DEBUG VAD init params
-    import json as _json_vad
-    try:
-        with open("/app/config/debug.log", "a") as _f:
-            _f.write(_json_vad.dumps({"hypothesisId":"VAD-INIT","location":"entrypoint:vad_init","message":"VAD Monitor inizializzato con nuovi parametri","data":{"energy_threshold":VAD_ENERGY_THRESHOLD,"min_speech_frames":6,"interrupt_cooldown":1.0,"speech_energy_threshold":SPEECH_ENERGY_THRESHOLD,"silence_threshold":SILENCE_THRESHOLD},"timestamp":int(time.time()*1000),"sessionId":"debug-session","runId":"post-fix"}) + "\n")
-    except: pass
-    # #endregion
     
     # Imposta dipendenze per VisionAgent (frame_extractor, llm, settings, session)
     VisionAgent.set_vision_dependencies(frame_extractor, base_llm, db_settings, session)
@@ -3869,55 +3817,20 @@ FORMATO TTS:
                 # Scarta audio sia durante TTS che durante cooldown (per evitare eco)
                 should_discard = tts_active or tts_cooldown
                 
-                # #region agent log - H10/H14: stato TTS flag (SEMPRE se attivo, ogni 50 frame altrimenti)
-                should_log = should_discard or (speech_frames % 50 == 0)
-                if should_log:
-                    import json as _json, os as _os
-                    try:
-                        with open("/app/config/debug.log", "a") as _f:
-                            _f.write(_json.dumps({"hypothesisId": "H10", "location": "process_participant_audio:loop", "message": "Audio frame check", "data": {"tts_active": tts_active, "tts_cooldown": tts_cooldown, "should_discard": should_discard, "energy": round(energy, 1), "buffer_size": len(audio_buffer), "frame": speech_frames, "pid": _os.getpid()}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-                    except: pass
-                # #endregion
                 
                 # ==================== SCARTA AUDIO DURANTE TTS E COOLDOWN ====================
                 # Se il TTS è attivo o siamo in cooldown, SCARTA TUTTO l'audio in ingresso
                 if should_discard:
-                    # #region agent log - H6: TTS attivo
-                    import json as _json
-                    reason = "TTS_ATTIVO" if tts_active else "COOLDOWN"
-                    try:
-                        with open("/app/config/debug.log", "a") as _f:
-                            _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:discard", "message": f"SCARTO AUDIO - {reason}", "data": {"energy": round(energy, 1), "tts_active": tts_active, "tts_cooldown": tts_cooldown}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-                    except: pass
-                    # #endregion
                     
                     # Se c'è voce significativa durante TTS (non cooldown), interrompi
                     if tts_active and energy > VAD_ENERGY_THRESHOLD:  # Soglia configurabile da DB (era hardcoded 70)
-                        # #region agent log - H6: tentativo interrupt
-                        try:
-                            with open("/app/config/debug.log", "a") as _f:
-                                _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_attempt", "message": "TENTATIVO INTERRUPT INLINE", "data": {"energy": round(energy, 1), "vad_threshold": VAD_ENERGY_THRESHOLD}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-                        except: pass
-                        # #endregion
                         
                         logger.info(f"✋ [BARGE-IN] Voce durante TTS (energia: {energy:.0f}) - INTERRUPT")
                         try:
                             await session.interrupt()
                             set_tts_speaking(False)  # Reset flag dopo interrupt
-                            # #region agent log - H6: interrupt success
-                            try:
-                                with open("/app/config/debug.log", "a") as _f:
-                                    _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_success", "message": "INTERRUPT RIUSCITO", "data": {}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-                            except: pass
-                            # #endregion
                             logger.info(f"✋ [BARGE-IN] TTS interrotto")
                         except Exception as e:
-                            # #region agent log - H6: interrupt failed
-                            try:
-                                with open("/app/config/debug.log", "a") as _f:
-                                    _f.write(_json.dumps({"hypothesisId": "H6", "location": "process_participant_audio:interrupt_failed", "message": "INTERRUPT FALLITO", "data": {"error": str(e)}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-                            except: pass
-                            # #endregion
                             logger.error(f"✋ [BARGE-IN] Errore: {e}")
                         request_cancel_llm()
                     # Scarta buffer e resetta contatori
@@ -3954,16 +3867,6 @@ FORMATO TTS:
                             avg_energy = sum(abs(s) for s in audio_samples) / len(audio_samples) if audio_samples else 0
                             max_energy = max(abs(s) for s in audio_samples) if audio_samples else 0
                             
-                            # #region agent log
-                            import json as _json
-                            _log_path = "/app/.cursor/debug.log"
-                            try:
-                                import os as _os
-                                _os.makedirs("/app/.cursor", exist_ok=True)
-                                with open(_log_path, "a") as _f:
-                                    _f.write(_json.dumps({"location":"main.py:transcribe_chunk","message":"Audio chunk ready for Whisper","data":{"bytes":len(audio_bytes),"duration_ms":round(audio_duration_ms),"avg_energy":round(avg_energy),"max_energy":max_energy,"speech_frames_accumulated":speech_frames,"silence_frames_trigger":SILENCE_THRESHOLD},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-AUDIO"})+"\n")
-                            except: pass
-                            # #endregion
                             
                             if is_sip_participant:
                                 logger.info(f"📞 [SIP-AUDIO] {participant_identity}: {len(audio_bytes)} bytes ({audio_duration_ms:.0f}ms), energy avg={avg_energy:.0f} max={max_energy}")
@@ -4205,7 +4108,7 @@ FORMATO TTS:
             set_tts_speaking(False)
 
     async def handle_text_message(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
-        """Gestisce un messaggio testuale - broadcast a tutti, chiama LLM solo se menzionato con @sophyai"""
+        """Gestisce un messaggio testuale dal frontend e genera sempre una risposta agent."""
         # Genera ID univoco per il messaggio utente
         user_message_id = generate_message_id()
         
@@ -4218,11 +4121,11 @@ FORMATO TTS:
         
         if is_wake:
             logger.info(f"🎤 Wake session attivata da messaggio testuale di {sender_identity}")
-        
-        if not should_respond:
-            # L'agent non è stato menzionato e non c'è wake session attiva
-            logger.info(f"💬 Messaggio senza menzione/wake, non rispondo: {user_text[:50]}...")
-            return
+
+        # Per i messaggi testuali espliciti dal frontend rispondiamo sempre.
+        # Il gate wake/mention resta valido per il solo canale vocale.
+        if not should_respond or not cleaned_text.strip():
+            cleaned_text = user_text
         
         # Genera ID univoco per la risposta dell'agent
         text_response_id = generate_message_id()
@@ -4237,45 +4140,119 @@ FORMATO TTS:
             chat_ctx = llm.ChatContext()
             chat_ctx.add_message(role="system", content=agent._instructions)
             chat_ctx.add_message(role="user", content=cleaned_text)
+
+            # Passa i tools dell'agent al provider LLM per abilitare function calling su chat testuale.
+            tools_for_chat = []
+            raw_tools = getattr(agent, "_tools", None)
+            if isinstance(raw_tools, dict):
+                tools_for_chat = list(raw_tools.values())
+            elif isinstance(raw_tools, (list, tuple)):
+                tools_for_chat = list(raw_tools)
             
             # Chiama LLM
             t_start = time.time()
             response_text = ""
             llm_cancelled = False
             reset_cancel_llm()  # Reset flag prima di iniziare
-            stream = my_llm.chat(chat_ctx=chat_ctx)
+            llm_conn_options = APIConnectOptions(max_retry=1, retry_interval=1.0, timeout=60.0)
+            stream = my_llm.chat(
+                chat_ctx=chat_ctx,
+                tools=tools_for_chat,
+                conn_options=llm_conn_options,
+                extra_kwargs=llm_chat_extra_kwargs,
+            )
             
-            async for chunk in stream:
-                # Check cancellazione ad ogni chunk
-                if should_cancel_llm():
-                    logger.info("🛑 Risposta LLM ANNULLATA (utente ha interrotto)")
-                    llm_cancelled = True
+            from livekit.agents.llm.chat_context import FunctionCall as _FunctionCall, FunctionCallOutput as _FunctionCallOutput
+
+            MAX_TOOL_ROUNDS = 3
+            for _tool_round in range(MAX_TOOL_ROUNDS + 1):
+                pending_tool_calls = []
+                async for chunk in stream:
+                    if should_cancel_llm():
+                        logger.info("🛑 Risposta LLM ANNULLATA (utente ha interrotto)")
+                        llm_cancelled = True
+                        break
+
+                    if hasattr(chunk, 'delta') and chunk.delta:
+                        d = chunk.delta
+                        if hasattr(d, 'content') and d.content:
+                            response_text += d.content
+                        if hasattr(d, 'tool_calls') and d.tool_calls:
+                            pending_tool_calls.extend(d.tool_calls)
+                    elif hasattr(chunk, 'choices') and chunk.choices:
+                        for choice in chunk.choices:
+                            if hasattr(choice, 'content') and choice.content:
+                                response_text += choice.content
+                            if hasattr(choice, 'tool_calls') and choice.tool_calls:
+                                pending_tool_calls.extend(choice.tool_calls)
+
+                if llm_cancelled:
                     break
-                    
-                if hasattr(chunk, 'delta') and chunk.delta:
-                    # chunk.delta è un ChoiceDelta, il testo è in .content
-                    content = chunk.delta.content if hasattr(chunk.delta, 'content') else str(chunk.delta)
-                    if content:
-                        response_text += content
-            
-            # Se cancellato, non fare TTS
+
+                if not pending_tool_calls:
+                    break
+
+                logger.info(f"🔧 [TOOL] Round {_tool_round+1}: {len(pending_tool_calls)} tool call(s)")
+
+                for tc in pending_tool_calls:
+                    fn_name = tc.name if hasattr(tc, 'name') else "unknown"
+                    fn_args_raw = tc.arguments if hasattr(tc, 'arguments') else "{}"
+                    tc_id = tc.call_id if hasattr(tc, 'call_id') else "unknown"
+                    logger.info(f"🔧 [TOOL] Eseguo {fn_name}({fn_args_raw}) call_id={tc_id}")
+
+                    chat_ctx.insert(_FunctionCall(call_id=tc_id, name=fn_name, arguments=fn_args_raw))
+
+                    tool_result = f"Tool {fn_name} non trovato."
+                    is_error = False
+                    try:
+                        fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
+                        if fn_name == "check_room_availability":
+                            tool_result = await agent.check_room_availability(
+                                context=None,
+                                start_date=fn_args.get("start_date", ""),
+                                end_date=fn_args.get("end_date", ""),
+                                count=int(fn_args.get("count", 2)),
+                            )
+                        else:
+                            logger.warning(f"🔧 [TOOL] Funzione {fn_name} non trovata tra i tools registrati")
+                            is_error = True
+                    except Exception as tool_err:
+                        logger.error(f"🔧 [TOOL] Errore esecuzione {fn_name}: {tool_err}")
+                        tool_result = f"Errore nell'esecuzione del tool: {tool_err}"
+                        is_error = True
+
+                    logger.info(f"🔧 [TOOL] Risultato {fn_name}: {str(tool_result)[:200]}")
+                    chat_ctx.insert(_FunctionCallOutput(call_id=tc_id, name=fn_name, output=str(tool_result), is_error=is_error))
+
+                response_text = ""
+                stream = my_llm.chat(
+                    chat_ctx=chat_ctx,
+                    tools=tools_for_chat,
+                    conn_options=llm_conn_options,
+                    extra_kwargs=llm_chat_extra_kwargs,
+                )
+
             if llm_cancelled:
                 logger.info("🛑 TTS saltato - risposta annullata")
                 return
-            
+
             t_llm = time.time()
             logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
-            
-            # Invia risposta al frontend con ID
+
             await send_callback(response_text, "assistant", text_response_id)
-            
-            # Pronuncia la risposta con tracking TTS in un task separato
+
             set_tts_speaking(True)
             asyncio.create_task(_speak_tts_task(session, response_text))
             
         except Exception as e:
             set_tts_speaking(False)  # Reset in caso di errore
             logger.error(f"Errore gestione messaggio testuale: {e}")
+            try:
+                fallback_id = generate_message_id()
+                fallback_text = "Sto impiegando più tempo del previsto per elaborare la richiesta. Riprova tra pochi secondi."
+                await send_callback(fallback_text, "assistant", fallback_id, "Receptionist")
+            except Exception:
+                pass
     
     async def handle_agent_response_only(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
         """Gestisce solo la risposta dell'agent (messaggio user già inviato da multi-audio)"""
@@ -4292,65 +4269,105 @@ FORMATO TTS:
             chat_ctx = llm.ChatContext()
             chat_ctx.add_message(role="system", content=agent._instructions)
             chat_ctx.add_message(role="user", content=cleaned_text)
+
+            tools_for_chat = []
+            raw_tools = getattr(agent, "_tools", None)
+            if isinstance(raw_tools, dict):
+                tools_for_chat = list(raw_tools.values())
+            elif isinstance(raw_tools, (list, tuple)):
+                tools_for_chat = list(raw_tools)
             
             # Chiama LLM
             t_start = time.time()
             response_text = ""
             llm_cancelled = False
             reset_cancel_llm()  # Reset flag prima di iniziare
-            stream = my_llm.chat(chat_ctx=chat_ctx)
-            
-            async for chunk in stream:
-                # ==================== CHECK CANCELLAZIONE ====================
-                if should_cancel_llm():
-                    logger.info("🛑 [MULTI-AUDIO] Risposta LLM ANNULLATA (utente ha interrotto)")
-                    llm_cancelled = True
-                    break
-                
-                # Debug log rimosso per fix indentazione
-                
-                # Prova prima formato choices (RemoteLLMStream)
-                if hasattr(chunk, 'choices') and chunk.choices:
-                    for choice in chunk.choices:
-                        if hasattr(choice, 'content') and choice.content:
-                            response_text += choice.content
-                # Poi prova formato delta (OpenAI-style) - controlla anche delta.choices
-                elif hasattr(chunk, 'delta') and chunk.delta:
-                    d = chunk.delta
-                    # Prova delta.content direttamente
-                    if hasattr(d, 'content') and d.content:
-                        response_text += d.content
-                    # Prova delta.choices[0].delta.content (formato OpenAI)
-                    elif hasattr(d, 'choices') and d.choices:
-                        for choice in d.choices:
-                            if hasattr(choice, 'delta') and hasattr(choice.delta, 'content') and choice.delta.content:
-                                response_text += choice.delta.content
-                            elif hasattr(choice, 'content') and choice.content:
+            llm_conn_options = APIConnectOptions(max_retry=1, retry_interval=1.0, timeout=60.0)
+            from livekit.agents.llm.chat_context import FunctionCall as _FunctionCall, FunctionCallOutput as _FunctionCallOutput
+
+            stream = my_llm.chat(
+                chat_ctx=chat_ctx,
+                tools=tools_for_chat,
+                conn_options=llm_conn_options,
+                extra_kwargs=llm_chat_extra_kwargs,
+            )
+
+            _MAX_TOOL_ROUNDS = 3
+            for _tround in range(_MAX_TOOL_ROUNDS + 1):
+                _pending_tc = []
+                async for chunk in stream:
+                    if should_cancel_llm():
+                        logger.info("🛑 [MULTI-AUDIO] Risposta LLM ANNULLATA (utente ha interrotto)")
+                        llm_cancelled = True
+                        break
+
+                    if hasattr(chunk, 'delta') and chunk.delta:
+                        d = chunk.delta
+                        if hasattr(d, 'content') and d.content:
+                            response_text += d.content
+                        if hasattr(d, 'tool_calls') and d.tool_calls:
+                            _pending_tc.extend(d.tool_calls)
+                    elif hasattr(chunk, 'choices') and chunk.choices:
+                        for choice in chunk.choices:
+                            if hasattr(choice, 'content') and choice.content:
                                 response_text += choice.content
-            
-            # Se cancellato, non procedere con TTS
+                            if hasattr(choice, 'tool_calls') and choice.tool_calls:
+                                _pending_tc.extend(choice.tool_calls)
+
+                if llm_cancelled:
+                    break
+
+                if not _pending_tc:
+                    break
+
+                logger.info(f"🔧 [MULTI-AUDIO TOOL] Round {_tround+1}: {len(_pending_tc)} tool call(s)")
+
+                for tc in _pending_tc:
+                    fn_name = tc.name if hasattr(tc, 'name') else "unknown"
+                    fn_args_raw = tc.arguments if hasattr(tc, 'arguments') else "{}"
+                    tc_id = tc.call_id if hasattr(tc, 'call_id') else "unknown"
+                    logger.info(f"🔧 [MULTI-AUDIO TOOL] Eseguo {fn_name}({fn_args_raw}) call_id={tc_id}")
+
+                    chat_ctx.insert(_FunctionCall(call_id=tc_id, name=fn_name, arguments=fn_args_raw))
+
+                    tool_result = f"Tool {fn_name} non trovato."
+                    is_error = False
+                    try:
+                        fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
+                        if fn_name == "check_room_availability":
+                            tool_result = await agent.check_room_availability(
+                                context=None,
+                                start_date=fn_args.get("start_date", ""),
+                                end_date=fn_args.get("end_date", ""),
+                                count=int(fn_args.get("count", 2)),
+                            )
+                        else:
+                            logger.warning(f"🔧 [MULTI-AUDIO TOOL] Funzione {fn_name} non trovata")
+                            is_error = True
+                    except Exception as tool_err:
+                        logger.error(f"🔧 [MULTI-AUDIO TOOL] Errore {fn_name}: {tool_err}")
+                        tool_result = f"Errore nell'esecuzione del tool: {tool_err}"
+                        is_error = True
+
+                    logger.info(f"🔧 [MULTI-AUDIO TOOL] Risultato {fn_name}: {str(tool_result)[:200]}")
+                    chat_ctx.insert(_FunctionCallOutput(call_id=tc_id, name=fn_name, output=str(tool_result), is_error=is_error))
+
+                response_text = ""
+                stream = my_llm.chat(
+                    chat_ctx=chat_ctx,
+                    tools=tools_for_chat,
+                    conn_options=llm_conn_options,
+                    extra_kwargs=llm_chat_extra_kwargs,
+                )
+
             if llm_cancelled:
                 logger.info("🛑 [MULTI-AUDIO] TTS saltato - risposta annullata")
                 return
             
             t_llm = time.time()
-            # #region agent log - H7: risposta finale
-            try:
-                _log_path = "/app/config/debug.log"
-                with open(_log_path, "a") as _f:
-                    _f.write(_json.dumps({"hypothesisId": "H7", "location": "handle_agent_response_only:response", "message": "Risposta LLM accumulata", "data": {"response_len": len(response_text), "response_preview": response_text[:100] if response_text else "EMPTY"}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-            except: pass
-            # #endregion
             logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
             
             # Invia risposta al frontend
-            # #region agent log - H8: send_callback
-            try:
-                _log_path = "/app/config/debug.log"
-                with open(_log_path, "a") as _f:
-                    _f.write(_json.dumps({"hypothesisId": "H8", "location": "handle_agent_response_only:send_callback", "message": "Invio a frontend", "data": {"text_len": len(response_text), "text_preview": response_text[:100] if response_text else "EMPTY", "msg_id": text_response_id}, "timestamp": int(time.time()*1000), "sessionId": "debug-session"}) + "\n")
-            except: pass
-            # #endregion
             await send_callback(response_text, "assistant", text_response_id)
             
             # Pronuncia la risposta (pulisci testo per TTS)
@@ -4435,21 +4452,22 @@ FORMATO TTS:
         except Exception as e:
             set_tts_speaking(False)  # Reset in caso di errore
             logger.error(f"Errore gestione risposta agent: {e}")
+            try:
+                fallback_id = generate_message_id()
+                fallback_text = "Sto impiegando più tempo del previsto per elaborare la richiesta. Riprova tra pochi secondi."
+                await send_callback(fallback_text, "assistant", fallback_id, "Receptionist")
+            except Exception:
+                pass
     
     # Messaggio di benvenuto
-    # #region debug log - welcome message
-    debug_log("A", "main.py:991", "PRIMA di session.say() benvenuto", {"text": "Ciao! Come posso aiutarti?", "session_ready": True})
     try:
         set_tts_speaking(True)
         await session.say("Ciao! Come posso aiutarti?")
         set_tts_speaking(False)
-        debug_log("A", "main.py:991", "DOPO session.say() benvenuto - completato senza eccezioni", {})
     except Exception as e:
         set_tts_speaking(False)
-        debug_log("A", "main.py:991", "ERRORE in session.say() benvenuto", {"error": str(e), "type": type(e).__name__})
         logger.error(f"❌ Errore nel messaggio di benvenuto: {e}")
         raise
-    # #endregion
     
     # Mantieni attivo
     await asyncio.Event().wait()

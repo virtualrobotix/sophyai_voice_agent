@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import io
+import json
 import argparse
 import logging
 from typing import Optional
@@ -229,6 +230,39 @@ async def synthesize(request: TTSRequest):
     
     # Usa engine dalla request se specificato, altrimenti quello globale
     engine_to_use = request.engine if request.engine else _tts_type
+    # #region agent log
+    try:
+        _lp = os.environ.get("DEBUG_TTS_LOG", "/app/.cursor/debug-fac0c1.log")
+        _cuda_n = 0
+        _cuda_ok = False
+        try:
+            import torch as _torch
+            _cuda_ok = _torch.cuda.is_available()
+            _cuda_n = _torch.cuda.device_count() if _cuda_ok else 0
+        except Exception:
+            pass
+        _payload = {
+            "sessionId": "fac0c1",
+            "hypothesisId": "H-GPU",
+            "location": "tts_server.py:synthesize",
+            "message": "synth_entry",
+            "data": {
+                "engine_requested": request.engine,
+                "engine_resolved": engine_to_use,
+                "global_tts_type": _tts_type,
+                "cuda_available": _cuda_ok,
+                "cuda_device_count": _cuda_n,
+                "text_len": len(text),
+            },
+            "timestamp": int(time.time() * 1000),
+            "runId": "tts-inproc",
+        }
+        if os.path.isdir(os.path.dirname(_lp)) or os.path.exists(os.path.dirname(_lp)):
+            with open(_lp, "a", encoding="utf-8") as _df:
+                _df.write(json.dumps(_payload, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    # #endregion
     logger.info(f"🎤 Sintesi: '{text[:50]}...' (engine={engine_to_use}, lang={request.language})")
     
     actual_engine_used = engine_to_use  # Tiene traccia dell'engine effettivamente usato
@@ -289,6 +323,29 @@ async def synthesize(request: TTSRequest):
         duration_audio = len(pcm_data) / (24000 * 2)  # 24kHz, 16-bit
         
         logger.info(f"✅ Sintesi completata: {(t_end-t_start)*1000:.0f}ms, audio: {duration_audio:.2f}s")
+        # #region agent log
+        try:
+            _lp = os.environ.get("DEBUG_TTS_LOG", "/app/.cursor/debug-fac0c1.log")
+            _payload = {
+                "sessionId": "fac0c1",
+                "hypothesisId": "H-RESULT",
+                "location": "tts_server.py:synthesize",
+                "message": "synth_success",
+                "data": {
+                    "engine_requested": request.engine,
+                    "engine_actual": actual_engine_used,
+                    "elapsed_ms": int((t_end - t_start) * 1000),
+                    "duration_audio_s": round(duration_audio, 3),
+                },
+                "timestamp": int(time.time() * 1000),
+                "runId": "tts-inproc",
+            }
+            if os.path.isdir(os.path.dirname(_lp)) or os.path.exists(os.path.dirname(_lp)):
+                with open(_lp, "a", encoding="utf-8") as _df:
+                    _df.write(json.dumps(_payload, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        # #endregion
         
         return Response(
             content=pcm_data,
@@ -303,6 +360,29 @@ async def synthesize(request: TTSRequest):
         
     except Exception as e:
         logger.error(f"❌ Errore sintesi: {e}")
+        # #region agent log
+        try:
+            _lp = os.environ.get("DEBUG_TTS_LOG", "/app/.cursor/debug-fac0c1.log")
+            _payload = {
+                "sessionId": "fac0c1",
+                "hypothesisId": "H-RESULT",
+                "location": "tts_server.py:synthesize",
+                "message": "synth_error",
+                "data": {
+                    "engine_requested": request.engine,
+                    "engine_resolved": engine_to_use if "engine_to_use" in locals() else None,
+                    "error_type": type(e).__name__,
+                    "error": str(e)[:400],
+                },
+                "timestamp": int(time.time() * 1000),
+                "runId": "tts-inproc",
+            }
+            if os.path.isdir(os.path.dirname(_lp)) or os.path.exists(os.path.dirname(_lp)):
+                with open(_lp, "a", encoding="utf-8") as _df:
+                    _df.write(json.dumps(_payload, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        # #endregion
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -473,13 +553,18 @@ async def synthesize_kokoro(text: str, language: str = "it", speed: float = 1.0)
         sys.path.insert(0, project_root)
     from agent.tts.kokoro_tts import KokoroTTS
     
-    # Seleziona voce in base alla lingua
-    voice = "if_sara" if language == "it" else "af_bella"
+    # Seleziona voce in base alla lingua (it_sara è la voce italiana Kokoro)
+    voice = "it_sara" if language == "it" else "af_bella"
+    try:
+        import torch as _torch
+        _use_gpu = bool(_torch.cuda.is_available())
+    except Exception:
+        _use_gpu = False
     
-    logger.info(f"🎤 Kokoro TTS: voice={voice}, speed={speed}")
+    logger.info(f"🎤 Kokoro TTS: voice={voice}, speed={speed}, gpu={_use_gpu}")
     
     # Crea istanza e sintetizza
-    kokoro = KokoroTTS(voice=voice, speed=speed)
+    kokoro = KokoroTTS(voice=voice, speed=speed, gpu=_use_gpu)
     
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, kokoro.synthesize, text)
@@ -622,7 +707,8 @@ async def synthesize_qwen(text: str, language: str = "it", speaker: str = "Ryan"
         logger.info("📥 Caricamento modello Qwen TTS...")
         dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        attn_impl = "flash_attention_2" if torch.cuda.is_available() else "sdpa"
+        # sdpa: più stabile nel container; flash_attention_2 può bloccare a lungo in fase di init
+        attn_impl = "sdpa"
         
         _qwen_model = Qwen3TTSModel.from_pretrained(
             "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",

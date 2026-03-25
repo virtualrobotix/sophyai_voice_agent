@@ -1526,6 +1526,32 @@ Authorization: Bearer &lt;token&gt;
                 </div>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🏨</div>
+                <h2 class="card-title">Contesto AI per Numero Telefonico</h2>
+            </div>
+
+            <div class="info-box" style="margin-bottom: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 3px solid #10b981;">
+                <div style="font-weight: 600; margin-bottom: 4px;">🎯 Routing del contesto</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Il contesto viene associato ai numeri configurati nel campo <strong>Numeri di Telefono</strong> del trunk.
+                    In chiamata, l'agent usa automaticamente il contesto del numero chiamato.
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-bottom: 12px;">
+                <button class="btn btn-secondary" onclick="loadHermitageContextTemplate()">📥 Carica Base Hotel Hermitage</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contesto di default (fallback)</label>
+                <textarea class="form-textarea" id="sip-context-default" rows="6" placeholder="Contesto usato quando non c'è una corrispondenza esatta col numero chiamato..."></textarea>
+            </div>
+
+            <div id="sip-phone-contexts-container"></div>
+        </div>
         
         <div class="card">
             <div class="card-header">
@@ -1729,6 +1755,7 @@ Authorization: Bearer &lt;token&gt;
         let ollamaModels = [];
         let openrouterModels = [];
         let selectedTTS = 'edge';
+        let sipPhoneContexts = {};
         
         const stats = {
             stt: { values: [], avg: 0, last: 0, count: 0 },
@@ -1814,6 +1841,25 @@ Authorization: Bearer &lt;token&gt;
             const tab = urlParams.get('tab');
             if (tab) {
                 switchTab(tab);
+            }
+
+            const trunkNumbersInput = document.getElementById('trunk-numbers');
+            if (trunkNumbersInput) {
+                trunkNumbersInput.addEventListener('input', () => {
+                    renderSIPPhoneContextEditors();
+                });
+            }
+
+            const defaultContextInput = document.getElementById('sip-context-default');
+            if (defaultContextInput) {
+                defaultContextInput.addEventListener('input', (event) => {
+                    const value = event.target.value || '';
+                    if (value.trim()) {
+                        sipPhoneContexts.__default__ = value;
+                    } else {
+                        delete sipPhoneContexts.__default__;
+                    }
+                });
             }
         });
 
@@ -1938,10 +1984,6 @@ Authorization: Bearer &lt;token&gt;
                 tts_language: document.getElementById('tts-language').value
             };
             
-            // #region agent log
-            fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings',message:'Saving TTS settings',data:{selectedTTS:selectedTTS,language:settings.tts_language},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
-            // #endregion
-            
             try {
                 // 1. Salva nel database
                 const dbResp = await fetch('/api/settings', {
@@ -1949,10 +1991,6 @@ Authorization: Bearer &lt;token&gt;
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ settings })
                 });
-                
-                // #region agent log
-                fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:dbSaved',message:'DB save response',data:{status:dbResp.status,ok:dbResp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
-                // #endregion
                 
                 // 2. Salva anche nella config file per l'agent
                 const fileResp = await fetch('/api/tts/current', {
@@ -1964,20 +2002,12 @@ Authorization: Bearer &lt;token&gt;
                     })
                 });
                 
-                // #region agent log
-                fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:fileSaved',message:'File save response',data:{status:fileResp.status,ok:fileResp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
-                // #endregion
-                
                 showToast('Impostazioni TTS salvate! Riavvio agent...', 'success');
                 
                 // 3. Riavvia automaticamente l'agent per applicare le modifiche
                 try {
                     const restartResp = await fetch('/api/agent/restart', { method: 'POST' });
                     const restartResult = await restartResp.json();
-                    
-                    // #region agent log
-                    fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveTTSSettings:restart',message:'Agent restart result',data:{status:restartResult.status,message:restartResult.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-A'})}).catch(()=>{});
-                    // #endregion
                     
                     if (restartResult.status === 'ok') {
                         showToast('TTS aggiornato e agent riavviato!', 'success');
@@ -2040,7 +2070,11 @@ Authorization: Bearer &lt;token&gt;
                 <div class="model-item ${m.name === savedModel || m.id === savedModel ? 'selected' : ''}" onclick="selectOllamaModelByIndex(${idx}, this)">
                     <div class="model-info">
                         <div class="model-name">${escapeHtml(m.name)} ${m.name === savedModel || m.id === savedModel ? '✓' : ''}</div>
-                        <div class="model-desc">${formatBytes(m.size)}</div>
+                        <div class="model-desc">
+                            ${m.details?.recommended && !m.details?.installed
+                                ? 'Consigliato (tool calling) - non ancora installato'
+                                : formatBytes(m.size)}
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -2809,10 +2843,6 @@ Authorization: Bearer &lt;token&gt;
                 tts_cooldown_seconds: document.getElementById('tts-cooldown').value
             };
             
-            // #region agent log
-            fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveVoiceSettings',message:'Saving VAD settings',data:settings,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-C'})}).catch(()=>{});
-            // #endregion
-            
             try {
                 // 1. Salva nel database
                 await fetch('/api/settings', {
@@ -2827,10 +2857,6 @@ Authorization: Bearer &lt;token&gt;
                 try {
                     const restartResp = await fetch('/api/agent/restart', { method: 'POST' });
                     const restartResult = await restartResp.json();
-                    
-                    // #region agent log
-                    fetch('http://127.0.0.1:7246/ingest/db176485-9638-4307-a34c-3b19e22d4bc3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.html:saveVoiceSettings:restart',message:'Agent restart result',data:{status:restartResult.status,message:restartResult.message,savedSettings:settings},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-C'})}).catch(()=>{});
-                    // #endregion
                     
                     if (restartResult.status === 'ok') {
                         showToast('Voice settings aggiornati e agent riavviato!', 'success');
@@ -2934,7 +2960,125 @@ Authorization: Bearer &lt;token&gt;
         }
         
         // ==================== SIP Configuration ====================
-        
+
+        function normalizePhoneNumber(value) {
+            const raw = (value || '').trim();
+            if (!raw) return '';
+            const hasPlus = raw.startsWith('+');
+            const digits = raw.replace(/[^\d]/g, '');
+            if (!digits) return '';
+            return hasPlus ? `+${digits}` : digits;
+        }
+
+        function getConfiguredTrunkNumbers() {
+            const raw = document.getElementById('trunk-numbers')?.value || '';
+            const numbers = raw
+                .split(',')
+                .map(item => normalizePhoneNumber(item))
+                .filter(Boolean);
+            return [...new Set(numbers)];
+        }
+
+        function renderSIPPhoneContextEditors() {
+            const container = document.getElementById('sip-phone-contexts-container');
+            if (!container) return;
+
+            const numbers = getConfiguredTrunkNumbers();
+            const defaultInput = document.getElementById('sip-context-default');
+            if (defaultInput) {
+                defaultInput.value = sipPhoneContexts.__default__ || '';
+            }
+
+            if (numbers.length === 0) {
+                container.innerHTML = `
+                    <div class="info-box" style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                            Inserisci prima i numeri nel campo <strong>Numeri di Telefono</strong> per configurare i contesti dedicati.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = numbers.map((number, index) => `
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label">Contesto per ${escapeHtml(number)}</label>
+                    <textarea
+                        class="form-textarea"
+                        id="sip-context-${index}"
+                        data-phone-number="${escapeHtml(number)}"
+                        rows="5"
+                        placeholder="Inserisci base conoscenza specifica per questo numero..."
+                    >${escapeHtml(sipPhoneContexts[number] || '')}</textarea>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('#sip-phone-contexts-container textarea[data-phone-number]').forEach((el) => {
+                el.addEventListener('input', (event) => {
+                    const phoneNumber = event.target.getAttribute('data-phone-number');
+                    const value = event.target.value || '';
+                    if (phoneNumber) {
+                        if (value.trim()) {
+                            sipPhoneContexts[phoneNumber] = value;
+                        } else {
+                            delete sipPhoneContexts[phoneNumber];
+                        }
+                    }
+                });
+            });
+        }
+
+        function collectSIPPhoneContextsFromForm() {
+            const collected = {};
+            const defaultValue = (document.getElementById('sip-context-default')?.value || '').trim();
+            if (defaultValue) {
+                collected.__default__ = defaultValue;
+            }
+
+            const configuredNumbers = getConfiguredTrunkNumbers();
+            configuredNumbers.forEach((number) => {
+                const textareas = document.querySelectorAll(`#sip-phone-contexts-container textarea[data-phone-number="${number}"]`);
+                if (textareas.length > 0) {
+                    const value = (textareas[0].value || '').trim();
+                    if (value) {
+                        collected[number] = value;
+                    }
+                    return;
+                }
+                if (sipPhoneContexts[number] && sipPhoneContexts[number].trim()) {
+                    collected[number] = sipPhoneContexts[number].trim();
+                }
+            });
+
+            sipPhoneContexts = collected;
+            return collected;
+        }
+
+        async function loadHermitageContextTemplate() {
+            try {
+                const resp = await fetch('/api/sip/context/template');
+                const data = await resp.json();
+                const template = data.template || '';
+                if (!template) {
+                    showToast('Template non disponibile', 'warning');
+                    return;
+                }
+
+                const numbers = getConfiguredTrunkNumbers();
+                if (numbers.length > 0) {
+                    numbers.forEach((number) => {
+                        sipPhoneContexts[number] = template;
+                    });
+                } else {
+                    sipPhoneContexts.__default__ = template;
+                }
+                renderSIPPhoneContextEditors();
+                showToast('Base conoscenza Hotel Hermitage caricata', 'success');
+            } catch (e) {
+                showToast('Errore caricamento template hotel', 'error');
+            }
+        }
+
         async function checkSIPStatus() {
             const statusBox = document.getElementById('sip-status-box');
             const serviceStatus = document.getElementById('sip-service-status');
@@ -3036,6 +3180,8 @@ Authorization: Bearer &lt;token&gt;
                 document.getElementById('room-prefix').value = config.room_prefix || 'sip-call-';
                 document.getElementById('enable-recording').checked = config.enable_recording || false;
                 document.getElementById('audio-codecs').value = config.audio_codecs || 'opus,pcmu,pcma';
+                sipPhoneContexts = config.phone_contexts || {};
+                renderSIPPhoneContextEditors();
                 
                 console.log('✅ Configurazione SIP caricata');
                 
@@ -3045,6 +3191,7 @@ Authorization: Bearer &lt;token&gt;
         }
         
         async function saveSIPConfig() {
+            const phoneContexts = collectSIPPhoneContextsFromForm();
             const config = {
                 sip_port: parseInt(document.getElementById('sip-port').value) || 5060,
                 sip_port_tls: parseInt(document.getElementById('sip-port-tls').value) || 5061,
@@ -3058,7 +3205,8 @@ Authorization: Bearer &lt;token&gt;
                 trunk_numbers: document.getElementById('trunk-numbers').value.trim(),
                 room_prefix: document.getElementById('room-prefix').value.trim() || 'sip-call-',
                 enable_recording: document.getElementById('enable-recording').checked,
-                audio_codecs: document.getElementById('audio-codecs').value.trim() || 'opus,pcmu,pcma'
+                audio_codecs: document.getElementById('audio-codecs').value.trim() || 'opus,pcmu,pcma',
+                phone_contexts: phoneContexts
             };
             
             const resultDiv = document.getElementById('sip-save-result');

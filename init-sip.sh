@@ -11,6 +11,9 @@ set -e
 LIVEKIT_URL="${LIVEKIT_URL:-http://localhost:7880}"
 LIVEKIT_API_KEY="${LIVEKIT_API_KEY:-devkey}"
 LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-secret_dev_key_change_in_production}"
+SIP_TRUNK_NAME="${SIP_TRUNK_NAME:-aims-dev-trunk}"
+SIP_INBOUND_NUMBER="${SIP_INBOUND_NUMBER:-+3901119517860}"
+SIP_ALLOWED_ADDRESS="${SIP_ALLOWED_ADDRESS:-aims-dev-trunk.pstn.frankfurt.twilio.com}"
 
 # Colori per output
 RED='\033[0;31m'
@@ -21,6 +24,39 @@ NC='\033[0m' # No Color
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# #region agent log
+DEBUG_LOG_PATH="${DEBUG_LOG_PATH:-/home/laserlab/lavoro/Progetti_2026/sophyai_voice_agent/.cursor/debug-fac0c1.log}"
+debug_log() {
+    local hypothesis="$1"
+    local location="$2"
+    local message="$3"
+    local data_json="$4"
+    python3 - <<PY || true
+import json, time, os
+_raw = """$data_json"""
+try:
+    _data = json.loads(_raw)
+except Exception:
+    _data = {"raw": _raw[:400]}
+line = {
+  "sessionId":"fac0c1",
+  "hypothesisId":"$hypothesis",
+  "location":"$location",
+  "message":"$message",
+  "data":_data,
+  "timestamp":int(time.time()*1000),
+  "runId":"sip-init"
+}
+try:
+    os.makedirs(os.path.dirname("$DEBUG_LOG_PATH"), exist_ok=True)
+    with open("$DEBUG_LOG_PATH","a",encoding="utf-8") as f:
+        f.write(json.dumps(line, ensure_ascii=False) + "\\n")
+except Exception:
+    pass
+PY
+}
+# #endregion
 
 # Genera JWT token per API LiveKit
 generate_token() {
@@ -41,14 +77,23 @@ print(token)
 # Attendi che LiveKit sia pronto
 wait_for_livekit() {
     log_info "Attendo LiveKit..."
+    # #region agent log
+    debug_log "H1-livekit" "init-sip.sh:wait_for_livekit" "wait_start" "{\"livekit_url\":\"${LIVEKIT_URL}\"}"
+    # #endregion
     for i in {1..30}; do
         if curl -s "${LIVEKIT_URL}" > /dev/null 2>&1; then
             log_info "LiveKit pronto!"
+            # #region agent log
+            debug_log "H1-livekit" "init-sip.sh:wait_for_livekit" "wait_ready" "{\"attempt\":${i}}"
+            # #endregion
             return 0
         fi
         sleep 2
     done
     log_error "LiveKit non risponde dopo 60 secondi"
+    # #region agent log
+    debug_log "H1-livekit" "init-sip.sh:wait_for_livekit" "wait_timeout" "{}"
+    # #endregion
     return 1
 }
 
@@ -56,33 +101,44 @@ wait_for_livekit() {
 create_inbound_trunk() {
     local TOKEN=$(generate_token)
     
-    log_info "Creazione SIP Inbound Trunk per Twilio..."
+    log_info "Creazione SIP Inbound Trunk (${SIP_TRUNK_NAME})..." >&2
     
     RESPONSE=$(curl -s -X POST "${LIVEKIT_URL}/twirp/livekit.SIP/CreateSIPInboundTrunk" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${TOKEN}" \
-        -d '{
-            "trunk": {
-                "name": "Twilio AIMS Trunk",
-                "numbers": ["+3901119517814"],
-                "allowed_addresses": [
-                    "aims-dev-trunk.pstn.twilio.com",
-                    "54.172.60.0/23",
-                    "54.244.51.0/24",
-                    "35.156.191.128/25",
-                    "54.171.127.192/26",
-                    "35.156.191.0/25"
+        -d "{
+            \"trunk\": {
+                \"name\": \"${SIP_TRUNK_NAME}\",
+                \"numbers\": [\"${SIP_INBOUND_NUMBER}\"],
+                \"allowed_addresses\": [
+                    \"${SIP_ALLOWED_ADDRESS}\",
+                    \"35.156.191.128/25\",
+                    \"35.156.191.0/25\",
+                    \"54.171.127.192/26\",
+                    \"54.172.60.0/23\",
+                    \"54.244.51.0/24\"
                 ],
-                "metadata": "{\"provider\": \"twilio\", \"trunk_type\": \"aims\"}"
+                \"metadata\": \"{\\\"provider\\\": \\\"twilio\\\", \\\"trunk_type\\\": \\\"aims\\\"}\"
             }
-        }')
+        }")
+    # #region agent log
+    if echo "$RESPONSE" | python3 -c "import sys,json; json.load(sys.stdin)" >/dev/null 2>&1; then
+        debug_log "H2-trunk" "init-sip.sh:create_inbound_trunk" "create_trunk_response" "$RESPONSE"
+    else
+        debug_log "H2-trunk" "init-sip.sh:create_inbound_trunk" "create_trunk_non_json" "{\"raw\":$(python3 - <<'PY'
+import json,sys
+print(json.dumps(sys.stdin.read()[:300]))
+PY
+<<<"$RESPONSE")}"
+    fi
+    # #endregion
     
-    if echo "$RESPONSE" | grep -q "sipTrunkId"; then
-        TRUNK_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sipTrunkId',''))" 2>/dev/null)
-        log_info "Trunk creato: ${TRUNK_ID}"
+    TRUNK_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('sip_trunk_id') or d.get('sipTrunkId') or '')" 2>/dev/null || echo "")
+    if [ -n "$TRUNK_ID" ]; then
+        log_info "Trunk creato: ${TRUNK_ID}" >&2
         echo "$TRUNK_ID"
     else
-        log_warn "Trunk potrebbe già esistere o errore: $RESPONSE"
+        log_warn "Trunk potrebbe già esistere o errore: $RESPONSE" >&2
         echo ""
     fi
 }
@@ -98,14 +154,15 @@ create_dispatch_rule() {
     RESPONSE=$(curl -s -X POST "${LIVEKIT_URL}/twirp/livekit.SIP/CreateSIPDispatchRule" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${TOKEN}" \
-        -d '{
-            "rule": {
-                "name": "Default Inbound Handler",
-                "dispatchRuleIndividual": {
-                    "roomPrefix": "sip-call-"
+        -d "{
+            \"rule\": {
+                \"name\": \"default-inbound\",
+                \"dispatchRuleIndividual\": {
+                    \"roomPrefix\": \"sip-call-\"
                 }
-            }
-        }')
+            },
+            \"trunk_ids\": [\"${TRUNK_IDS}\"]
+        }")
     
     if echo "$RESPONSE" | grep -q "sip_dispatch_rule_id"; then
         RULE_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sip_dispatch_rule_id',''))" 2>/dev/null)
@@ -134,6 +191,9 @@ check_existing_config() {
         -d '{}')
     
     RULE_COUNT=$(echo "$RULES" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('items',[])))" 2>/dev/null || echo "0")
+    # #region agent log
+    debug_log "H3-routing" "init-sip.sh:check_existing_config" "current_config_counts" "{\"trunk_count\":${TRUNK_COUNT},\"rule_count\":${RULE_COUNT}}"
+    # #endregion
     
     log_info "Configurazione attuale: ${TRUNK_COUNT} trunk, ${RULE_COUNT} dispatch rules"
     
@@ -156,7 +216,7 @@ main() {
     
     log_info "Configurazione SIP mancante, creo trunk e rules..."
     
-    TRUNK_ID=$(create_inbound_trunk)
+    TRUNK_ID=$(create_inbound_trunk | tail -n1)
     create_dispatch_rule "$TRUNK_ID"
     
     log_info "=== Configurazione SIP completata ==="

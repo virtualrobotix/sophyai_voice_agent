@@ -74,7 +74,8 @@ FORMATO TTS:
     ('vad_energy_threshold', '120'),
     ('speech_energy_threshold', '100'),
     ('silence_threshold', '30'),
-    ('tts_cooldown_seconds', '5')
+    ('tts_cooldown_seconds', '5'),
+    ('sip_phone_contexts', '{}')
 ON CONFLICT (key) DO NOTHING;
 
 -- Function to update updated_at timestamp

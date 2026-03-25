@@ -90,14 +90,19 @@ services:
       - TTS_PORT=8092
       - TTS_DEVICE=cuda
       - HF_HOME=/app/models
+      # Entrambe le GPU visibili nel container (PyTorch usa cuda:0 di default; modelli multi-GPU richiedono codice dedicato)
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0,1
     volumes:
       - tts_models:/app/models
+      - ./.cursor:/app/.cursor
+      - ./tts_server.py:/app/tts_server.py:ro
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: 2
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8092/health"]

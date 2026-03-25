@@ -19,8 +19,8 @@ from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict
 import socket
 from loguru import logger
 from livekit import api
@@ -56,11 +56,6 @@ def get_server_ip() -> str:
 
 def get_livekit_url_for_client(request: Request) -> str:
     """Costruisce l'URL LiveKit appropriato per il client"""
-    # #region agent log
-    try:
-        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Entry", "data": {"configured_url": config.livekit.url, "request_scheme": str(request.url.scheme), "x_forwarded_proto": request.headers.get("x-forwarded-proto"), "origin": request.headers.get("origin"), "host": request.headers.get("host")}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
-    except Exception: pass
-    # #endregion
     # Se LIVEKIT_URL è configurato con un IP specifico (non localhost/0.0.0.0), usalo
     configured_url = config.livekit.url
     
@@ -103,11 +98,6 @@ def get_livekit_url_for_client(request: Request) -> str:
         request.headers.get("origin", "").startswith("https://")
     )
     
-    # #region agent log
-    try:
-        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Before HTTPS check", "data": {"is_https": is_https, "proto_before": proto, "host": host, "port_before": port}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
-    except Exception: pass
-    # #endregion
     
     # NOTA: LiveKit non ha TLS configurato, usa sempre WS sulla porta 7880
     # Se in futuro si configura un proxy TLS su 7443, riabilitare questo blocco
@@ -117,11 +107,6 @@ def get_livekit_url_for_client(request: Request) -> str:
     pass  # Usa sempre ws:// porta 7880
     
     final_url = f"{proto}://{host}:{port}"
-    # #region agent log
-    try:
-        log_data = {"location": "server.py:get_livekit_url_for_client", "message": "Exit", "data": {"final_url": final_url, "proto": proto, "host": host, "port": port}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
-    except Exception: pass
-    # #endregion
     return final_url
 
 
@@ -195,22 +180,6 @@ async def debug_redirect():
 async def health():
     """Health check"""
     return {"status": "ok", "service": "voice-agent", "https": True}
-
-
-# #region agent log
-@app.post("/api/debug-log")
-async def frontend_debug_log(request: Request):
-    """Endpoint per raccogliere log di debug dal frontend"""
-    try:
-        data = await request.json()
-        log_path = Path(__file__).parent / ".cursor" / "debug.log"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        with log_path.open("a") as f:
-            f.write(json.dumps(data) + "\n")
-        return {"status": "ok"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-# #endregion
 
 
 @app.get("/api/status")
@@ -625,6 +594,18 @@ async def get_ollama_models():
     import aiohttp
     
     ollama_url = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+    # Modelli consigliati per GPU 24GB con supporto tool/function calling
+    recommended_models = [
+        {"id": "qwen3:14b", "name": "qwen3:14b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "qwen3:32b", "name": "qwen3:32b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "qwen3.5:9b", "name": "qwen3.5:9b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "qwen3.5:27b", "name": "qwen3.5:27b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "ministral-3:14b", "name": "ministral-3:14b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "devstral-small-2:24b", "name": "devstral-small-2:24b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "olmo-3.1:32b", "name": "olmo-3.1:32b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "nemotron-3-nano:4b", "name": "nemotron-3-nano:4b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "nemotron-cascade-2:30b", "name": "nemotron-cascade-2:30b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+    ]
     
     try:
         async with aiohttp.ClientSession() as session:
@@ -643,13 +624,23 @@ async def get_ollama_models():
                         "name": m["name"],
                         "size": m.get("size", 0),
                         "modified_at": m.get("modified_at", ""),
-                        "details": m.get("details", {})
+                        "details": {
+                            **m.get("details", {}),
+                            "installed": True,
+                        }
                     })
-                
+
+                # Aggiungi modelli consigliati non ancora presenti localmente
+                existing_names = {m["name"] for m in models}
+                for rec in recommended_models:
+                    if rec["name"] not in existing_names:
+                        models.append(rec)
+
                 return {"models": models, "host": ollama_url}
     except aiohttp.ClientError as e:
         logger.error(f"Errore connessione Ollama: {e}")
-        raise HTTPException(status_code=503, detail=f"Ollama non raggiungibile: {e}")
+        # Fallback: mostra almeno i modelli consigliati se Ollama non è raggiungibile
+        return {"models": recommended_models, "host": ollama_url, "warning": f"Ollama non raggiungibile: {e}"}
 
 
 class OllamaSelectRequest(BaseModel):
@@ -1220,6 +1211,31 @@ async def livekit_webhook(request: Request):
                 # Estrai numero dal participant identity (formato: sip_+XXXXXXXXXXX)
                 caller_number = participant.identity.replace("sip_", "")
                 caller_name = participant.name or f"Phone {caller_number}"
+                called_number = None
+
+                # Estrai il numero chiamato dagli attributi SIP (se presenti)
+                try:
+                    participant_attrs = {}
+                    raw_attrs = getattr(participant, "attributes", None)
+                    if raw_attrs and isinstance(raw_attrs, dict):
+                        participant_attrs = raw_attrs
+
+                    candidate_keys = [
+                        "sip.calledNumber",
+                        "sip.phoneNumber",
+                        "sip.trunkPhoneNumber",
+                        "sip.to",
+                        "called_number",
+                        "phone_number",
+                        "to"
+                    ]
+                    for key in candidate_keys:
+                        value = participant_attrs.get(key)
+                        if value:
+                            called_number = str(value).strip()
+                            break
+                except Exception as attr_err:
+                    logger.debug(f"Impossibile leggere called_number dagli attributi SIP: {attr_err}")
                 
                 # Genera un call_id univoco
                 call_id = f"call_{room.name}_{int(datetime.now().timestamp())}"
@@ -1230,6 +1246,7 @@ async def livekit_webhook(request: Request):
                         call_id=call_id,
                         room_name=room.name,
                         caller_number=caller_number,
+                        called_number=called_number,
                         caller_name=caller_name,
                         metadata={
                             "participant_sid": participant.sid,
@@ -1478,20 +1495,10 @@ async def get_token(request: TokenRequest, http_request: Request):
         
         jwt_token = token.to_jwt()
         
-        # #region agent log
-        try:
-            log_data = {"location": "server.py:get_token", "message": "Token generated", "data": {"token_length": len(jwt_token), "token_preview": jwt_token[:50] + "..." if len(jwt_token) > 50 else jwt_token, "room_name": request.room_name, "participant_name": request.participant_name}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "B"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
-        except Exception: pass
-        # #endregion
         
         # URL WebSocket per il client - costruito dinamicamente
         ws_url = get_livekit_url_for_client(http_request)
         
-        # #region agent log
-        try:
-            log_data = {"location": "server.py:get_token", "message": "URL generated", "data": {"ws_url": ws_url, "room_name": request.room_name}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "A"}; log_path = Path(__file__).parent / ".cursor" / "debug.log"; log_path.parent.mkdir(parents=True, exist_ok=True); log_path.open("a").write(json.dumps(log_data) + "\n")
-        except Exception: pass
-        # #endregion
         
         # Crea la room se non esiste e dispatcha l'agent SOLO se non ce n'è già uno
         # Usa un lock per evitare race condition quando più utenti si connettono simultaneamente
@@ -2361,6 +2368,76 @@ async def get_remote_config():
 
 # ==================== SIP Configuration API ====================
 
+HOTEL_HERMITAGE_CONTEXT_TEMPLATE = """Hotel Hermitage & Golf Club - Base conoscenza iniziale
+
+Panoramica:
+- Resort cinque stelle all'Isola d'Elba, localita La Biodola, immerso nel verde con spiaggia privata.
+- Camere e suite in stile mediterraneo, Wi-Fi gratuito, colazione buffet e servizi premium.
+- Servizi principali: tre piscine di acqua di mare, SPA, golf nove buche, tennis, diving, meeting ed eventi.
+
+Contatti:
+- Telefono: +39 0565 9740
+- Email: info@hotelhermitage.it
+- Indirizzo: Localita La Biodola, 57037 Portoferraio (LI), Isola d'Elba
+
+FAQ principali:
+- Check-in dalle 14:00
+- Check-out entro le 11:00
+- Wi-Fi gratuito in tutta la struttura
+- Parcheggio esterno gratuito videosorvegliato
+- Opzioni senza glutine disponibili
+- Pet friendly (animali di piccola taglia, supplemento 35 EUR/giorno)
+
+Nota operativa per l'agente:
+- Se una richiesta richiede dettaglio specifico (tariffe, disponibilita, menu stagionali), proporre verifica diretta con reception/concierge.
+"""
+
+
+def _normalize_phone_number(number: str) -> str:
+    """Normalizza un numero telefonico mantenendo il + iniziale se presente."""
+    if not number:
+        return ""
+    number = number.strip()
+    if not number:
+        return ""
+    has_plus = number.startswith("+")
+    digits = "".join(ch for ch in number if ch.isdigit())
+    if not digits:
+        return ""
+    return f"+{digits}" if has_plus else digits
+
+
+def _resolve_phone_context(phone_contexts: Dict[str, str], called_number: str) -> tuple[str, str]:
+    """Risolve il contesto associato a un numero chiamato."""
+    if not phone_contexts:
+        return "", ""
+
+    normalized_map: Dict[str, str] = {}
+    for raw_number, context in phone_contexts.items():
+        if not context:
+            continue
+        normalized = _normalize_phone_number(raw_number)
+        if normalized:
+            normalized_map[normalized] = context
+
+    normalized_called = _normalize_phone_number(called_number)
+    if normalized_called and normalized_called in normalized_map:
+        return normalized_map[normalized_called], normalized_called
+
+    if normalized_called:
+        called_digits = normalized_called.replace("+", "")
+        for map_number, context in normalized_map.items():
+            map_digits = map_number.replace("+", "")
+            if called_digits and (called_digits.endswith(map_digits) or map_digits.endswith(called_digits)):
+                return context, map_number
+
+    default_context = phone_contexts.get("__default__", "").strip()
+    if default_context:
+        return default_context, "__default__"
+
+    return "", ""
+
+
 class SIPConfig(BaseModel):
     """SIP configuration model."""
     sip_port: int = 5060
@@ -2379,6 +2456,8 @@ class SIPConfig(BaseModel):
     enable_recording: bool = False
     # Audio codecs (comma-separated)
     audio_codecs: str = "opus,pcmu,pcma"
+    # Contesto dedicato per numero chiamato
+    phone_contexts: Dict[str, str] = Field(default_factory=dict)
 
 
 @app.get("/api/sip/status")
@@ -2558,7 +2637,8 @@ async def get_sip_config():
         "trunk_numbers": "",
         "room_prefix": "sip-call-",
         "enable_recording": False,
-        "audio_codecs": "opus,pcmu,pcma"
+        "audio_codecs": "opus,pcmu,pcma",
+        "phone_contexts": {}
     }
     
     # Prova a leggere dal database
@@ -2577,6 +2657,13 @@ async def get_sip_config():
                         default_config[key] = value.lower() == "true"
                     else:
                         default_config[key] = value
+            raw_phone_contexts = settings.get("sip_phone_contexts", "")
+            if raw_phone_contexts:
+                parsed_contexts = json.loads(raw_phone_contexts)
+                if isinstance(parsed_contexts, dict):
+                    default_config["phone_contexts"] = {
+                        str(k): str(v) for k, v in parsed_contexts.items() if isinstance(v, str)
+                    }
         except Exception as e:
             logger.warning(f"Errore lettura SIP settings dal DB: {e}")
     
@@ -2625,20 +2712,73 @@ async def get_sip_config():
     return default_config
 
 
+@app.get("/api/sip/context/template")
+async def get_sip_context_template():
+    """Restituisce un template iniziale di base conoscenza per hotel."""
+    return {"template": HOTEL_HERMITAGE_CONTEXT_TEMPLATE}
+
+
+@app.get("/api/sip/context/resolve")
+async def resolve_sip_context(room_name: Optional[str] = None, called_number: Optional[str] = None):
+    """
+    Risolve il contesto SIP in base al numero chiamato.
+    Se viene passata la room, tenta prima di leggere il called_number dal call_log attivo.
+    """
+    db = await get_database()
+    if db is None:
+        return {
+            "called_number": called_number or "",
+            "matched_number": "",
+            "context": "",
+            "found": False
+        }
+
+    active_called_number = called_number or ""
+    try:
+        if room_name:
+            call_log = await db.get_call_log_by_room(room_name, status="active")
+            if call_log and call_log.get("called_number"):
+                active_called_number = str(call_log.get("called_number"))
+    except Exception as e:
+        logger.debug(f"resolve_sip_context: impossibile leggere call_log per room {room_name}: {e}")
+
+    try:
+        raw_phone_contexts = await db.get_setting("sip_phone_contexts")
+        phone_contexts = json.loads(raw_phone_contexts) if raw_phone_contexts else {}
+        if not isinstance(phone_contexts, dict):
+            phone_contexts = {}
+    except Exception as e:
+        logger.warning(f"resolve_sip_context: errore lettura sip_phone_contexts: {e}")
+        phone_contexts = {}
+
+    context_text, matched_number = _resolve_phone_context(phone_contexts, active_called_number)
+    return {
+        "called_number": active_called_number or "",
+        "matched_number": matched_number,
+        "context": context_text,
+        "found": bool(context_text)
+    }
+
+
 @app.post("/api/sip/config")
 async def save_sip_config(sip_config: SIPConfig):
     """Salva la configurazione SIP e registra trunk/dispatch rules via API LiveKit."""
-    # #region agent log
-    import json as _json
-    _log_path = Path(__file__).parent / ".cursor" / "debug.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:entry","message":"SIP config save started","data":{"trunk_host":sip_config.trunk_host,"trunk_numbers":sip_config.trunk_numbers,"room_prefix":sip_config.room_prefix},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
-    # #endregion
     
     # Salva nel database
     db = await get_database()
     if db:
         try:
+            clean_phone_contexts: Dict[str, str] = {}
+            for number, context in (sip_config.phone_contexts or {}).items():
+                if context is None:
+                    continue
+                number_key = str(number).strip()
+                context_value = str(context).strip()
+                if not number_key or not context_value:
+                    continue
+                clean_phone_contexts[number_key] = context_value
+
+
             settings = {
                 "sip_sip_port": str(sip_config.sip_port),
                 "sip_sip_port_tls": str(sip_config.sip_port_tls),
@@ -2652,7 +2792,8 @@ async def save_sip_config(sip_config: SIPConfig):
                 "sip_trunk_numbers": sip_config.trunk_numbers,
                 "sip_room_prefix": sip_config.room_prefix,
                 "sip_enable_recording": str(sip_config.enable_recording).lower(),
-                "sip_audio_codecs": sip_config.audio_codecs
+                "sip_audio_codecs": sip_config.audio_codecs,
+                "sip_phone_contexts": json.dumps(clean_phone_contexts, ensure_ascii=False)
             }
             await db.set_multiple_settings(settings)
         except Exception as e:
@@ -2732,16 +2873,10 @@ async def save_sip_config(sip_config: SIPConfig):
                 api_secret=config.livekit.api_secret
             )
             
-            # #region agent log
-            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:api_connect","message":"LiveKit API connected","data":{"url":internal_url},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-            # #endregion
             
             # 1. Elenca e elimina trunk esistenti per evitare duplicati
             try:
                 existing_trunks = await lk_api.sip.list_sip_inbound_trunk(api.ListSIPInboundTrunkRequest())
-                # #region agent log
-                with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:list_trunks","message":"Existing trunks listed","data":{"count":len(existing_trunks.items) if existing_trunks.items else 0},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-                # #endregion
                 
                 for trunk in (existing_trunks.items or []):
                     try:
@@ -2755,9 +2890,6 @@ async def save_sip_config(sip_config: SIPConfig):
             # 2. Elenca e elimina dispatch rules esistenti
             try:
                 existing_rules = await lk_api.sip.list_sip_dispatch_rule(api.ListSIPDispatchRuleRequest())
-                # #region agent log
-                with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:list_rules","message":"Existing dispatch rules listed","data":{"count":len(existing_rules.items) if existing_rules.items else 0},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C"})+"\n")
-                # #endregion
                 
                 for rule in (existing_rules.items or []):
                     try:
@@ -2791,9 +2923,6 @@ async def save_sip_config(sip_config: SIPConfig):
             api_result["trunk_id"] = trunk_id
             logger.info(f"📞 Trunk SIP creato: {trunk_id}")
             
-            # #region agent log
-            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:trunk_created","message":"SIP trunk created via API","data":{"trunk_id":trunk_id,"numbers":numbers},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-            # #endregion
             
             # 4. Crea dispatch rule
             room_prefix = sip_config.room_prefix or "sip-call-"
@@ -2817,9 +2946,6 @@ async def save_sip_config(sip_config: SIPConfig):
             api_result["dispatch_rule_id"] = created_rule.sip_dispatch_rule_id
             logger.info(f"📞 Dispatch rule creata: {created_rule.sip_dispatch_rule_id}")
             
-            # #region agent log
-            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:rule_created","message":"Dispatch rule created via API","data":{"rule_id":created_rule.sip_dispatch_rule_id,"room_prefix":room_prefix},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-C"})+"\n")
-            # #endregion
             
             await lk_api.aclose()
             
@@ -2827,13 +2953,7 @@ async def save_sip_config(sip_config: SIPConfig):
             error_msg = str(e)
             api_result["errors"].append(error_msg)
             logger.error(f"📞 Errore registrazione SIP via API: {e}")
-            # #region agent log
-            with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:api_error","message":"API error during SIP registration","data":{"error":error_msg},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
-            # #endregion
     
-    # #region agent log
-    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:save_sip_config:exit","message":"SIP config save completed","data":api_result,"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-D"})+"\n")
-    # #endregion
     
     # Costruisci messaggio di risposta
     if api_result["trunk_created"] and api_result["dispatch_rule_created"]:
@@ -2854,12 +2974,6 @@ async def save_sip_config(sip_config: SIPConfig):
 @app.get("/api/sip/trunks")
 async def list_sip_trunks():
     """Elenca i trunk SIP registrati in LiveKit."""
-    # #region agent log
-    import json as _json
-    _log_path = Path(__file__).parent / ".cursor" / "debug.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:entry","message":"Listing SIP trunks","data":{},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-    # #endregion
     
     try:
         internal_url = os.getenv("LIVEKIT_INTERNAL_URL", "ws://host.docker.internal:7880")
@@ -2892,9 +3006,6 @@ async def list_sip_trunks():
         
         await lk_api.aclose()
         
-        # #region agent log
-        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:exit","message":"Trunks and rules listed","data":{"trunks_count":len(trunks),"rules_count":len(rules)},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-        # #endregion
         
         return {
             "trunks": trunks,
@@ -2903,9 +3014,6 @@ async def list_sip_trunks():
         
     except Exception as e:
         logger.error(f"Errore lista trunk SIP: {e}")
-        # #region agent log
-        with open(_log_path, "a") as _f: _f.write(_json.dumps({"location":"server.py:list_sip_trunks:error","message":"Error listing trunks","data":{"error":str(e)},"timestamp":int(time.time()*1000),"sessionId":"debug-session","hypothesisId":"H-B"})+"\n")
-        # #endregion
         raise HTTPException(status_code=500, detail=str(e))
 
 

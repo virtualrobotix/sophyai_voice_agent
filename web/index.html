@@ -1910,9 +1910,6 @@
                 initModal.setStepStatus('init-step-room', 'active');
                 initModal.setMessage('Connessione alla room in corso...');
                 
-                // #region agent log
-                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeTokenRequest',message:'Requesting token',data:{roomName:selectedRoom,userName:userName,protocol:window.location.protocol,host:window.location.host,href:window.location.href},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
                 const resp = await fetch('/api/token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1921,10 +1918,6 @@
                         participant_name: userName
                     })
                 });
-                
-                // #region agent log
-                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenResponse',message:'Token response received',data:{status:resp.status,statusText:resp.statusText,ok:resp.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
                 
                 // Gestione errore 409 - nome utente duplicato
                 if (resp.status === 409) {
@@ -1939,17 +1932,10 @@
                 
                 const data = await resp.json();
                 
-                // #region agent log
-                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:tokenData',message:'Token data parsed - MIXED CONTENT CHECK',data:{url:data.url,tokenLength:data.token?.length||0,urlProtocol:data.url?.substring(0,data.url.indexOf('://'))||'unknown',pageProtocol:window.location.protocol,isMixedContent:window.location.protocol==='https:'&&data.url?.startsWith('ws://')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
-                
                 // Connect to room
                 state.room = new LivekitClient.Room();
                 
                 state.room.on('trackSubscribed', (track, publication, participant) => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:trackSubscribed',message:'Track ricevuto',data:{trackKind:track.kind,participantIdentity:participant.identity,participantName:participant.name,isLocal:participant.identity===state.room?.localParticipant?.identity},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-A'})}).catch(()=>{});
-                    // #endregion
                     if (track.kind === 'audio') {
                         const audio = track.attach();
                         audio.autoplay = true;
@@ -1973,10 +1959,6 @@
                             });
                         }
                     } else if (track.kind === 'video') {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:videoTrack',message:'Video track gestito',data:{participantIdentity:participant.identity,participantName:participant.name,localIdentity:state.room?.localParticipant?.identity},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-B'})}).catch(()=>{});
-                        // #endregion
-                        
                         // Crea o aggiorna video box dinamico per ogni partecipante remoto
                         const participantId = participant.identity;
                         const displayName = participant.name || participant.identity;
@@ -2046,10 +2028,6 @@
                         const msg = JSON.parse(new TextDecoder().decode(data));
                         const messageId = msg.id || null;
                         
-                        // #region agent log
-                        fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Messaggio ricevuto',data:{type:msg.type,role:msg.role,id:messageId,textPreview:msg.text?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H-FRONTEND'})}).catch(()=>{});
-                        // #endregion
-                        
                         // Deduplicazione: se abbiamo già visto questo ID, ignora
                         if (messageId) {
                             if (state.receivedMessageIds.has(messageId)) {
@@ -2066,9 +2044,6 @@
                         }
                         
                         if (msg.type === 'transcript') {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:dataReceived',message:'Transcript ricevuto',data:{role:msg.role,sender:msg.sender,senderName:msg.senderName,textPreview:msg.text?.substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-A'})}).catch(()=>{});
-                            // #endregion
                             // Determina il sender:
                             // - Per agent: usa msg.sender (dovrebbe essere "SophyAI")
                             // - Per user con sender: usa msg.sender
@@ -2152,18 +2127,9 @@
                     }
                 });
 
-                // #region agent log
-                fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:beforeConnect',message:'Before room.connect',data:{url:data.url,tokenExists:!!data.token,roomExists:!!state.room},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-                // #endregion
                 try {
                     await state.room.connect(data.url, data.token);
-                    // #region agent log
-                    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:afterConnect',message:'Room.connect succeeded',data:{connected:state.room.state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-                    // #endregion
                 } catch (connectError) {
-                    // #region agent log
-                    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:connectError',message:'Room.connect FAILED',data:{errorMessage:connectError.message,errorName:connectError.name,errorStack:connectError.stack?.substring(0,300),url:data.url,pageProtocol:window.location.protocol},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-                    // #endregion
                     throw connectError;
                 }
                 
@@ -2266,9 +2232,6 @@
         const displayedMessageIds = new Set();
         
         function addMessage(text, role, messageId = null, senderName = null) {
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/b77323bc-d85d-4ee0-ac4f-951dbf6e60c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:addMessage',message:'Aggiunta messaggio',data:{role:role,senderName:senderName,textPreview:text?.substring(0,30),hasMessageId:!!messageId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-B'})}).catch(()=>{});
-            // #endregion
             // Genera ID locale se non fornito
             if (!messageId) {
                 messageId = `LOCAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
