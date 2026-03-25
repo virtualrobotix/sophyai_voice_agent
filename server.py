@@ -99,12 +99,9 @@ def get_livekit_url_for_client(request: Request) -> str:
     )
     
     
-    # NOTA: LiveKit non ha TLS configurato, usa sempre WS sulla porta 7880
-    # Se in futuro si configura un proxy TLS su 7443, riabilitare questo blocco
-    # if is_https:
-    #     proto = "wss"
-    #     port = "7443"  # Porta del proxy TLS per LiveKit
-    pass  # Usa sempre ws:// porta 7880
+    if is_https:
+        proto = "wss"
+        port = "7443"
     
     final_url = f"{proto}://{host}:{port}"
     return final_url
@@ -2641,39 +2638,12 @@ async def get_sip_config():
         "phone_contexts": {}
     }
     
-    # Prova a leggere dal database
-    db = await get_database()
-    if db:
-        try:
-            settings = await db.get_all_settings()
-            for key in default_config.keys():
-                sip_key = f"sip_{key}"
-                if sip_key in settings:
-                    value = settings[sip_key]
-                    # Converti i tipi appropriati
-                    if key in ["sip_port", "sip_port_tls", "rtp_port_start", "rtp_port_end", "trunk_port"]:
-                        default_config[key] = int(value)
-                    elif key == "enable_recording":
-                        default_config[key] = value.lower() == "true"
-                    else:
-                        default_config[key] = value
-            raw_phone_contexts = settings.get("sip_phone_contexts", "")
-            if raw_phone_contexts:
-                parsed_contexts = json.loads(raw_phone_contexts)
-                if isinstance(parsed_contexts, dict):
-                    default_config["phone_contexts"] = {
-                        str(k): str(v) for k, v in parsed_contexts.items() if isinstance(v, str)
-                    }
-        except Exception as e:
-            logger.warning(f"Errore lettura SIP settings dal DB: {e}")
-    
-    # Leggi anche dal file YAML per completezza
+    # 1) Leggi dal file YAML come base (fallback iniziale)
     if sip_config_path.exists():
         try:
             with open(sip_config_path, "r") as f:
                 yaml_config = yaml.safe_load(f)
                 
-                # Mappa valori YAML ai campi del form
                 if yaml_config:
                     sip = yaml_config.get("sip", {})
                     if sip:
@@ -2708,6 +2678,31 @@ async def get_sip_config():
                         default_config["audio_codecs"] = ",".join(codecs) if codecs else "opus,pcmu,pcma"
         except Exception as e:
             logger.warning(f"Errore lettura sip-config.yaml: {e}")
+
+    # 2) Leggi dal database (ha precedenza sul YAML -- l'admin panel salva qui)
+    db = await get_database()
+    if db:
+        try:
+            settings = await db.get_all_settings()
+            for key in default_config.keys():
+                sip_key = f"sip_{key}"
+                if sip_key in settings:
+                    value = settings[sip_key]
+                    if key in ["sip_port", "sip_port_tls", "rtp_port_start", "rtp_port_end", "trunk_port"]:
+                        default_config[key] = int(value)
+                    elif key == "enable_recording":
+                        default_config[key] = value.lower() == "true"
+                    else:
+                        default_config[key] = value
+            raw_phone_contexts = settings.get("sip_phone_contexts", "")
+            if raw_phone_contexts:
+                parsed_contexts = json.loads(raw_phone_contexts)
+                if isinstance(parsed_contexts, dict):
+                    default_config["phone_contexts"] = {
+                        str(k): str(v) for k, v in parsed_contexts.items() if isinstance(v, str)
+                    }
+        except Exception as e:
+            logger.warning(f"Errore lettura SIP settings dal DB: {e}")
     
     return default_config
 
@@ -2902,7 +2897,7 @@ async def save_sip_config(sip_config: SIPConfig):
             
             # 3. Crea nuovo trunk inbound
             numbers = [n.strip() for n in sip_config.trunk_numbers.split(",") if n.strip()]
-            allowed_addresses = [sip_config.trunk_host] if sip_config.trunk_host else []
+            allowed_addresses = [a.strip() for a in sip_config.trunk_host.split(",") if a.strip()] if sip_config.trunk_host else []
             
             trunk_info = api.SIPInboundTrunkInfo(
                 name=sip_config.trunk_name or "trunk-principale",
@@ -2928,8 +2923,8 @@ async def save_sip_config(sip_config: SIPConfig):
             room_prefix = sip_config.room_prefix or "sip-call-"
             
             dispatch_rule = api.SIPDispatchRule(
-                dispatch_rule_direct=api.SIPDispatchRuleDirect(
-                    room_name=f"{room_prefix}{{call_id}}",
+                dispatch_rule_individual=api.SIPDispatchRuleIndividual(
+                    room_prefix=room_prefix,
                     pin=""
                 )
             )
@@ -3069,66 +3064,43 @@ if web_dir.exists():
 def main():
     """Avvia il server con HTTPS e HTTP"""
     import threading
-    
+
     https_port = config.server.web_port  # 8443
-    http_port = 8080  # Porta HTTP per app che non supportano certificati self-signed
-    
-    # Percorsi certificati (controlla sia locale che Docker)
+    http_port = 8080
+
     cert_dir = Path(__file__).parent / "certs"
     docker_cert_dir = Path("/app/certs")
-    
-    # Usa certificati Docker se esistono, altrimenti locali
+
     if docker_cert_dir.exists():
         ssl_keyfile = docker_cert_dir / "key.pem"
         ssl_certfile = docker_cert_dir / "cert.pem"
     else:
         ssl_keyfile = cert_dir / "key.pem"
         ssl_certfile = cert_dir / "cert.pem"
-    
-    # Verifica se i certificati esistono
-    use_ssl = ssl_keyfile.exists() and ssl_certfile.exists()
-    
-    def run_http_server():
-        """Avvia server HTTP in un thread separato"""
-        import uvicorn
-        logger.info(f"📱 Server HTTP su porta {http_port} (per app mobile)")
-        uvicorn.run(
-            "server:app",
-            host="0.0.0.0",
-            port=http_port,
-            reload=False,
-            log_level="warning"  # Meno verbose per HTTP
-        )
-    
+
+    use_ssl = ssl_keyfile.exists() and ssl_certfile.exists() and ssl_keyfile.stat().st_size > 0
+
+    def run_http():
+        uvicorn.run("server:app", host="0.0.0.0", port=http_port, log_level="warning")
+
     if use_ssl:
-        # Avvia HTTP in background per le app mobile
-        http_thread = threading.Thread(target=run_http_server, daemon=True)
-        http_thread.start()
-        
-        logger.info(f"🔒 Avvio server HTTPS su porta {https_port}...")
+        logger.info(f"🔒 HTTPS su porta {https_port} | HTTP su porta {http_port}")
         logger.info(f"📱 Collegati a: https://localhost:{https_port}")
-        logger.info(f"📱 HTTP disponibile su: http://localhost:{http_port}")
-        
+
+        threading.Thread(target=run_http, daemon=True).start()
+
         uvicorn.run(
             "server:app",
             host="0.0.0.0",
             port=https_port,
             ssl_keyfile=str(ssl_keyfile),
             ssl_certfile=str(ssl_certfile),
-            reload=False,
-            log_level=config.server.log_level.lower()
+            log_level=config.server.log_level.lower(),
         )
     else:
         logger.warning("⚠️ Certificati SSL non trovati, avvio solo in HTTP")
         logger.info(f"Avvio server HTTP su porta {http_port}...")
-        
-        uvicorn.run(
-            "server:app",
-            host="0.0.0.0",
-            port=http_port,
-            reload=True,
-            log_level=config.server.log_level.lower()
-        )
+        uvicorn.run("server:app", host="0.0.0.0", port=http_port, log_level=config.server.log_level.lower())
 
 
 if __name__ == "__main__":

@@ -208,6 +208,7 @@ services:
       - ./models:/app/models
       - ./config:/app/config
       - ./agent:/app/agent:ro
+      - ./.cursor:/app/.cursor
     depends_on:
       postgres:
         condition: service_healthy
@@ -252,6 +253,21 @@ services:
     command:
       - |
         pip install -q pyjwt && sleep 5 && /init-sip.sh
+
+  # TLS proxy for LiveKit WebSocket (wss://host:7443 -> ws://livekit:7880)
+  livekit-tls-proxy:
+    image: nginx:alpine
+    container_name: livekit-tls-proxy
+    restart: unless-stopped
+    ports:
+      - "7443:7443"
+    volumes:
+      - ./nginx-livekit-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - voiceagent
 
 networks:
   voiceagent:

@@ -3272,8 +3272,19 @@ async def entrypoint(ctx: JobContext):
         else:
             resolve_url = f"{web_base}/api/sip/context/resolve?called_number=__default__"
 
+        # #region agent log
+        import json as _dbg_json, time as _dbg_time
+        _dbg_log_path = "/app/.cursor/debug-ffaca3.log"
+        with open(_dbg_log_path, "a") as _f: _f.write(_dbg_json.dumps({"sessionId":"ffaca3","hypothesisId":"H1","location":"main.py:ctx-resolve","message":"context_resolve_start","data":{"is_sip":_is_sip_call,"room_name":room_name,"resolve_url":resolve_url},"timestamp":int(_dbg_time.time()*1000)})+"\n")
+        # #endregion
+
+        sip_context = ""
         async with aiohttp.ClientSession() as _ctx_session:
             async with _ctx_session.get(resolve_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                # #region agent log
+                _resp_text = await resp.text()
+                with open(_dbg_log_path, "a") as _f: _f.write(_dbg_json.dumps({"sessionId":"ffaca3","hypothesisId":"H1","location":"main.py:ctx-resp","message":"primary_resolve_response","data":{"status":resp.status,"body":_resp_text[:500]},"timestamp":int(_dbg_time.time()*1000)})+"\n")
+                # #endregion
                 if resp.status == 200:
                     payload = await resp.json()
                     sip_context = (payload.get("context") or "").strip()
@@ -3283,7 +3294,27 @@ async def entrypoint(ctx: JobContext):
                             f"🏨 Context risolto per {'SIP ' + str(payload.get('matched_number')) if _is_sip_call else 'default'}: "
                             f"{len(sip_context)} caratteri"
                         )
+
+            # #region agent log
+            with open(_dbg_log_path, "a") as _f: _f.write(_dbg_json.dumps({"sessionId":"ffaca3","hypothesisId":"H2","location":"main.py:ctx-fallback-check","message":"after_primary_resolve","data":{"sip_context_len":len(sip_context),"is_sip":_is_sip_call,"will_fallback":not sip_context and _is_sip_call},"timestamp":int(_dbg_time.time()*1000)})+"\n")
+            # #endregion
+
+            if not sip_context and _is_sip_call:
+                fallback_url = f"{web_base}/api/sip/context/resolve?called_number=__default__"
+                async with _ctx_session.get(fallback_url, timeout=aiohttp.ClientTimeout(total=5)) as resp2:
+                    if resp2.status == 200:
+                        payload2 = await resp2.json()
+                        sip_context = (payload2.get("context") or "").strip()
+                        if sip_context:
+                            db_settings["sip_context_injection"] = sip_context
+                            logger.info(f"🏨 Context SIP fallback __default__: {len(sip_context)} caratteri")
+                # #region agent log
+                with open(_dbg_log_path, "a") as _f: _f.write(_dbg_json.dumps({"sessionId":"ffaca3","hypothesisId":"H2","location":"main.py:ctx-fallback-result","message":"fallback_resolve_result","data":{"sip_context_len":len(sip_context)},"timestamp":int(_dbg_time.time()*1000)})+"\n")
+                # #endregion
     except Exception as e:
+        # #region agent log
+        with open(_dbg_log_path, "a") as _f: _f.write(_dbg_json.dumps({"sessionId":"ffaca3","hypothesisId":"H1","location":"main.py:ctx-error","message":"context_resolve_error","data":{"error":str(e)},"timestamp":int(_dbg_time.time()*1000)})+"\n")
+        # #endregion
         logger.warning(f"⚠️ Impossibile risolvere context per room {room_name}: {e}")
     
     
@@ -3669,10 +3700,22 @@ FORMATO TTS:
         logger.info(f"📝 Context injection aggiunto: {len(context_injection)} caratteri")
 
     sip_context_injection = db_settings.get("sip_context_injection", "").strip()
+    # #region agent log
+    try:
+        import json as _dbg_json2, time as _dbg_time2
+        _dbg_log_path2 = "/app/.cursor/debug-ffaca3.log"
+        with open(_dbg_log_path2, "a") as _f: _f.write(_dbg_json2.dumps({"sessionId":"ffaca3","hypothesisId":"H3","location":"main.py:prompt-inject","message":"sip_context_at_prompt_build","data":{"sip_ctx_len":len(sip_context_injection),"has_ctx":bool(sip_context_injection),"first100":sip_context_injection[:100] if sip_context_injection else ""},"timestamp":int(_dbg_time2.time()*1000)})+"\n")
+    except: pass
+    # #endregion
     if sip_context_injection:
         system_prompt = f"{system_prompt}\n\n--- CONTESTO SIP PER NUMERO CHIAMATO ---\n{sip_context_injection}"
         logger.info(f"🏨 Context SIP aggiunto: {len(sip_context_injection)} caratteri")
     
+    # #region agent log
+    try:
+        with open(_dbg_log_path2, "a") as _f: _f.write(_dbg_json2.dumps({"sessionId":"ffaca3","hypothesisId":"H3","location":"main.py:prompt-final","message":"system_prompt_final_size","data":{"prompt_len":len(system_prompt),"has_sip_ctx":bool(sip_context_injection)},"timestamp":int(_dbg_time2.time()*1000)})+"\n")
+    except: pass
+    # #endregion
     logger.info(f"📝 System prompt: {len(system_prompt)} caratteri")
     
     # Inizializza VideoFrameExtractor PRIMA dell'Agent

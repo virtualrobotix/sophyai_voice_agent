@@ -21,8 +21,8 @@ rtp_port:
 # NAT 1:1 - IP pubblico (dopo NAT/firewall)
 # Il server ha IP interno 159.223.228.197
 # Ma è raggiungibile dall'esterno su 188.166.134.148 (NAT)
-nat_1_to_1_ip: "188.166.134.148"
-media_nat_1_to_1_ip: "188.166.134.148"
+nat_1_to_1_ip: "10.0.0.133"
+media_nat_1_to_1_ip: "10.0.0.133"
 
 # Logging
 logging:
