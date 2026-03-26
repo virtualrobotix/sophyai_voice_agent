@@ -4,6 +4,7 @@ Agent principale che orchestra STT, LLM e TTS per conversazioni vocali.
 """
 
 import asyncio
+from datetime import datetime, timezone
 import os
 import re
 import sys
@@ -3334,7 +3335,7 @@ async def entrypoint(ctx: JobContext):
     # Inizializza LLM in base al provider configurato
     llm_provider = db_settings.get("llm_provider", "ollama")
     
-    llm_chat_extra_kwargs = None
+    llm_chat_extra_kwargs = {}
 
     if llm_provider == "remote" and db_settings.get("remote_server_url"):
         # Usa Server Remoto Custom con adapter LiveKit-compatible
@@ -3730,7 +3731,34 @@ FORMATO TTS:
         llm=my_llm,
         tts=my_tts,
     )
-    
+
+    session_conversation = {
+        "room_name": room_name,
+        "is_sip": _is_sip_call,
+        "session_id": str(uuid.uuid4()),
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "system_prompt": system_prompt,
+        "llm_provider": _component_info.get("llm", "unknown"),
+        "turns": [],
+    }
+
+    def _post_debug_snapshot(sess_conv):
+        """Invia snapshot sessione al server per debug API."""
+        try:
+            import urllib.request
+            data = json.dumps(sess_conv).encode()
+            req = urllib.request.Request(
+                "http://127.0.0.1:8080/api/debug/session",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=2)
+        except Exception:
+            pass
+
+    _post_debug_snapshot(session_conversation)
+
     
     # Verifica tools registrati
     if hasattr(agent, '_tools') and agent._tools:
@@ -4140,6 +4168,11 @@ FORMATO TTS:
                 force = msg.get("force", False)
                 set_force_agent_response(force)
 
+            elif msg_type == "reset_context":
+                session_conversation["turns"].clear()
+                logger.info("🔄 Reset storico conversazione (nuova chat)")
+                _post_debug_snapshot(session_conversation)
+
         except Exception as e:
             logger.error(f"Errore parsing messaggio frontend: {e}")
 
@@ -4179,12 +4212,14 @@ FORMATO TTS:
             # Nota: l'analisi video è ora gestita via function calling dall'LLM
             # Non serve più pattern matching manuale
             
-            # Crea chat context con il messaggio utente (usa il testo pulito senza il trigger)
+            # Costruisci chat context con storico multi-turno
             chat_ctx = llm.ChatContext()
             chat_ctx.add_message(role="system", content=agent._instructions)
+            for prev_turn in session_conversation["turns"]:
+                chat_ctx.add_message(role="user", content=prev_turn["user_message"])
+                chat_ctx.add_message(role="assistant", content=prev_turn["assistant_response"])
             chat_ctx.add_message(role="user", content=cleaned_text)
 
-            # Passa i tools dell'agent al provider LLM per abilitare function calling su chat testuale.
             tools_for_chat = []
             raw_tools = getattr(agent, "_tools", None)
             if isinstance(raw_tools, dict):
@@ -4192,11 +4227,11 @@ FORMATO TTS:
             elif isinstance(raw_tools, (list, tuple)):
                 tools_for_chat = list(raw_tools)
             
-            # Chiama LLM
             t_start = time.time()
             response_text = ""
             llm_cancelled = False
-            reset_cancel_llm()  # Reset flag prima di iniziare
+            turn_tool_calls = []
+            reset_cancel_llm()
             llm_conn_options = APIConnectOptions(max_retry=1, retry_interval=1.0, timeout=60.0)
             stream = my_llm.chat(
                 chat_ctx=chat_ctx,
@@ -4243,6 +4278,13 @@ FORMATO TTS:
                     tc_id = tc.call_id if hasattr(tc, 'call_id') else "unknown"
                     logger.info(f"🔧 [TOOL] Eseguo {fn_name}({fn_args_raw}) call_id={tc_id}")
 
+                    # Invia evento tool_call request al frontend
+                    try:
+                        tc_args_parsed = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
+                    except Exception:
+                        tc_args_parsed = fn_args_raw
+                    await send_callback(json.dumps({"type": "tool_call", "phase": "request", "tool_name": fn_name, "call_id": tc_id, "arguments": tc_args_parsed, "round": _tool_round + 1}), "system", generate_message_id())
+
                     chat_ctx.insert(_FunctionCall(call_id=tc_id, name=fn_name, arguments=fn_args_raw))
 
                     tool_result = f"Tool {fn_name} non trovato."
@@ -4267,6 +4309,10 @@ FORMATO TTS:
                     logger.info(f"🔧 [TOOL] Risultato {fn_name}: {str(tool_result)[:200]}")
                     chat_ctx.insert(_FunctionCallOutput(call_id=tc_id, name=fn_name, output=str(tool_result), is_error=is_error))
 
+                    # Invia evento tool_call response al frontend
+                    await send_callback(json.dumps({"type": "tool_call", "phase": "response", "tool_name": fn_name, "call_id": tc_id, "result": str(tool_result)[:500], "is_error": is_error, "round": _tool_round + 1}), "system", generate_message_id())
+                    turn_tool_calls.append({"function_name": fn_name, "arguments": tc_args_parsed, "result": str(tool_result)[:500], "is_error": is_error})
+
                 response_text = ""
                 stream = my_llm.chat(
                     chat_ctx=chat_ctx,
@@ -4280,15 +4326,26 @@ FORMATO TTS:
                 return
 
             t_llm = time.time()
-            logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
+            llm_elapsed_ms = int((t_llm - t_start) * 1000)
+            logger.info(f"🤖 [LLM] Risposta in {llm_elapsed_ms}ms: {response_text[:100]}...")
 
             await send_callback(response_text, "assistant", text_response_id)
+
+            session_conversation["turns"].append({
+                "turn_id": len(session_conversation["turns"]) + 1,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "user_message": cleaned_text,
+                "assistant_response": response_text,
+                "tool_calls": turn_tool_calls,
+                "llm_elapsed_ms": llm_elapsed_ms,
+            })
+            _post_debug_snapshot(session_conversation)
 
             set_tts_speaking(True)
             asyncio.create_task(_speak_tts_task(session, response_text))
             
         except Exception as e:
-            set_tts_speaking(False)  # Reset in caso di errore
+            set_tts_speaking(False)
             logger.error(f"Errore gestione messaggio testuale: {e}")
             try:
                 fallback_id = generate_message_id()
@@ -4308,9 +4365,12 @@ FORMATO TTS:
         try:
             logger.info(f"🤖 [MULTI-AUDIO] Genero risposta per {sender_identity}: {cleaned_text[:50]}...")
             
-            # Crea chat context
+            # Costruisci chat context con storico multi-turno
             chat_ctx = llm.ChatContext()
             chat_ctx.add_message(role="system", content=agent._instructions)
+            for prev_turn in session_conversation["turns"]:
+                chat_ctx.add_message(role="user", content=prev_turn["user_message"])
+                chat_ctx.add_message(role="assistant", content=prev_turn["assistant_response"])
             chat_ctx.add_message(role="user", content=cleaned_text)
 
             tools_for_chat = []
@@ -4320,11 +4380,11 @@ FORMATO TTS:
             elif isinstance(raw_tools, (list, tuple)):
                 tools_for_chat = list(raw_tools)
             
-            # Chiama LLM
             t_start = time.time()
             response_text = ""
             llm_cancelled = False
-            reset_cancel_llm()  # Reset flag prima di iniziare
+            turn_tool_calls = []
+            reset_cancel_llm()
             llm_conn_options = APIConnectOptions(max_retry=1, retry_interval=1.0, timeout=60.0)
             from livekit.agents.llm.chat_context import FunctionCall as _FunctionCall, FunctionCallOutput as _FunctionCallOutput
 
@@ -4371,6 +4431,12 @@ FORMATO TTS:
                     tc_id = tc.call_id if hasattr(tc, 'call_id') else "unknown"
                     logger.info(f"🔧 [MULTI-AUDIO TOOL] Eseguo {fn_name}({fn_args_raw}) call_id={tc_id}")
 
+                    try:
+                        tc_args_parsed = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
+                    except Exception:
+                        tc_args_parsed = fn_args_raw
+                    await send_callback(json.dumps({"type": "tool_call", "phase": "request", "tool_name": fn_name, "call_id": tc_id, "arguments": tc_args_parsed, "round": _tround + 1}), "system", generate_message_id())
+
                     chat_ctx.insert(_FunctionCall(call_id=tc_id, name=fn_name, arguments=fn_args_raw))
 
                     tool_result = f"Tool {fn_name} non trovato."
@@ -4395,6 +4461,9 @@ FORMATO TTS:
                     logger.info(f"🔧 [MULTI-AUDIO TOOL] Risultato {fn_name}: {str(tool_result)[:200]}")
                     chat_ctx.insert(_FunctionCallOutput(call_id=tc_id, name=fn_name, output=str(tool_result), is_error=is_error))
 
+                    await send_callback(json.dumps({"type": "tool_call", "phase": "response", "tool_name": fn_name, "call_id": tc_id, "result": str(tool_result)[:500], "is_error": is_error, "round": _tround + 1}), "system", generate_message_id())
+                    turn_tool_calls.append({"function_name": fn_name, "arguments": tc_args_parsed, "result": str(tool_result)[:500], "is_error": is_error})
+
                 response_text = ""
                 stream = my_llm.chat(
                     chat_ctx=chat_ctx,
@@ -4408,12 +4477,21 @@ FORMATO TTS:
                 return
             
             t_llm = time.time()
-            logger.info(f"🤖 [LLM] Risposta in {(t_llm - t_start)*1000:.0f}ms: {response_text[:100]}...")
+            llm_elapsed_ms = int((t_llm - t_start) * 1000)
+            logger.info(f"🤖 [LLM] Risposta in {llm_elapsed_ms}ms: {response_text[:100]}...")
             
-            # Invia risposta al frontend
             await send_callback(response_text, "assistant", text_response_id)
+
+            session_conversation["turns"].append({
+                "turn_id": len(session_conversation["turns"]) + 1,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "user_message": cleaned_text,
+                "assistant_response": response_text,
+                "tool_calls": turn_tool_calls,
+                "llm_elapsed_ms": llm_elapsed_ms,
+            })
+            _post_debug_snapshot(session_conversation)
             
-            # Pronuncia la risposta (pulisci testo per TTS)
             tts_text = response_text
             # Rimuovi contenuti tra parentesi quadre [...]
             tts_text = re.sub(r'\[.*?\]', '', tts_text)

@@ -344,6 +344,78 @@
             border-bottom-left-radius: 6px;
         }
 
+        .tool-call-panel {
+            background: rgba(245,158,11,0.05);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 12px;
+            margin: 8px 0;
+            overflow: visible;
+            flex-shrink: 0;
+            min-height: 40px;
+            width: 100%;
+        }
+        .tool-call-panel.is-error {
+            border-color: rgba(239,68,68,0.3);
+            background: rgba(239,68,68,0.05);
+        }
+        .tool-call-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .tool-call-header:hover { background: rgba(245,158,11,0.08); border-radius: 12px; }
+        .tool-chevron {
+            font-size: 0.6rem;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .tool-chevron.open { transform: rotate(90deg); }
+        .tool-badge {
+            font-size: 0.65rem;
+            background: rgba(245,158,11,0.15);
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-left: auto;
+        }
+        .tool-elapsed {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .tool-call-body {
+            padding: 0 14px 12px;
+        }
+        .tool-call-body.closed { display: none; }
+        .tool-call-section { margin-bottom: 8px; }
+        .tool-call-section-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tool-call-json {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text-secondary);
+        }
+        .tool-call-json .json-key { color: #818cf8; }
+        .tool-call-json .json-str { color: #34d399; }
+        .tool-call-json .json-num { color: #fbbf24; }
+        .tool-call-json .json-bool { color: #f472b6; }
+        .tool-call-json .json-null { color: #94a3b8; }
+
         .messages-empty {
             flex: 1;
             display: flex;
@@ -2082,11 +2154,15 @@
                                 elements.analyzeImageBtn.disabled = false;
                                 elements.analyzeImageBtn.textContent = '🔍 Analizza';
                             }
+                        } else if (msg.type === 'tool_call') {
+                            try {
+                                renderToolCallPanel(msg);
+                            } catch(toolErr) {
+                                console.error('renderToolCallPanel error:', toolErr);
+                            }
                         } else if (msg.type === 'wake_status') {
-                            // Gestione stato wake session
                             handleWakeStatus(msg.active, msg.remaining_seconds || 0);
                         } else if (msg.type === 'wake_countdown') {
-                            // Aggiornamento countdown wake
                             handleWakeCountdown(msg.remaining_seconds || 0);
                         }
                     } catch (e) {}
@@ -2840,6 +2916,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ context: '' })
                 });
+
+                // Reset storico conversazione nell'agent
+                if (state.room && state.connected) {
+                    const enc = new TextEncoder();
+                    await state.room.localParticipant.publishData(enc.encode(JSON.stringify({type: 'reset_context'})), {reliable: true});
+                }
                 
                 await loadChats();
                 
@@ -2903,26 +2985,8 @@
         }
         
         async function updateChatContext() {
-            // Crea un contesto formattato con gli ultimi messaggi
-            const recentMessages = chatMessages.slice(-20); // Ultimi 20 messaggi
-            
-            if (recentMessages.length === 0) return;
-            
-            const contextText = recentMessages.map(m => 
-                `${m.role === 'user' ? 'Utente' : 'Assistente'}: ${m.content}`
-            ).join('\n');
-            
-            try {
-                await fetch('/api/context', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        context: `--- STORICO CONVERSAZIONE ---\n${contextText}\n--- FINE STORICO ---`
-                    })
-                });
-            } catch (e) {
-                console.error('Errore aggiornamento contesto:', e);
-            }
+            // Lo storico conversazione è ora gestito dal ChatContext multi-turno nell'agent.
+            // context_injection nel DB è riservato al contesto statico (hotel, etc).
         }
 
         async function deleteChat(chatId) {
@@ -2953,6 +3017,12 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ context: '' })
                     });
+
+                    // Reset storico conversazione nell'agent
+                    if (state.room && state.connected) {
+                        const enc = new TextEncoder();
+                        await state.room.localParticipant.publishData(enc.encode(JSON.stringify({type: 'reset_context'})), {reliable: true});
+                    }
                 }
                 await loadChats();
             } catch (e) {
@@ -3038,6 +3108,74 @@
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        const _pendingToolCalls = {};
+
+        function syntaxHighlightJson(obj) {
+            const jsonStr = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+            return escapeHtml(jsonStr)
+                .replace(/"([^"]+)"(?=\s*:)/g, '"<span class="json-key">$1</span>"')
+                .replace(/:\s*"([^"]*)"/g, ': "<span class="json-str">$1</span>"')
+                .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+                .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+                .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+        }
+
+        function renderToolCallPanel(msg) {
+            const container = elements.messages;
+            if (!container) return;
+
+            if (msg.phase === 'request') {
+                _pendingToolCalls[msg.call_id] = msg;
+                const panel = document.createElement('div');
+                panel.className = 'tool-call-panel';
+                panel.dataset.callId = msg.call_id;
+                const argsHtml = syntaxHighlightJson(msg.arguments || {});
+                const headerHtml = `
+                    <div class="tool-call-header">
+                        <span class="tool-chevron open">&#9654;</span>
+                        <span>&#9881; ${escapeHtml(msg.tool_name)}</span>
+                        <span class="tool-badge">ROUND ${msg.round || 1}</span>
+                        <span class="tool-elapsed">in corso...</span>
+                    </div>
+                    <div class="tool-call-body">
+                        <div class="tool-call-section">
+                            <div class="tool-call-section-label">Request</div>
+                            <div class="tool-call-json">${argsHtml}</div>
+                        </div>
+                        <div class="tool-call-section tool-call-response-section" style="display:none;">
+                            <div class="tool-call-section-label">Response</div>
+                            <div class="tool-call-json tool-call-response-json"></div>
+                        </div>
+                    </div>
+                `;
+                panel.innerHTML = headerHtml;
+                panel.querySelector('.tool-call-header')?.addEventListener('click', function() {
+                    this.querySelector('.tool-chevron').classList.toggle('open');
+                    this.nextElementSibling.classList.toggle('closed');
+                });
+                container.insertBefore(panel, container.firstChild);
+            } else if (msg.phase === 'response') {
+                let panel = container.querySelector(`.tool-call-panel[data-call-id="${msg.call_id}"]`);
+                if (!panel) {
+                    renderToolCallPanel({...msg, phase: 'request', arguments: {}});
+                    panel = container.querySelector(`.tool-call-panel[data-call-id="${msg.call_id}"]`);
+                }
+                if (panel) {
+                    if (msg.is_error) panel.classList.add('is-error');
+                    const elapsed = panel.querySelector('.tool-elapsed');
+                    if (elapsed) elapsed.textContent = 'completato';
+                    const respSection = panel.querySelector('.tool-call-response-section');
+                    if (respSection) {
+                        respSection.style.display = '';
+                        const respJson = respSection.querySelector('.tool-call-response-json');
+                        if (respJson) respJson.innerHTML = syntaxHighlightJson(msg.result || '');
+                    }
+                    const body = panel.querySelector('.tool-call-body');
+                    if (body) body.classList.remove('closed');
+                }
+            }
         }
 
         function formatDate(isoString) {

@@ -426,6 +426,44 @@ async def restart_agent():
         return {"status": "error", "message": str(e)}
 
 
+# ==================== Debug Sessions (in-memory) ====================
+_debug_sessions: Dict[str, dict] = {}
+
+@app.post("/api/debug/session")
+async def post_debug_session(request: Request):
+    """Riceve snapshot sessione dall'agent per debug."""
+    data = await request.json()
+    room_name = data.get("room_name", "unknown")
+    _debug_sessions[room_name] = data
+    return {"status": "ok"}
+
+@app.get("/api/debug/sessions")
+async def get_debug_sessions():
+    """Lista sessioni debug attive."""
+    sessions = []
+    for rn, sess in _debug_sessions.items():
+        sessions.append({
+            "room_name": rn,
+            "session_id": sess.get("session_id", ""),
+            "is_sip": sess.get("is_sip", False),
+            "llm_provider": sess.get("llm_provider", ""),
+            "started_at": sess.get("started_at", ""),
+            "turns_count": len(sess.get("turns", [])),
+            "last_user_message": sess.get("turns", [{}])[-1].get("user_message", "") if sess.get("turns") else "",
+            "last_assistant_response": sess.get("turns", [{}])[-1].get("assistant_response", "") if sess.get("turns") else "",
+            "system_prompt_length": len(sess.get("system_prompt", "")),
+        })
+    return {"sessions": sessions}
+
+@app.get("/api/debug/sessions/{room_name:path}")
+async def get_debug_session_detail(room_name: str):
+    """Dettaglio completo sessione debug per room."""
+    sess = _debug_sessions.get(room_name)
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return sess
+
+
 # ==================== Database Connection ====================
 _db = None
 
