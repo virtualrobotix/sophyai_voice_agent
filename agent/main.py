@@ -2771,6 +2771,25 @@ Scrivi solo testo semplice e discorsivo."""
         # Restituisce stringa vuota per evitare che l'LLM interpreti la risposta
         return ""
 
+    @function_tool(description="Restituisce la data e l'ora corrente del sistema. Usa questo tool SEMPRE prima di check_room_availability per conoscere la data odierna e calcolare le date corrette quando l'utente usa espressioni relative come 'domani', 'la prossima settimana', 'tra 3 giorni', 'questo weekend'.")
+    async def get_current_datetime(
+        self,
+        context: RunContext,
+    ) -> str:
+        """Restituisce data/ora corrente del server in formato leggibile e ISO."""
+        now = datetime.now()
+        utc_now = datetime.now(timezone.utc)
+        weekdays_it = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
+        months_it = ["", "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+                      "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+        weekday = weekdays_it[now.weekday()]
+        return (
+            f"Data odierna: {weekday} {now.day} {months_it[now.month]} {now.year}, "
+            f"ore {now.strftime('%H:%M')}. "
+            f"Formato ISO: {now.strftime('%Y-%m-%d')}. "
+            f"UTC: {utc_now.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        )
+
     @function_tool(description="Controlla la disponibilità delle camere in hotel per un periodo. Usa questo tool quando l'utente chiede camere libere, disponibilità o vuole cercare camere tra una data di arrivo e una di partenza.")
     async def check_room_availability(
         self,
@@ -3672,11 +3691,14 @@ Hai accesso a webcam e screen sharing. Quando l'utente ti chiede di:
 Usa sempre le funzioni appropriate quando l'utente fa richieste visive.
 
 CAPACITÀ HOTEL:
-Quando l'utente chiede disponibilità camere, camere libere o ricerca camere tra date specifiche,
-usa la funzione check_room_availability passando:
-- start_date in formato YYYY-MM-DD
-- end_date in formato YYYY-MM-DD
-- count come numero richiesto
+Quando l'utente chiede disponibilità camere, camere libere o ricerca camere tra date specifiche:
+1. PRIMA chiama get_current_datetime per conoscere la data odierna
+2. POI usa la data odierna per calcolare le date corrette (es. "domani" = data odierna + 1 giorno)
+3. INFINE chiama check_room_availability passando:
+   - start_date in formato YYYY-MM-DD
+   - end_date in formato YYYY-MM-DD
+   - count come numero richiesto
+IMPORTANTE: NON inventare o indovinare mai la data corrente. Usa SEMPRE get_current_datetime.
 
 STILE:
 - Rispondi come un amico esperto: diretto, chiaro, utile
@@ -4291,7 +4313,9 @@ FORMATO TTS:
                     is_error = False
                     try:
                         fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
-                        if fn_name == "check_room_availability":
+                        if fn_name == "get_current_datetime":
+                            tool_result = await agent.get_current_datetime(context=None)
+                        elif fn_name == "check_room_availability":
                             tool_result = await agent.check_room_availability(
                                 context=None,
                                 start_date=fn_args.get("start_date", ""),
@@ -4443,7 +4467,9 @@ FORMATO TTS:
                     is_error = False
                     try:
                         fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
-                        if fn_name == "check_room_availability":
+                        if fn_name == "get_current_datetime":
+                            tool_result = await agent.get_current_datetime(context=None)
+                        elif fn_name == "check_room_availability":
                             tool_result = await agent.check_room_availability(
                                 context=None,
                                 start_date=fn_args.get("start_date", ""),
