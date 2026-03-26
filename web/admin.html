@@ -2721,6 +2721,7 @@ Authorization: Bearer &lt;token&gt;
 
         // ==================== Debug Sessions ====================
         let _debugSessionsCache = '';
+        let _openDebugRooms = new Set();
 
         async function fetchDebugSessions() {
             try {
@@ -2729,45 +2730,64 @@ Authorization: Bearer &lt;token&gt;
                 const data = await resp.json();
                 if (!data.sessions || data.sessions.length === 0) return;
                 const sig = JSON.stringify(data.sessions.map(s => s.room_name + ':' + s.turns_count));
-                if (sig === _debugSessionsCache) return;
-                _debugSessionsCache = sig;
-                renderDebugSessionsList(data.sessions);
+                if (sig !== _debugSessionsCache) {
+                    _debugSessionsCache = sig;
+                    renderDebugSessionsList(data.sessions);
+                }
+                // Auto-refresh sessioni aperte
+                for (const roomName of _openDebugRooms) {
+                    const el = document.querySelector(`.debug-session[data-room="${roomName}"] .debug-session-body.open`);
+                    if (el) refreshDebugSessionDetail(roomName, el);
+                }
             } catch (e) {}
         }
 
         function renderDebugSessionsList(sessions) {
             const container = document.getElementById('debug-sessions-container');
+            const prevOpen = new Set(_openDebugRooms);
             container.innerHTML = sessions.map(s => {
                 const badge = s.is_sip
                     ? '<span class="debug-session-badge sip">SIP</span>'
                     : '<span class="debug-session-badge chat">CHAT</span>';
                 const started = s.started_at ? new Date(s.started_at).toLocaleString('it-IT') : '--';
+                const isOpen = prevOpen.has(s.room_name);
                 return `<div class="debug-session" data-room="${escapeHtml(s.room_name)}">
                     <div class="debug-session-header" onclick="toggleDebugSession(this)">
-                        <span class="debug-session-chevron">&#9654;</span>
+                        <span class="debug-session-chevron${isOpen ? ' open' : ''}">&#9654;</span>
                         ${badge}
                         <span style="font-size:0.82rem; font-weight:600; color:var(--text-primary);">${escapeHtml(s.room_name)}</span>
                         <span class="debug-session-meta">${s.turns_count} turni &middot; ${s.llm_provider || '?'} &middot; ${started}</span>
                     </div>
-                    <div class="debug-session-body">
+                    <div class="debug-session-body${isOpen ? ' open' : ''}">
                         <p style="color:var(--text-muted); font-size:0.8rem; padding:8px 0;">Caricamento...</p>
                     </div>
                 </div>`;
             }).join('');
+            // Ri-carica dettagli per sessioni che erano aperte
+            for (const roomName of prevOpen) {
+                const el = document.querySelector(`.debug-session[data-room="${roomName}"] .debug-session-body.open`);
+                if (el) refreshDebugSessionDetail(roomName, el);
+            }
         }
 
         async function toggleDebugSession(headerEl) {
             const body = headerEl.nextElementSibling;
             const chevron = headerEl.querySelector('.debug-session-chevron');
+            const roomName = headerEl.closest('.debug-session').dataset.room;
             const isOpen = body.classList.contains('open');
             if (isOpen) {
                 body.classList.remove('open');
                 chevron.classList.remove('open');
+                _openDebugRooms.delete(roomName);
                 return;
             }
             body.classList.add('open');
             chevron.classList.add('open');
-            const roomName = headerEl.closest('.debug-session').dataset.room;
+            _openDebugRooms.add(roomName);
+            await refreshDebugSessionDetail(roomName, body);
+        }
+
+        async function refreshDebugSessionDetail(roomName, body) {
             try {
                 const resp = await fetch(`/api/debug/sessions/${encodeURIComponent(roomName)}`);
                 if (!resp.ok) { body.innerHTML = '<p style="color:#ef4444; padding:8px;">Errore caricamento</p>'; return; }
@@ -2781,6 +2801,14 @@ Authorization: Bearer &lt;token&gt;
         function renderDebugSessionDetail(container, sess) {
             let html = '';
 
+            // Info sessione
+            html += `<div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                <span style="font-size:0.72rem; color:var(--text-muted);">🆔 ${escapeHtml(sess.session_id || '?')}</span>
+                <span style="font-size:0.72rem; color:var(--text-muted);">🤖 ${escapeHtml(sess.llm_provider || '?')}</span>
+                <span style="font-size:0.72rem; color:var(--text-muted);">📡 ${sess.is_sip ? 'SIP' : 'Web Chat'}</span>
+            </div>`;
+
+            // System Prompt
             const promptText = sess.system_prompt || '(nessuno)';
             const promptId = 'sp-' + Math.random().toString(36).slice(2, 8);
             html += `<div style="margin-bottom:12px;">
@@ -2797,11 +2825,16 @@ Authorization: Bearer &lt;token&gt;
                     const timingBadge = turn.llm_elapsed_ms
                         ? `<span style="font-size:0.65rem; color:${turn.llm_elapsed_ms < 1500 ? '#22c55e' : turn.llm_elapsed_ms < 3000 ? '#eab308' : '#ef4444'}; margin-left:auto;">LLM ${turn.llm_elapsed_ms}ms</span>`
                         : '';
+                    const channelBadge = turn.channel
+                        ? `<span style="font-size:0.6rem; padding:1px 6px; border-radius:4px; background:${turn.channel === 'voice' ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.15)'}; color:${turn.channel === 'voice' ? '#22c55e' : '#818cf8'};">${turn.channel}</span>`
+                        : '';
+
+                    // Tool calls
                     let toolsHtml = '';
                     if (turn.tool_calls && turn.tool_calls.length > 0) {
                         toolsHtml = turn.tool_calls.map(tc => {
                             const tcId = 'tc-' + Math.random().toString(36).slice(2, 8);
-                            const hasError = tc.result && typeof tc.result === 'string' && tc.result.toLowerCase().includes('error');
+                            const hasError = tc.is_error || (tc.result && typeof tc.result === 'string' && tc.result.toLowerCase().includes('error'));
                             return `<div class="debug-tool-badge${hasError ? ' error' : ''}">
                                 🔧 ${escapeHtml(tc.function_name || tc.name || '?')}
                                 <button class="debug-raw-toggle" onclick="event.stopPropagation(); document.getElementById('${tcId}').classList.toggle('open')" style="margin-left:6px;">dettagli</button>
@@ -2810,31 +2843,41 @@ Authorization: Bearer &lt;token&gt;
                         }).join('');
                     }
 
+                    // RAW contesto LLM (i messaggi esatti inviati al modello)
+                    let ctxHtml = '';
+                    if (turn.llm_context_messages && turn.llm_context_messages.length > 0) {
+                        const ctxId = 'ctx-' + Math.random().toString(36).slice(2, 8);
+                        const msgCount = turn.llm_context_messages.length;
+                        const sysLen = (turn.llm_context_messages[0]?.content || '').length;
+                        ctxHtml = `<button class="debug-raw-toggle" onclick="document.getElementById('${ctxId}').classList.toggle('open')" style="margin-top:4px;">📨 Contesto LLM inviato (${msgCount} messaggi, system: ${sysLen} chars)</button>
+                        <div id="${ctxId}" class="debug-raw-content">${turn.llm_context_messages.map((m, i) => {
+                            const roleColor = m.role === 'system' ? '#f59e0b' : m.role === 'user' ? '#818cf8' : '#22c55e';
+                            return '<div style="margin-bottom:8px;"><strong style="color:' + roleColor + ';">[' + (i+1) + '] ' + escapeHtml(m.role).toUpperCase() + '</strong> <span style="color:var(--text-muted); font-size:0.65rem;">(' + (m.content||'').length + ' chars)</span>\n' + escapeHtml(m.content || '(vuoto)') + '</div>';
+                        }).join('<hr style="border-color:rgba(255,255,255,0.05); margin:4px 0;">')}</div>`;
+                    }
+
+                    // RAW JSON turno completo
                     const rawId = 'raw-' + Math.random().toString(36).slice(2, 8);
-                    const rawCtx = {
-                        turn_index: idx,
-                        user_message: turn.user_message,
-                        assistant_response: turn.assistant_response,
-                        tool_calls: turn.tool_calls,
-                        llm_elapsed_ms: turn.llm_elapsed_ms,
-                        timestamp: turn.timestamp
-                    };
 
                     html += `<div class="debug-turn">
                         <div class="debug-turn-header">
                             <span style="font-weight:700;">#${idx + 1}</span>
+                            ${channelBadge}
                             ${turn.timestamp ? '<span>' + new Date(turn.timestamp).toLocaleTimeString('it-IT') + '</span>' : ''}
+                            ${turn.llm_provider ? '<span style="font-size:0.6rem; color:var(--text-muted);">' + escapeHtml(turn.llm_provider) + '</span>' : ''}
                             ${timingBadge}
                         </div>
-                        <div class="debug-turn-user">👤 ${escapeHtml((turn.user_message || '').substring(0, 300))}</div>
-                        <div class="debug-turn-assistant">🤖 ${escapeHtml((turn.assistant_response || '').substring(0, 500))}</div>
+                        <div class="debug-turn-user">👤 ${escapeHtml((turn.user_message || '').substring(0, 500))}</div>
+                        <div class="debug-turn-assistant">🤖 ${escapeHtml((turn.assistant_response || '').substring(0, 800))}</div>
                         ${toolsHtml}
-                        <button class="debug-raw-toggle" onclick="document.getElementById('${rawId}').classList.toggle('open')" style="margin-top:6px;">RAW JSON turno</button>
-                        <div id="${rawId}" class="debug-raw-content">${escapeHtml(JSON.stringify(rawCtx, null, 2))}</div>
+                        ${ctxHtml}
+                        <button class="debug-raw-toggle" onclick="document.getElementById('${rawId}').classList.toggle('open')" style="margin-top:4px;">📋 RAW JSON turno</button>
+                        <div id="${rawId}" class="debug-raw-content">${escapeHtml(JSON.stringify(turn, null, 2))}</div>
                     </div>`;
                 });
             }
 
+            // RAW sessione completa
             const fullRawId = 'fraw-' + Math.random().toString(36).slice(2, 8);
             html += `<div style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
                 <button class="debug-raw-toggle" onclick="document.getElementById('${fullRawId}').classList.toggle('open')">📦 RAW sessione completa</button>

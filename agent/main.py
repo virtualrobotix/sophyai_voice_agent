@@ -4242,6 +4242,13 @@ FORMATO TTS:
                 chat_ctx.add_message(role="assistant", content=prev_turn["assistant_response"])
             chat_ctx.add_message(role="user", content=cleaned_text)
 
+            # Cattura snapshot raw del contesto inviato al LLM
+            llm_raw_messages = [{"role": "system", "content": agent._instructions}]
+            for prev_turn in session_conversation["turns"]:
+                llm_raw_messages.append({"role": "user", "content": prev_turn["user_message"]})
+                llm_raw_messages.append({"role": "assistant", "content": prev_turn["assistant_response"]})
+            llm_raw_messages.append({"role": "user", "content": cleaned_text})
+
             tools_for_chat = []
             raw_tools = getattr(agent, "_tools", None)
             if isinstance(raw_tools, dict):
@@ -4362,10 +4369,12 @@ FORMATO TTS:
                 "assistant_response": response_text,
                 "tool_calls": turn_tool_calls,
                 "llm_elapsed_ms": llm_elapsed_ms,
+                "llm_context_messages": llm_raw_messages,
+                "llm_provider": _component_info.get("llm", "unknown"),
+                "channel": "chat",
             })
             _post_debug_snapshot(session_conversation)
 
-            # Invia record al pannello timing/conversazioni (admin)
             asyncio.create_task(send_conversation_to_server({
                 "stt_ms": 0,
                 "llm_ms": llm_elapsed_ms,
@@ -4412,6 +4421,12 @@ FORMATO TTS:
                 chat_ctx.add_message(role="user", content=prev_turn["user_message"])
                 chat_ctx.add_message(role="assistant", content=prev_turn["assistant_response"])
             chat_ctx.add_message(role="user", content=cleaned_text)
+
+            llm_raw_messages = [{"role": "system", "content": agent._instructions}]
+            for prev_turn in session_conversation["turns"]:
+                llm_raw_messages.append({"role": "user", "content": prev_turn["user_message"]})
+                llm_raw_messages.append({"role": "assistant", "content": prev_turn["assistant_response"]})
+            llm_raw_messages.append({"role": "user", "content": cleaned_text})
 
             tools_for_chat = []
             raw_tools = getattr(agent, "_tools", None)
@@ -4531,6 +4546,9 @@ FORMATO TTS:
                 "assistant_response": response_text,
                 "tool_calls": turn_tool_calls,
                 "llm_elapsed_ms": llm_elapsed_ms,
+                "llm_context_messages": llm_raw_messages,
+                "llm_provider": _component_info.get("llm", "unknown"),
+                "channel": "voice",
             })
             _post_debug_snapshot(session_conversation)
             
