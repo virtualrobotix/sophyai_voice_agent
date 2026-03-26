@@ -2256,6 +2256,12 @@
                 elements.statusText.textContent = 'Connesso';
                 initModal.hide();
                 elements.voiceStatus.textContent = `Parla con ${branding.assistantName}...`;
+
+                // Reset storico conversazione nell'agent alla connessione
+                try {
+                    const enc = new TextEncoder();
+                    await state.room.localParticipant.publishData(enc.encode(JSON.stringify({type: 'reset_context'})), {reliable: true});
+                } catch(e) {}
                 
                 // Inizializza sistema di interruzione vocale automatica
                 setupVoiceInterrupt();

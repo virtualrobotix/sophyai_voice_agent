@@ -4365,6 +4365,22 @@ FORMATO TTS:
             })
             _post_debug_snapshot(session_conversation)
 
+            # Invia record al pannello timing/conversazioni (admin)
+            asyncio.create_task(send_conversation_to_server({
+                "stt_ms": 0,
+                "llm_ms": llm_elapsed_ms,
+                "llm_ttft_ms": 0,
+                "tts_ms": 0,
+                "e2e_ms": llm_elapsed_ms,
+                "speech_to_tts_ms": 0,
+                "stt_type": "text",
+                "llm_type": _component_info.get("llm", "unknown"),
+                "tts_type": "text",
+                "user_text": cleaned_text[:100] if cleaned_text else "",
+                "agent_text": response_text[:100] if response_text else "",
+                "sender": sender_identity or "chat",
+            }))
+
             set_tts_speaking(True)
             asyncio.create_task(_speak_tts_task(session, response_text))
             
