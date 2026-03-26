@@ -3766,16 +3766,24 @@ FORMATO TTS:
 
     def _post_debug_snapshot(sess_conv):
         """Invia snapshot sessione al server per debug API."""
+        async def _do_post():
+            import ssl
+            try:
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                connector = aiohttp.TCPConnector(ssl=ssl_context)
+                async with aiohttp.ClientSession(connector=connector) as s:
+                    async with s.post(
+                        "https://host.docker.internal:8443/api/debug/session",
+                        json=sess_conv,
+                        timeout=aiohttp.ClientTimeout(total=3),
+                    ) as resp:
+                        pass
+            except Exception:
+                pass
         try:
-            import urllib.request
-            data = json.dumps(sess_conv).encode()
-            req = urllib.request.Request(
-                "http://127.0.0.1:8080/api/debug/session",
-                data=data,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            urllib.request.urlopen(req, timeout=2)
+            asyncio.get_event_loop().create_task(_do_post())
         except Exception:
             pass
 
