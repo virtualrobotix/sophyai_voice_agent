@@ -2394,8 +2394,17 @@
                 });
 
                 try {
+                    // #region agent log
+                    fetch('/api/_debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'aba069',hypothesisId:'H1-H4',location:'index.html:room.connect',message:'Attempting room.connect',data:{url:data.url,tokenLength:data.token?.length,windowLocation:window.location.href},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
                     await state.room.connect(data.url, data.token);
+                    // #region agent log
+                    fetch('/api/_debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'aba069',hypothesisId:'H1',location:'index.html:room.connect.success',message:'room.connect SUCCESS',data:{},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
                 } catch (connectError) {
+                    // #region agent log
+                    fetch('/api/_debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'aba069',hypothesisId:'H1-H4',location:'index.html:room.connect.error',message:'room.connect FAILED',data:{error:connectError?.message||String(connectError),url:data.url},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
                     throw connectError;
                 }
                 

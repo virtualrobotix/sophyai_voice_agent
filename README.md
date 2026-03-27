@@ -194,6 +194,21 @@ sophyai_voice_agent/
 - Richieste Docker interne esenti da auth
 - SMTP configurabile per reset password
 
+## Porte per Accesso Esterno
+
+Per accesso da Internet, configurare il NAT/firewall con queste porte:
+
+| Porta | Proto | Servizio |
+|-------|-------|----------|
+| **8443** | TCP | Web HTTPS |
+| **7443** | TCP | LiveKit WSS signaling |
+| **7881-7882** | TCP | LiveKit RTC |
+| **50000-60000** | UDP | WebRTC media |
+| 5060 | UDP+TCP | SIP (opzionale) |
+| 10000-10100 | UDP | SIP RTP (opzionale) |
+
+Per dettagli completi vedi [docs/INSTALLATION.md](docs/INSTALLATION.md#firewall-e-nat-per-accesso-esterno).
+
 ## Licenza
 
 MIT License

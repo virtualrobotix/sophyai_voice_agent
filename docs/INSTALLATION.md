@@ -50,6 +50,79 @@
 | 5060 | UDP/TCP | SIP signaling | Solo se SIP |
 | 10000-10100 | UDP | SIP RTP media | Solo se SIP |
 
+### Firewall e NAT per Accesso Esterno
+
+Per consentire l'accesso alla piattaforma da Internet (fuori dalla rete locale), e' necessario configurare il port forwarding sul router/firewall.
+
+**Porte obbligatorie:**
+
+| Porta | Protocollo | Servizio | Note |
+|-------|-----------|----------|------|
+| **8443** | TCP | Web HTTPS (frontend + API + login) | Pagina web e tutte le API |
+| **7443** | TCP | LiveKit WSS signaling | Segnalazione WebRTC. **Senza questa porta la connessione alla room fallisce** con "could not establish signal connection: Failed to fetch" |
+| **7881-7882** | TCP | LiveKit RTC/TCP | Trasporto media WebRTC via TCP (fallback) |
+| **50000-60000** | UDP | WebRTC media (audio/video) | Trasporto media RTP. Range configurabile in `livekit-server.yaml` |
+
+**Porte opzionali (solo se si usa telefonia SIP):**
+
+| Porta | Protocollo | Servizio | Note |
+|-------|-----------|----------|------|
+| 5060 | UDP + TCP | SIP signaling | Ricezione chiamate VoIP |
+| 10000-10100 | UDP | SIP RTP media | Audio chiamate telefoniche |
+
+**Esempio configurazione router** (tutte le porte puntano all'IP locale del server):
+
+```
+8443      TCP  ->  192.168.1.100:8443   # Web HTTPS
+7443      TCP  ->  192.168.1.100:7443   # LiveKit WSS
+7881-7882 TCP  ->  192.168.1.100:7881-7882  # LiveKit RTC
+50000-60000 UDP -> 192.168.1.100:50000-60000  # WebRTC media
+```
+
+**Esempio con `ufw` (firewall Linux):**
+
+```bash
+sudo ufw allow 8443/tcp    # Web HTTPS
+sudo ufw allow 7443/tcp    # LiveKit WSS signaling
+sudo ufw allow 7881:7882/tcp  # LiveKit RTC
+sudo ufw allow 50000:60000/udp  # WebRTC media
+# Solo se SIP:
+sudo ufw allow 5060        # SIP signaling
+sudo ufw allow 10000:10100/udp  # SIP RTP
+```
+
+**Esempio con `iptables`:**
+
+```bash
+# Web HTTPS
+iptables -A INPUT -p tcp --dport 8443 -j ACCEPT
+# LiveKit WSS
+iptables -A INPUT -p tcp --dport 7443 -j ACCEPT
+# LiveKit RTC
+iptables -A INPUT -p tcp --dport 7881:7882 -j ACCEPT
+# WebRTC media
+iptables -A INPUT -p udp --dport 50000:60000 -j ACCEPT
+```
+
+**Ridurre il range UDP:** Se il router non supporta range ampi, modifica `livekit-server.yaml`:
+
+```yaml
+rtc:
+  port_range_start: 50000
+  port_range_end: 50100   # Range ridotto (100 porte)
+  use_external_ip: true
+```
+
+**Verifica connettivita':** Dopo aver configurato il NAT, verifica dall'esterno:
+
+```bash
+# Test porta web
+curl -sk https://chatbotdev.sophyai.io:8443/api/health
+
+# Test porta LiveKit WSS (deve rispondere con upgrade WebSocket)
+curl -sk -I https://chatbotdev.sophyai.io:7443
+```
+
 ---
 
 ## Prerequisiti Software
@@ -475,13 +548,24 @@ docker compose logs web --tail 50
 
 ### Non riesco a connettermi da remoto
 
-1. Verifica che la porta 8443 sia aperta nel firewall:
+1. Verifica che le porte siano aperte nel firewall:
    ```bash
-   sudo ufw allow 8443/tcp
-   sudo ufw allow 7443/tcp
+   sudo ufw allow 8443/tcp   # Web HTTPS
+   sudo ufw allow 7443/tcp   # LiveKit WSS
+   sudo ufw allow 7881:7882/tcp  # LiveKit RTC
+   sudo ufw allow 50000:60000/udp  # WebRTC media
    ```
 2. Verifica che `SERVER_IP` in `.env` sia corretto (o lascialo vuoto per auto-detect)
 3. Se usi certificati self-signed, accetta l'eccezione nel browser
+
+### "Could not establish signal connection: Failed to fetch"
+
+Questo errore significa che il browser non riesce a raggiungere il server LiveKit sulla porta 7443.
+
+1. **Causa piu' comune**: La porta **7443 TCP** non e' nattata/forwardata sul router
+2. Configura il port forwarding per la porta 7443 TCP verso l'IP locale del server
+3. Vedi la sezione [Firewall e NAT per Accesso Esterno](#firewall-e-nat-per-accesso-esterno) per la lista completa delle porte
+4. Verifica dall'esterno: `curl -sk https://tuodominio.com:7443` - deve dare una risposta (anche errore 400 va bene, significa che la porta e' raggiungibile)
 
 ### LiveKit non si connette
 

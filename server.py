@@ -111,6 +111,16 @@ def get_livekit_url_for_client(request: Request) -> str:
         port = "7443"
     
     final_url = f"{proto}://{host}:{port}"
+    # #region agent log
+    import json as _json_dbg
+    try:
+        _log_line = _json_dbg.dumps({"sessionId":"aba069","hypothesisId":"H1-H2-H4","location":"server.py:get_livekit_url_for_client","message":"LiveKit URL for client","data":{"final_url":final_url,"host":host,"port":port,"proto":proto,"configured_url":configured_url,"request_host":request.headers.get("host",""),"is_https":is_https,"client_ip":request.client.host if request.client else "unknown","origin":request.headers.get("origin","")},"timestamp":int(__import__('time').time()*1000)})
+        for _p in ["/home/laserlab/lavoro/Progetti_2026/sophyai_voice_agent/.cursor/debug-aba069.log","/app/.cursor/debug-aba069.log","/tmp/debug-aba069.log"]:
+            try:
+                with open(_p,"a") as _f: _f.write(_log_line+"\n"); break
+            except: continue
+    except: pass
+    # #endregion
     return final_url
 
 
@@ -149,6 +159,7 @@ PUBLIC_PATHS = {
     "/api/auth/login", "/api/auth/logout", "/api/auth/me",
     "/api/auth/change-password", "/api/auth/forgot-password",
     "/api/auth/reset-password", "/api/health", "/api/branding",
+    "/api/_debug_log",
 }
 PUBLIC_PREFIXES = ("/static/",)
 
@@ -641,6 +652,23 @@ async def admin_send_reset_email(user_id: int, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore invio email: {str(e)}")
     return {"status": "ok", "message": f"Email inviata a {target['email']}"}
+
+
+# #region agent log
+@app.post("/api/_debug_log")
+async def debug_log_endpoint(request: Request):
+    """Temporary debug log relay for frontend instrumentation."""
+    try:
+        body = await request.json()
+        import json as _jj
+        _log_line = _jj.dumps(body)
+        for _p in ["/home/laserlab/lavoro/Progetti_2026/sophyai_voice_agent/.cursor/debug-aba069.log","/app/.cursor/debug-aba069.log","/tmp/debug-aba069.log"]:
+            try:
+                with open(_p,"a") as _f: _f.write(_log_line+"\n"); break
+            except: continue
+    except: pass
+    return {"ok": True}
+# #endregion
 
 
 @app.get("/api/health")

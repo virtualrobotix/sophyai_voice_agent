@@ -292,3 +292,30 @@ Dal tab "Ascolto Live":
 - **LLM**: Tempo di risposta, Time-to-First-Token
 - **TTS**: Tempo di sintesi vocale
 - **Latenza totale**: Tempo end-to-end dalla voce dell'utente alla risposta
+
+---
+
+## Risoluzione Problemi Comuni
+
+### La chat funziona in locale ma non dall'esterno
+
+Se dalla rete locale (es. `https://10.0.0.x:8443`) tutto funziona, ma dall'esterno (es. `https://chatbotdev.sophyai.io:8443`) si ottiene l'errore **"could not establish signal connection: Failed to fetch"** al tentativo di connettersi alla room:
+
+**Causa**: La porta **7443 TCP** (LiveKit WSS signaling) non e' nattata sul router.
+
+**Soluzione**: Configurare il port forwarding per queste porte sul router/firewall:
+
+| Porta | Proto | Servizio |
+|-------|-------|----------|
+| 8443 | TCP | Web HTTPS (gia' configurato se la pagina si carica) |
+| **7443** | TCP | LiveKit WSS signaling |
+| **7881-7882** | TCP | LiveKit RTC |
+| **50000-60000** | UDP | WebRTC media audio/video |
+
+Per la guida completa vedi [INSTALLATION.md - Firewall e NAT](INSTALLATION.md#firewall-e-nat-per-accesso-esterno).
+
+### Non si sente audio nella chat
+
+1. Verificare che il browser abbia i permessi per il microfono
+2. Verificare la calibrazione audio nel widget "Calibrazione Audio" nella pagina chat
+3. Se si accede dall'esterno, verificare che le porte UDP 50000-60000 siano nattate

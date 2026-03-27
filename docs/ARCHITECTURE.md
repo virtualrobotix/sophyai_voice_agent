@@ -171,6 +171,29 @@ Runtime LLM locale. I container accedono via `host.docker.internal:11434`.
 - **Richieste interne** (172.x.x.x): Bypassano l'autenticazione per comunicazione container-to-container
 - **SIP Bridge**: Usa `network_mode: host` per evitare problemi NAT
 
+## Porte per Accesso Esterno (NAT/Firewall)
+
+Per rendere la piattaforma accessibile da Internet, queste porte devono essere aperte e nattate:
+
+| Porta | Proto | Servizio | Obbligatoria |
+|-------|-------|----------|-------------|
+| **8443** | TCP | Web HTTPS (pagine + API + login) | Si |
+| **7443** | TCP | LiveKit WSS signaling | Si (senza, errore "Failed to fetch") |
+| **7881-7882** | TCP | LiveKit RTC/TCP fallback | Si |
+| **50000-60000** | UDP | WebRTC media (audio/video) | Si |
+| 5060 | UDP+TCP | SIP signaling | Solo se SIP |
+| 10000-10100 | UDP | SIP RTP media | Solo se SIP |
+
+**Flusso di rete per un client esterno:**
+
+```
+Browser esterno
+  |
+  |-- HTTPS :8443 --> FastAPI (login, API, pagine)
+  |-- WSS :7443 ----> Nginx TLS proxy --> LiveKit :7880 (signaling)
+  |-- UDP 50000+ ---> LiveKit (media audio/video RTP)
+```
+
 ## Sicurezza
 
 ### Autenticazione
