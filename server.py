@@ -14,10 +14,15 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 import uvicorn
-from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi import FastAPI, HTTPException, Response, Request, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
@@ -25,6 +30,8 @@ import socket
 from loguru import logger
 from livekit import api
 import httpx
+from passlib.context import CryptContext
+from jose import jwt, JWTError
 
 # Aggiungi il path del progetto
 sys.path.insert(0, str(Path(__file__).parent))
@@ -135,10 +142,145 @@ app.add_middleware(
 )
 
 
+# ==================== Auth Middleware ====================
+
+PUBLIC_PATHS = {
+    "/login.html", "/login",
+    "/api/auth/login", "/api/auth/logout", "/api/auth/me",
+    "/api/auth/change-password", "/api/auth/forgot-password",
+    "/api/auth/reset-password", "/api/health", "/api/branding",
+}
+PUBLIC_PREFIXES = ("/static/",)
+
+ADMIN_ONLY_PREFIXES = (
+    "/api/settings", "/api/agent/", "/api/sip/", "/api/ollama/",
+    "/api/openrouter/", "/api/elevenlabs/", "/api/remote/",
+    "/api/admin/", "/api/tts/vibevoice/", "/api/debug/",
+)
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+
+    if path in PUBLIC_PATHS or any(path.startswith(p) for p in PUBLIC_PREFIXES):
+        return await call_next(request)
+
+    if path == "/login.html" or path == "/login":
+        return await call_next(request)
+
+    if _is_internal_request(request) and path.startswith("/api/"):
+        return await call_next(request)
+
+    user = await get_current_user(request)
+
+    if path == "/" or path == "":
+        if not user:
+            return RedirectResponse(url="/login.html", status_code=302)
+        return await call_next(request)
+
+    if path in ("/admin", "/admin.html"):
+        if not user:
+            return RedirectResponse(url="/login.html", status_code=302)
+        if user.get("role") != "admin":
+            return RedirectResponse(url="/", status_code=302)
+        return await call_next(request)
+
+    if path.startswith("/api/"):
+        if not user:
+            return JSONResponse(status_code=401, content={"detail": "Non autenticato"})
+        if any(path.startswith(p) for p in ADMIN_ONLY_PREFIXES):
+            if user.get("role") != "admin":
+                return JSONResponse(status_code=403, content={"detail": "Accesso riservato agli amministratori"})
+        return await call_next(request)
+
+    return await call_next(request)
+
+# ==================== Authentication ====================
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+AUTH_COOKIE_NAME = "sophyai_session"
+AUTH_JWT_ALGORITHM = "HS256"
+AUTH_JWT_EXPIRE_HOURS = 24
+_jwt_secret_key: Optional[str] = None
+
+async def _get_jwt_secret() -> str:
+    global _jwt_secret_key
+    if _jwt_secret_key:
+        return _jwt_secret_key
+    try:
+        db = await get_database()
+        if db:
+            stored = await db.get_setting("jwt_secret_key")
+            if stored:
+                _jwt_secret_key = stored
+                return stored
+            new_key = secrets.token_hex(32)
+            await db.set_setting("jwt_secret_key", new_key)
+            _jwt_secret_key = new_key
+            return new_key
+    except Exception:
+        pass
+    _jwt_secret_key = secrets.token_hex(32)
+    return _jwt_secret_key
+
+
+def create_access_token(data: dict) -> str:
+    from datetime import timedelta, timezone
+    expire = datetime.now(timezone.utc) + timedelta(hours=AUTH_JWT_EXPIRE_HOURS)
+    to_encode = {**data, "exp": expire}
+    return jwt.encode(to_encode, _jwt_secret_key, algorithm=AUTH_JWT_ALGORITHM)
+
+
+async def get_current_user(request: Request) -> Optional[dict]:
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
+        return None
+    try:
+        secret = await _get_jwt_secret()
+        payload = jwt.decode(token, secret, algorithms=[AUTH_JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        db = await get_database()
+        if not db:
+            return None
+        user = await db.get_user_by_id(int(user_id))
+        if not user or not user.get("is_active"):
+            return None
+        return user
+    except JWTError:
+        return None
+
+
+async def require_auth(request: Request) -> dict:
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Non autenticato")
+    return user
+
+
+async def require_admin(request: Request) -> dict:
+    user = await require_auth(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
+    return user
+
+
+def _is_internal_request(request: Request) -> bool:
+    """Check if request comes from Docker internal network (172.x.x.x containers only)."""
+    client = request.client
+    if not client:
+        return False
+    ip = client.host
+    return ip in ("127.0.0.1", "::1") or ip.startswith("172.")
+
+
 class TokenRequest(BaseModel):
     """Richiesta token LiveKit"""
     room_name: str
     participant_name: str
+    force: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -166,11 +308,339 @@ async def admin_page():
     return FileResponse("web/admin.html")
 
 
+@app.get("/login.html")
+@app.get("/login")
+async def login_page():
+    """Serve la pagina di login"""
+    return FileResponse("web/login.html")
+
+
 @app.get("/debug.html")
 async def debug_redirect():
     """Redirect dalla vecchia pagina debug alla nuova pagina admin"""
-    from starlette.responses import RedirectResponse
     return RedirectResponse(url="/admin")
+
+
+# ==================== SMTP Email Utility ====================
+
+async def _send_reset_email(db, to_email: str, username: str, token: str):
+    """Send password reset email via configured SMTP."""
+    settings = await db.get_all_settings()
+    host = settings.get("smtp_host", "")
+    port = int(settings.get("smtp_port", "587"))
+    smtp_user = settings.get("smtp_user", "")
+    smtp_pass = settings.get("smtp_password", "")
+    from_email = settings.get("smtp_from_email", "")
+    use_tls = settings.get("smtp_use_tls", "true") == "true"
+
+    if not host or not from_email:
+        raise RuntimeError("SMTP non configurato")
+
+    server_host = get_server_ip()
+    server_port = os.getenv("WEB_PORT", "8443")
+    reset_url = f"https://{server_host}:{server_port}/login.html?reset_token={token}"
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;background:#1e1e28;color:#fafafa;border-radius:12px;">
+        <h2 style="color:#8b5cf6;">SophyAI - Reset Password</h2>
+        <p>Ciao <strong>{username}</strong>,</p>
+        <p>Hai richiesto il reset della tua password. Clicca il pulsante per impostarne una nuova:</p>
+        <a href="{reset_url}" style="display:inline-block;background:#8b5cf6;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">Reset Password</a>
+        <p style="color:#a1a1aa;font-size:0.85em;">Il link scade tra 1 ora. Se non hai richiesto il reset, ignora questa email.</p>
+    </div>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "SophyAI - Reset Password"
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg.attach(MIMEText(f"Reset password per {username}: {reset_url}", "plain", "utf-8"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    if use_tls:
+        server = smtplib.SMTP(host, port, timeout=10)
+        server.starttls()
+    else:
+        server = smtplib.SMTP_SSL(host, port, timeout=10)
+    if smtp_user and smtp_pass:
+        server.login(smtp_user, smtp_pass)
+    server.send_message(msg)
+    server.quit()
+    logger.info(f"📧 Email reset password inviata a {to_email}")
+
+
+# ==================== Auth API ====================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@app.post("/api/auth/login")
+async def auth_login(req: LoginRequest, response: Response):
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    user = await db.get_user_by_username(req.username)
+    if not user or not pwd_context.verify(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+    if not user.get("is_active"):
+        raise HTTPException(status_code=403, detail="Account disabilitato")
+
+    await _get_jwt_secret()
+    token = create_access_token({"sub": str(user["id"]), "role": user["role"]})
+
+    from datetime import timezone
+    await db.update_user(user["id"], last_login=datetime.now(timezone.utc))
+
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME, value=token, httponly=True,
+        samesite="lax", max_age=AUTH_JWT_EXPIRE_HOURS * 3600,
+        secure=False,
+    )
+    return {
+        "id": user["id"], "username": user["username"], "role": user["role"],
+        "must_change_password": user["must_change_password"],
+    }
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(response: Response):
+    response.delete_cookie(AUTH_COOKIE_NAME)
+    return {"status": "ok"}
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Non autenticato")
+    return {
+        "id": user["id"], "username": user["username"], "role": user["role"],
+        "email": user.get("email"), "must_change_password": user["must_change_password"],
+    }
+
+
+@app.post("/api/auth/change-password")
+async def auth_change_password(req: ChangePasswordRequest, request: Request):
+    user = await require_auth(request)
+    db = await get_database()
+    if not pwd_context.verify(req.old_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Password attuale non corretta")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 8 caratteri")
+    new_hash = pwd_context.hash(req.new_password)
+    await db.update_user(user["id"], password_hash=new_hash, must_change_password=False)
+    return {"status": "ok"}
+
+
+@app.post("/api/auth/forgot-password")
+async def auth_forgot_password(req: ForgotPasswordRequest):
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    smtp_provider = await db.get_setting("smtp_provider")
+    if not smtp_provider or smtp_provider == "none":
+        raise HTTPException(status_code=400, detail="Servizio email non configurato. Contatta l'amministratore.")
+    user = await db.get_user_by_email(req.email)
+    if not user:
+        return {"status": "ok", "message": "Se l'email esiste, riceverai un link di reset."}
+
+    from datetime import timedelta, timezone
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    await db.create_password_reset_token(user["id"], token, expires)
+    try:
+        await _send_reset_email(db, user["email"], user["username"], token)
+    except Exception as e:
+        logger.error(f"Errore invio email reset: {e}")
+        raise HTTPException(status_code=500, detail="Errore nell'invio dell'email")
+    return {"status": "ok", "message": "Se l'email esiste, riceverai un link di reset."}
+
+
+@app.post("/api/auth/reset-password")
+async def auth_reset_password(req: ResetPasswordRequest):
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 8 caratteri")
+    token_data = await db.get_password_reset_token(req.token)
+    if not token_data:
+        raise HTTPException(status_code=400, detail="Link di reset non valido o scaduto")
+    new_hash = pwd_context.hash(req.new_password)
+    await db.update_user(token_data["user_id"], password_hash=new_hash, must_change_password=False)
+    await db.mark_reset_token_used(req.token)
+    return {"status": "ok"}
+
+
+@app.post("/api/auth/test-smtp")
+async def auth_test_smtp(request: Request):
+    await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    try:
+        settings = await db.get_all_settings()
+        host = settings.get("smtp_host", "")
+        port = int(settings.get("smtp_port", "587"))
+        user = settings.get("smtp_user", "")
+        password = settings.get("smtp_password", "")
+        from_email = settings.get("smtp_from_email", "")
+        use_tls = settings.get("smtp_use_tls", "true") == "true"
+
+        if not host or not from_email:
+            raise HTTPException(status_code=400, detail="Configurazione SMTP incompleta")
+
+        msg = MIMEText("Questo e' un messaggio di test dalla piattaforma SophyAI.", "plain", "utf-8")
+        msg["Subject"] = "SophyAI - Test SMTP"
+        msg["From"] = from_email
+        msg["To"] = from_email
+
+        if use_tls:
+            server = smtplib.SMTP(host, port, timeout=10)
+            server.starttls()
+        else:
+            server = smtplib.SMTP_SSL(host, port, timeout=10)
+        if user and password:
+            server.login(user, password)
+        server.send_message(msg)
+        server.quit()
+        return {"status": "ok", "message": "Email di test inviata con successo"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore SMTP: {str(e)}")
+
+
+# ==================== Admin User Management API ====================
+
+class CreateUserRequest(BaseModel):
+    username: str
+    email: Optional[str] = None
+    role: str = "user"
+    password: str = "changeme1"
+
+class UpdateUserRequest(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str
+
+
+@app.get("/api/admin/users")
+async def admin_list_users(request: Request):
+    await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    return await db.get_all_users()
+
+
+@app.post("/api/admin/users")
+async def admin_create_user(req: CreateUserRequest, request: Request):
+    await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    if len(req.username) < 3:
+        raise HTTPException(status_code=400, detail="Username minimo 3 caratteri")
+    existing = await db.get_user_by_username(req.username)
+    if existing:
+        raise HTTPException(status_code=409, detail="Username gia' in uso")
+    pw = req.password if len(req.password) >= 8 else "changeme1"
+    pw_hash = pwd_context.hash(pw)
+    user_id = await db.create_user(req.username, pw_hash, req.email, req.role, must_change_password=True)
+    logger.info(f"Utente creato: {req.username} (id={user_id}, role={req.role})")
+    return {"id": user_id, "username": req.username, "role": req.role, "default_password": pw}
+
+
+@app.put("/api/admin/users/{user_id}")
+async def admin_update_user(user_id: int, req: UpdateUserRequest, request: Request):
+    current = await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    target = await db.get_user_by_id(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if current["id"] == user_id and req.role and req.role != "admin":
+        raise HTTPException(status_code=400, detail="Non puoi rimuovere il tuo ruolo admin")
+    if current["id"] == user_id and req.is_active is False:
+        raise HTTPException(status_code=400, detail="Non puoi disabilitare il tuo account")
+    kwargs = {}
+    if req.email is not None:
+        kwargs["email"] = req.email
+    if req.role is not None:
+        kwargs["role"] = req.role
+    if req.is_active is not None:
+        kwargs["is_active"] = req.is_active
+    await db.update_user(user_id, **kwargs)
+    return {"status": "ok"}
+
+
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(user_id: int, request: Request):
+    current = await require_admin(request)
+    if current["id"] == user_id:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare il tuo account")
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    await db.delete_user(user_id)
+    return {"status": "ok"}
+
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: int, req: AdminResetPasswordRequest, request: Request):
+    await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    target = await db.get_user_by_id(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 8 caratteri")
+    new_hash = pwd_context.hash(req.new_password)
+    await db.update_user(user_id, password_hash=new_hash, must_change_password=True)
+    return {"status": "ok"}
+
+
+@app.post("/api/admin/users/{user_id}/send-reset-email")
+async def admin_send_reset_email(user_id: int, request: Request):
+    await require_admin(request)
+    db = await get_database()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database non disponibile")
+    target = await db.get_user_by_id(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if not target.get("email"):
+        raise HTTPException(status_code=400, detail="L'utente non ha un indirizzo email")
+    smtp_provider = await db.get_setting("smtp_provider")
+    if not smtp_provider or smtp_provider == "none":
+        raise HTTPException(status_code=400, detail="SMTP non configurato")
+    from datetime import timedelta, timezone
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    await db.create_password_reset_token(target["id"], token, expires)
+    try:
+        await _send_reset_email(db, target["email"], target["username"], token)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore invio email: {str(e)}")
+    return {"status": "ok", "message": f"Email inviata a {target['email']}"}
 
 
 @app.get("/api/health")
@@ -494,7 +964,15 @@ async def startup_event():
                 "vad_energy_threshold": "120",
                 "speech_energy_threshold": "100",
                 "silence_threshold": "30",
-                "tts_cooldown_seconds": "5"
+                "tts_cooldown_seconds": "5",
+                "sip_vad_energy_threshold": "120",
+                "sip_speech_energy_threshold": "100",
+                "sip_silence_threshold": "30",
+                "sip_tts_cooldown_seconds": "5",
+                "web_vad_energy_threshold": "120",
+                "web_speech_energy_threshold": "25",
+                "web_silence_threshold": "60",
+                "web_tts_cooldown_seconds": "5",
             }
             for key, default_value in voice_defaults.items():
                 existing = await db.get_setting(key)
@@ -507,6 +985,56 @@ async def startup_event():
             if current_vad and int(current_vad) < 120:
                 await db.set_setting("vad_energy_threshold", "120")
                 logger.info(f"📝 Migrazione: vad_energy_threshold aggiornato da {current_vad} a 120 (anti-interruzione)")
+
+            # Init JWT secret
+            await _get_jwt_secret()
+            logger.info("🔑 JWT secret inizializzato")
+
+            # Ensure users table exists (run schema migration)
+            async with db.pool.acquire() as conn:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR(100) UNIQUE NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        email VARCHAR(255),
+                        role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+                        must_change_password BOOLEAN DEFAULT TRUE,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        last_login TIMESTAMP WITH TIME ZONE
+                    )
+                """)
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        token VARCHAR(255) UNIQUE NOT NULL,
+                        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                        used BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+            # Create default admin if no users exist
+            user_count = await db.count_users()
+            if user_count == 0:
+                default_pw = "admin123"
+                pw_hash = pwd_context.hash(default_pw)
+                await db.create_user("admin", pw_hash, role="admin", must_change_password=True)
+                logger.info(f"🔑 Utente admin creato - username: admin, password: {default_pw} (cambio obbligatorio al primo accesso)")
+
+            # SMTP defaults
+            smtp_defaults = {
+                "smtp_provider": "none", "smtp_host": "", "smtp_port": "587",
+                "smtp_user": "", "smtp_password": "", "smtp_from_email": "", "smtp_use_tls": "true",
+            }
+            for key, val in smtp_defaults.items():
+                existing = await db.get_setting(key)
+                if existing is None:
+                    await db.set_setting(key, val)
+
     except Exception as e:
         logger.warning(f"Database non disponibile all'avvio: {e}")
 
@@ -556,7 +1084,16 @@ async def get_settings():
             "vad_energy_threshold": "120",
             "speech_energy_threshold": "100",
             "silence_threshold": "30",
-            "tts_cooldown_seconds": "5"
+            "tts_cooldown_seconds": "5",
+            # Per-channel audio settings
+            "sip_vad_energy_threshold": "120",
+            "sip_speech_energy_threshold": "100",
+            "sip_silence_threshold": "30",
+            "sip_tts_cooldown_seconds": "5",
+            "web_vad_energy_threshold": "120",
+            "web_speech_energy_threshold": "25",
+            "web_silence_threshold": "60",
+            "web_tts_cooldown_seconds": "5",
         }
     
     try:
@@ -1497,16 +2034,25 @@ async def get_token(request: TokenRequest, http_request: Request):
             )
             for p in participants.participants:
                 if p.identity == request.participant_name:
-                    await lk_api.aclose()
-                    logger.warning(f"Nome utente duplicato: {request.participant_name} già presente in {request.room_name}")
-                    raise HTTPException(
-                        status_code=409, 
-                        detail=f"Il nome '{request.participant_name}' è già in uso nella room. Scegli un nome diverso."
-                    )
+                    if request.force:
+                        logger.info(f"Force reconnect: rimuovo {request.participant_name} dalla room {request.room_name}")
+                        try:
+                            await lk_api.room.remove_participant(
+                                api.RoomParticipantIdentity(room=request.room_name, identity=request.participant_name)
+                            )
+                        except Exception as re:
+                            logger.warning(f"Errore rimozione partecipante: {re}")
+                        break
+                    else:
+                        await lk_api.aclose()
+                        logger.warning(f"Nome utente duplicato: {request.participant_name} già presente in {request.room_name}")
+                        raise HTTPException(
+                            status_code=409,
+                            detail=f"L'utente '{request.participant_name}' è già connesso alla room. Puoi forzare la riconnessione disconnettendo la sessione precedente."
+                        )
         except HTTPException:
-            raise  # Rilancia l'errore 409
+            raise
         except Exception as e:
-            # La room potrebbe non esistere ancora, continua
             logger.debug(f"Room {request.room_name} non esiste ancora o errore verifica: {e}")
         
         # Crea token

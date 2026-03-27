@@ -416,6 +416,112 @@
         .tool-call-json .json-bool { color: #f472b6; }
         .tool-call-json .json-null { color: #94a3b8; }
 
+        /* ==================== AUDIO MONITOR PANEL ==================== */
+        .audio-monitor-toggle {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.25);
+            border-radius: 8px; padding: 4px 10px; cursor: pointer;
+            font-size: 0.72rem; color: var(--accent); font-weight: 600;
+            transition: background 0.2s;
+        }
+        .audio-monitor-toggle:hover { background: rgba(139,92,246,0.18); }
+        .audio-monitor-panel {
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            width: 96%; max-width: 780px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 14px 16px;
+            z-index: 200; box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+            display: none; flex-direction: column; gap: 10px;
+        }
+        .audio-monitor-panel.open { display: flex; }
+        .am-header {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
+        }
+        .am-close { cursor: pointer; font-size: 1rem; color: var(--text-muted); }
+        .am-close:hover { color: var(--text-primary); }
+        .am-badges {
+            display: flex; gap: 6px; flex-wrap: wrap;
+        }
+        .am-badge {
+            font-size: 0.65rem; padding: 2px 8px; border-radius: 6px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .am-badge.speech { background: rgba(34,197,94,0.15); color: var(--success); }
+        .am-badge.tts { background: rgba(139,92,246,0.15); color: var(--accent); }
+        .am-badge.cooldown { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .am-badge.channel { background: rgba(56,189,248,0.15); color: #38bdf8; }
+        .am-badge.active { opacity: 1; }
+        .am-badge.inactive { opacity: 0.3; }
+        /* VU Meter */
+        .am-vu-container {
+            position: relative; height: 28px;
+            background: rgba(0,0,0,0.3); border-radius: 6px;
+            overflow: hidden;
+        }
+        .am-vu-bar {
+            height: 100%; width: 0%; border-radius: 6px;
+            transition: width 0.15s ease-out, background 0.2s;
+            background: var(--success);
+        }
+        .am-vu-bar.medium { background: var(--warning); }
+        .am-vu-bar.high { background: var(--danger); }
+        .am-vu-marker {
+            position: absolute; top: 0; bottom: 0; width: 2px;
+            z-index: 2;
+        }
+        .am-vu-marker.vad { background: var(--danger); }
+        .am-vu-marker.speech { background: var(--success); }
+        .am-vu-marker::after {
+            content: attr(data-label); position: absolute; top: -14px;
+            left: 50%; transform: translateX(-50%);
+            font-size: 0.55rem; color: var(--text-muted); white-space: nowrap;
+        }
+        .am-energy-label {
+            position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            font-size: 0.68rem; color: var(--text-secondary); font-weight: 600;
+            z-index: 3; text-shadow: 0 0 4px rgba(0,0,0,0.8);
+        }
+        /* Sliders */
+        .am-sliders {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+        }
+        .am-slider-group { display: flex; flex-direction: column; gap: 2px; }
+        .am-slider-label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.68rem; color: var(--text-muted);
+        }
+        .am-slider-label span:last-child {
+            color: var(--text-secondary); font-weight: 600;
+        }
+        .am-slider-group input[type=range] {
+            -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+            background: rgba(255,255,255,0.08); border-radius: 2px; outline: none;
+        }
+        .am-slider-group input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+        }
+        .am-actions {
+            display: flex; gap: 8px; justify-content: flex-end;
+        }
+        .am-btn {
+            padding: 5px 14px; border-radius: 8px; border: none;
+            font-size: 0.72rem; font-weight: 600; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .am-btn.primary { background: var(--accent); color: #fff; }
+        .am-btn.primary:hover { background: #7c3aed; }
+        .am-btn.secondary { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+        .am-btn.secondary:hover { background: rgba(255,255,255,0.12); }
+        .am-btn.cal { background: rgba(34,197,94,0.15); color: var(--success); }
+        .am-btn.cal:hover { background: rgba(34,197,94,0.25); }
+        .am-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .am-cal-status {
+            font-size: 0.7rem; color: var(--text-muted); text-align: center;
+        }
+
         .messages-empty {
             flex: 1;
             display: flex;
@@ -1554,6 +1660,10 @@
                 <button class="stop-button" id="interrupt-btn" onclick="interruptSpeech()">
                     ✋
                 </button>
+                <!-- Audio Monitor toggle -->
+                <button class="audio-monitor-toggle" id="am-toggle-btn" onclick="toggleAudioMonitor()" title="Audio Monitor">
+                    <span>📊</span><span>Audio</span>
+                </button>
             </div>
             <div class="voice-status-bar">
                 <span class="voice-status-text" id="voice-status">🔇 Microfono disattivato</span>
@@ -1566,6 +1676,50 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Audio Monitor Panel (floating) -->
+    <div class="audio-monitor-panel" id="audio-monitor-panel">
+        <div class="am-header">
+            <span>Audio Monitor</span>
+            <div class="am-badges">
+                <span class="am-badge channel inactive" id="am-badge-channel">MIC</span>
+                <span class="am-badge speech inactive" id="am-badge-speech">Speech</span>
+                <span class="am-badge tts inactive" id="am-badge-tts">TTS</span>
+                <span class="am-badge cooldown inactive" id="am-badge-cooldown">Cooldown</span>
+            </div>
+            <span class="am-close" id="am-close-btn">&times;</span>
+        </div>
+        <div class="am-vu-container">
+            <div class="am-vu-bar" id="am-vu-bar"></div>
+            <div class="am-vu-marker speech" id="am-marker-speech" data-label="Speech"></div>
+            <div class="am-vu-marker vad" id="am-marker-vad" data-label="VAD"></div>
+            <span class="am-energy-label" id="am-energy-label">0</span>
+        </div>
+        <div class="am-sliders">
+            <div class="am-slider-group">
+                <label class="am-slider-label"><span>VAD Threshold</span><span id="am-val-vad">120</span></label>
+                <input type="range" id="am-sl-vad" min="10" max="500" value="120">
+            </div>
+            <div class="am-slider-group">
+                <label class="am-slider-label"><span>Speech Threshold</span><span id="am-val-speech">25</span></label>
+                <input type="range" id="am-sl-speech" min="5" max="200" value="25">
+            </div>
+            <div class="am-slider-group">
+                <label class="am-slider-label"><span>Silence Frames</span><span id="am-val-silence">60</span></label>
+                <input type="range" id="am-sl-silence" min="10" max="120" value="60">
+            </div>
+            <div class="am-slider-group">
+                <label class="am-slider-label"><span>TTS Cooldown (s)</span><span id="am-val-cooldown">5.0</span></label>
+                <input type="range" id="am-sl-cooldown" min="0.5" max="10" step="0.5" value="5">
+            </div>
+        </div>
+        <div class="am-actions">
+            <button class="am-btn cal" id="am-cal-btn" onclick="startAudioCalibration()">Auto Calibrate</button>
+            <button class="am-btn secondary" id="am-reset-btn" onclick="resetAudioDefaults()">Reset</button>
+            <button class="am-btn primary" id="am-save-btn" onclick="saveAudioSettings()">Save</button>
+        </div>
+        <div class="am-cal-status" id="am-cal-status"></div>
     </div>
 
         </div><!-- End main-area -->
@@ -1676,6 +1830,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script>
+        // ==================== Auth Guard ====================
+        (async function authGuard() {
+            try {
+                const resp = await fetch('/api/auth/me');
+                if (resp.status === 401) { window.location.href = '/login.html'; return; }
+                if (!resp.ok) return;
+                const user = await resp.json();
+                if (user.must_change_password) { window.location.href = '/login.html'; return; }
+            } catch (e) {}
+        })();
+
         // State
         const state = {
             room: null,
@@ -1991,18 +2156,37 @@
                     })
                 });
                 
-                // Gestione errore 409 - nome utente duplicato
+                let data;
                 if (resp.status === 409) {
                     const errorData = await resp.json();
-                    throw new Error(errorData.detail || 'Nome utente già in uso. Scegli un nome diverso.');
-                }
-                
-                if (!resp.ok) {
+                    const forceReconnect = confirm(
+                        `${errorData.detail || "L'utente è già connesso."}\n\nVuoi disconnettere la sessione precedente e riconnetterti?`
+                    );
+                    if (forceReconnect) {
+                        initModal.setMessage('Disconnessione sessione precedente...');
+                        const resp2 = await fetch('/api/token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                room_name: selectedRoom,
+                                participant_name: userName,
+                                force: true
+                            })
+                        });
+                        if (!resp2.ok) {
+                            const err2 = await resp2.json();
+                            throw new Error(err2.detail || 'Errore durante la riconnessione forzata.');
+                        }
+                        data = await resp2.json();
+                    } else {
+                        throw new Error("Connessione annullata: l'utente è già connesso con questo nome.");
+                    }
+                } else if (!resp.ok) {
                     const errorData = await resp.json();
                     throw new Error(errorData.detail || 'Errore durante la connessione');
+                } else {
+                    data = await resp.json();
                 }
-                
-                const data = await resp.json();
                 
                 // Connect to room
                 state.room = new LivekitClient.Room();
@@ -2164,6 +2348,12 @@
                             handleWakeStatus(msg.active, msg.remaining_seconds || 0);
                         } else if (msg.type === 'wake_countdown') {
                             handleWakeCountdown(msg.remaining_seconds || 0);
+                        } else if (msg.type === 'audio_level') {
+                            updateAudioMonitor(msg);
+                        } else if (msg.type === 'calibration_result') {
+                            handleCalibrationResult(msg);
+                        } else if (msg.type === 'calibration_status') {
+                            handleCalibrationStatus(msg);
                         }
                     } catch (e) {}
                 });
@@ -3364,6 +3554,150 @@
             
             // Invia conteggio partecipanti al server
             sendParticipantsCount();
+        }
+
+        // ==================== AUDIO MONITOR ====================
+        const AM_VU_MAX = 500;
+        let _amOpen = false;
+        let _amCalibrating = false;
+
+        function toggleAudioMonitor() {
+            _amOpen = !_amOpen;
+            const panel = document.getElementById('audio-monitor-panel');
+            panel.classList.toggle('open', _amOpen);
+        }
+
+        document.getElementById('am-close-btn').addEventListener('click', () => {
+            _amOpen = false;
+            document.getElementById('audio-monitor-panel').classList.remove('open');
+        });
+
+        function updateAudioMonitor(msg) {
+            if (!_amOpen) return;
+            const energy = msg.energy || 0;
+            const vadTh = msg.vad_threshold || 120;
+            const speechTh = msg.speech_threshold || 25;
+
+            const pct = Math.min(energy / AM_VU_MAX * 100, 100);
+            const bar = document.getElementById('am-vu-bar');
+            bar.style.width = pct + '%';
+            bar.className = 'am-vu-bar' + (energy > vadTh ? ' high' : energy > speechTh ? ' medium' : '');
+
+            document.getElementById('am-energy-label').textContent = Math.round(energy);
+
+            const vadPct = Math.min(vadTh / AM_VU_MAX * 100, 100);
+            const speechPct = Math.min(speechTh / AM_VU_MAX * 100, 100);
+            document.getElementById('am-marker-vad').style.left = vadPct + '%';
+            document.getElementById('am-marker-speech').style.left = speechPct + '%';
+
+            const setBadge = (id, active) => {
+                const el = document.getElementById(id);
+                el.classList.toggle('active', active);
+                el.classList.toggle('inactive', !active);
+            };
+            setBadge('am-badge-speech', msg.is_speech);
+            setBadge('am-badge-tts', msg.tts_active);
+            setBadge('am-badge-cooldown', msg.tts_cooldown);
+
+            const chBadge = document.getElementById('am-badge-channel');
+            chBadge.textContent = (msg.channel === 'sip') ? 'SIP' : 'MIC';
+            chBadge.classList.add('active');
+            chBadge.classList.remove('inactive');
+
+            if (!document.getElementById('am-sl-vad')._userTouched) {
+                document.getElementById('am-sl-vad').value = vadTh;
+                document.getElementById('am-val-vad').textContent = Math.round(vadTh);
+            }
+            if (!document.getElementById('am-sl-speech')._userTouched) {
+                document.getElementById('am-sl-speech').value = speechTh;
+                document.getElementById('am-val-speech').textContent = Math.round(speechTh);
+            }
+            if (msg.silence_threshold !== undefined && !document.getElementById('am-sl-silence')._userTouched) {
+                document.getElementById('am-sl-silence').value = msg.silence_threshold;
+                document.getElementById('am-val-silence').textContent = msg.silence_threshold;
+            }
+            if (msg.tts_cooldown_seconds !== undefined && !document.getElementById('am-sl-cooldown')._userTouched) {
+                document.getElementById('am-sl-cooldown').value = msg.tts_cooldown_seconds;
+                document.getElementById('am-val-cooldown').textContent = parseFloat(msg.tts_cooldown_seconds).toFixed(1);
+            }
+        }
+
+        ['am-sl-vad', 'am-sl-speech', 'am-sl-silence', 'am-sl-cooldown'].forEach(id => {
+            const sl = document.getElementById(id);
+            sl._userTouched = false;
+            sl.addEventListener('input', () => {
+                sl._userTouched = true;
+                const valId = 'am-val-' + id.replace('am-sl-', '');
+                const val = (id === 'am-sl-cooldown') ? parseFloat(sl.value).toFixed(1) : sl.value;
+                document.getElementById(valId).textContent = val;
+            });
+            sl.addEventListener('change', () => {
+                setTimeout(() => { sl._userTouched = false; }, 3000);
+            });
+        });
+
+        function saveAudioSettings() {
+            if (!state.room) return;
+            const msg = {
+                type: 'update_audio_settings',
+                vad_threshold: parseFloat(document.getElementById('am-sl-vad').value),
+                speech_threshold: parseFloat(document.getElementById('am-sl-speech').value),
+                silence_threshold: parseInt(document.getElementById('am-sl-silence').value),
+                tts_cooldown: parseFloat(document.getElementById('am-sl-cooldown').value),
+            };
+            const enc = new TextEncoder().encode(JSON.stringify(msg));
+            state.room.localParticipant.publishData(enc, { reliable: true });
+            document.getElementById('am-cal-status').textContent = 'Settings salvati e inviati all\'agent.';
+            setTimeout(() => { document.getElementById('am-cal-status').textContent = ''; }, 3000);
+        }
+
+        function startAudioCalibration() {
+            if (!state.room || _amCalibrating) return;
+            _amCalibrating = true;
+            const btn = document.getElementById('am-cal-btn');
+            btn.disabled = true;
+            btn.textContent = 'Calibrazione...';
+            document.getElementById('am-cal-status').textContent = 'Raccolta campioni rumore ambientale...';
+
+            const msg = { type: 'start_calibration', duration: 3 };
+            const enc = new TextEncoder().encode(JSON.stringify(msg));
+            state.room.localParticipant.publishData(enc, { reliable: true });
+        }
+
+        function handleCalibrationStatus(msg) {
+            document.getElementById('am-cal-status').textContent = `Calibrazione avviata (${msg.duration}s)...`;
+        }
+
+        function handleCalibrationResult(msg) {
+            _amCalibrating = false;
+            const btn = document.getElementById('am-cal-btn');
+            btn.disabled = false;
+            btn.textContent = 'Auto Calibrate';
+
+            if (msg.status === 'ok') {
+                document.getElementById('am-cal-status').textContent =
+                    `Calibrazione OK: noise=${msg.noise_floor}, peak=${msg.peak_noise}, VAD=${msg.vad_threshold}, Speech=${msg.speech_threshold} (${msg.samples_count} campioni)`;
+                document.getElementById('am-sl-vad').value = msg.vad_threshold;
+                document.getElementById('am-val-vad').textContent = Math.round(msg.vad_threshold);
+                document.getElementById('am-sl-speech').value = msg.speech_threshold;
+                document.getElementById('am-val-speech').textContent = Math.round(msg.speech_threshold);
+            } else {
+                document.getElementById('am-cal-status').textContent = `Calibrazione fallita: ${msg.reason || 'errore sconosciuto'}`;
+            }
+            setTimeout(() => { document.getElementById('am-cal-status').textContent = ''; }, 8000);
+        }
+
+        function resetAudioDefaults() {
+            const defaults = { vad: 120, speech: 25, silence: 60, cooldown: 5.0 };
+            document.getElementById('am-sl-vad').value = defaults.vad;
+            document.getElementById('am-val-vad').textContent = defaults.vad;
+            document.getElementById('am-sl-speech').value = defaults.speech;
+            document.getElementById('am-val-speech').textContent = defaults.speech;
+            document.getElementById('am-sl-silence').value = defaults.silence;
+            document.getElementById('am-val-silence').textContent = defaults.silence;
+            document.getElementById('am-sl-cooldown').value = defaults.cooldown;
+            document.getElementById('am-val-cooldown').textContent = defaults.cooldown.toFixed(1);
+            saveAudioSettings();
         }
 
         // Init

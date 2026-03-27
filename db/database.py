@@ -234,6 +234,96 @@ class DatabaseService:
             )
             return result == "DELETE 1"
     
+    # ==================== Users ====================
+
+    async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM users WHERE username = $1", username)
+            return dict(row) if row else None
+
+    async def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
+            return dict(row) if row else None
+
+    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM users WHERE email = $1 AND is_active = TRUE", email)
+            return dict(row) if row else None
+
+    async def get_all_users(self) -> List[Dict[str, Any]]:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("SELECT id, username, email, role, must_change_password, is_active, created_at, updated_at, last_login FROM users ORDER BY id")
+            result = []
+            for row in rows:
+                u = dict(row)
+                for k in ('created_at', 'updated_at', 'last_login'):
+                    if u.get(k):
+                        u[k] = u[k].isoformat()
+                result.append(u)
+            return result
+
+    async def create_user(self, username: str, password_hash: str, email: str = None, role: str = 'user', must_change_password: bool = True) -> int:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "INSERT INTO users (username, password_hash, email, role, must_change_password) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                username, password_hash, email, role, must_change_password
+            )
+            return row["id"]
+
+    async def update_user(self, user_id: int, **kwargs) -> bool:
+        await self._ensure_connected()
+        allowed = {'email', 'role', 'is_active', 'must_change_password', 'password_hash', 'last_login'}
+        updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+        if not updates:
+            return False
+        set_parts = [f"{k} = ${i+2}" for i, k in enumerate(updates.keys())]
+        query = f"UPDATE users SET {', '.join(set_parts)} WHERE id = $1"
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(query, user_id, *updates.values())
+            return "UPDATE 1" in result
+
+    async def delete_user(self, user_id: int) -> bool:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            result = await conn.execute("UPDATE users SET is_active = FALSE WHERE id = $1", user_id)
+            return "UPDATE 1" in result
+
+    async def count_users(self) -> int:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT COUNT(*) as cnt FROM users")
+            return row["cnt"]
+
+    async def create_password_reset_token(self, user_id: int, token: str, expires_at) -> int:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3) RETURNING id",
+                user_id, token, expires_at
+            )
+            return row["id"]
+
+    async def get_password_reset_token(self, token: str) -> Optional[Dict[str, Any]]:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM password_reset_tokens WHERE token = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP",
+                token
+            )
+            return dict(row) if row else None
+
+    async def mark_reset_token_used(self, token: str) -> bool:
+        await self._ensure_connected()
+        async with self.pool.acquire() as conn:
+            result = await conn.execute("UPDATE password_reset_tokens SET used = TRUE WHERE token = $1", token)
+            return "UPDATE 1" in result
+
     # ==================== Call Logs ====================
     
     async def create_call_log(

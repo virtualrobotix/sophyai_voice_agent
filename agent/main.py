@@ -133,6 +133,11 @@ _TTS_FLAG_FILE = "/tmp/sophyai_tts_speaking.flag"
 _TTS_END_TIME_FILE = "/tmp/sophyai_tts_end_time.txt"
 TTS_COOLDOWN_SECONDS = 5.0  # Scarta audio per Ns dopo fine TTS (configurabile da DB)
 
+# ==================== AUDIO CALIBRATION ====================
+_calibration_active = False
+_calibration_samples: list[float] = []
+_calibration_end_time = 0.0
+
 
 def set_tts_speaking(speaking: bool):
     """Imposta lo stato di speaking del TTS usando un file flag"""
@@ -3338,15 +3343,28 @@ async def entrypoint(ctx: JobContext):
         logger.warning(f"⚠️ Impossibile risolvere context per room {room_name}: {e}")
     
     
-    # Applica Voice Settings dalle impostazioni caricate
+    # Applica Voice Settings dalle impostazioni caricate (per-channel se disponibili)
     global WAKE_TIMEOUT_SECONDS, VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
     try:
         WAKE_TIMEOUT_SECONDS = int(db_settings.get('wake_timeout_seconds', '30'))
-        VAD_ENERGY_THRESHOLD = int(db_settings.get('vad_energy_threshold', '120'))
-        SPEECH_ENERGY_THRESHOLD = int(db_settings.get('speech_energy_threshold', '25'))
-        SILENCE_THRESHOLD = int(db_settings.get('silence_threshold', '60'))
-        TTS_COOLDOWN_SECONDS = float(db_settings.get('tts_cooldown_seconds', '1.5'))
-        logger.info(f"🎙️ Voice Settings: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
+        ch_prefix = "sip_" if _is_sip_call else "web_"
+        VAD_ENERGY_THRESHOLD = int(db_settings.get(
+            f'{ch_prefix}vad_energy_threshold',
+            db_settings.get('vad_energy_threshold', '120')
+        ))
+        SPEECH_ENERGY_THRESHOLD = int(db_settings.get(
+            f'{ch_prefix}speech_energy_threshold',
+            db_settings.get('speech_energy_threshold', '25')
+        ))
+        SILENCE_THRESHOLD = int(db_settings.get(
+            f'{ch_prefix}silence_threshold',
+            db_settings.get('silence_threshold', '60')
+        ))
+        TTS_COOLDOWN_SECONDS = float(db_settings.get(
+            f'{ch_prefix}tts_cooldown_seconds',
+            db_settings.get('tts_cooldown_seconds', '1.5')
+        ))
+        logger.info(f"🎙️ Voice Settings [{ch_prefix.rstrip('_')}]: wake_timeout={WAKE_TIMEOUT_SECONDS}s, vad={VAD_ENERGY_THRESHOLD}, speech={SPEECH_ENERGY_THRESHOLD}, silence={SILENCE_THRESHOLD}, cooldown={TTS_COOLDOWN_SECONDS}s")
         
     except Exception as e:
         logger.warning(f"⚠️ Errore parsing voice settings: {e}, uso default")
@@ -3789,7 +3807,113 @@ FORMATO TTS:
 
     _post_debug_snapshot(session_conversation)
 
-    
+    async def _apply_audio_settings(msg: dict):
+        """Applica le nuove soglie audio ricevute dal frontend e persisti in DB."""
+        global VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD, SILENCE_THRESHOLD, TTS_COOLDOWN_SECONDS
+        changed = {}
+        if "vad_threshold" in msg:
+            VAD_ENERGY_THRESHOLD = float(msg["vad_threshold"])
+            changed["vad_energy_threshold"] = str(VAD_ENERGY_THRESHOLD)
+        if "speech_threshold" in msg:
+            SPEECH_ENERGY_THRESHOLD = float(msg["speech_threshold"])
+            changed["speech_energy_threshold"] = str(SPEECH_ENERGY_THRESHOLD)
+        if "silence_threshold" in msg:
+            SILENCE_THRESHOLD = int(msg["silence_threshold"])
+            changed["silence_threshold"] = str(SILENCE_THRESHOLD)
+        if "tts_cooldown" in msg:
+            TTS_COOLDOWN_SECONDS = float(msg["tts_cooldown"])
+            changed["tts_cooldown_seconds"] = str(TTS_COOLDOWN_SECONDS)
+
+        vad = get_vad_monitor()
+        if vad and "vad_threshold" in msg:
+            vad._energy_threshold = VAD_ENERGY_THRESHOLD
+
+        prefix = "sip_" if _is_sip_call else "web_"
+        db_payload = {f"{prefix}{k}": v for k, v in changed.items()}
+
+        if db_payload:
+            import ssl as _ssl
+            try:
+                _sc = _ssl.create_default_context()
+                _sc.check_hostname = False
+                _sc.verify_mode = _ssl.CERT_NONE
+                conn = aiohttp.TCPConnector(ssl=_sc)
+                async with aiohttp.ClientSession(connector=conn) as s:
+                    async with s.post(
+                        "https://host.docker.internal:8443/api/settings",
+                        json={"settings": db_payload},
+                        timeout=aiohttp.ClientTimeout(total=3),
+                    ) as resp:
+                        logger.info(f"🔊 Audio settings salvati in DB: {db_payload} status={resp.status}")
+            except Exception as e:
+                logger.warning(f"🔊 Errore salvataggio audio settings: {e}")
+
+        logger.info(f"🔊 Audio settings aggiornati: VAD={VAD_ENERGY_THRESHOLD} SPEECH={SPEECH_ENERGY_THRESHOLD} SILENCE={SILENCE_THRESHOLD} TTS_CD={TTS_COOLDOWN_SECONDS}")
+
+    async def auto_calibrate_noise(duration_seconds: int = 3):
+        """Raccoglie campioni di energia audio per N secondi e calcola soglie ottimali."""
+        global _calibration_active, _calibration_end_time, _calibration_samples
+        global VAD_ENERGY_THRESHOLD, SPEECH_ENERGY_THRESHOLD
+
+        _calibration_samples.clear()
+        _calibration_end_time = time.time() + duration_seconds
+        _calibration_active = True
+
+        try:
+            _cal_msg = json.dumps({"type": "calibration_status", "status": "started", "duration": duration_seconds})
+            await ctx.room.local_participant.publish_data(_cal_msg.encode(), reliable=True)
+        except Exception:
+            pass
+
+        logger.info(f"🔊 Calibrazione avviata: raccolta campioni per {duration_seconds}s")
+        await asyncio.sleep(duration_seconds + 0.5)
+
+        _calibration_active = False
+        samples = list(_calibration_samples)
+        _calibration_samples.clear()
+
+        if len(samples) < 5:
+            logger.warning("🔊 Calibrazione fallita: campioni insufficienti")
+            try:
+                _cal_msg = json.dumps({"type": "calibration_result", "status": "failed", "reason": "insufficient_samples", "count": len(samples)})
+                await ctx.room.local_participant.publish_data(_cal_msg.encode(), reliable=True)
+            except Exception:
+                pass
+            return
+
+        samples_sorted = sorted(samples)
+        noise_floor = sum(samples) / len(samples)
+        p95_idx = int(len(samples_sorted) * 0.95)
+        peak_noise = samples_sorted[min(p95_idx, len(samples_sorted) - 1)]
+
+        new_vad = round(peak_noise * 1.5, 1)
+        new_speech = round(max(noise_floor * 1.2, 10), 1)
+
+        VAD_ENERGY_THRESHOLD = new_vad
+        SPEECH_ENERGY_THRESHOLD = new_speech
+
+        vad = get_vad_monitor()
+        if vad:
+            vad._energy_threshold = new_vad
+
+        result = {
+            "type": "calibration_result",
+            "status": "ok",
+            "samples_count": len(samples),
+            "noise_floor": round(noise_floor, 1),
+            "peak_noise": round(peak_noise, 1),
+            "vad_threshold": new_vad,
+            "speech_threshold": new_speech,
+        }
+        logger.info(f"🔊 Calibrazione completata: {result}")
+
+        try:
+            await ctx.room.local_participant.publish_data(json.dumps(result).encode(), reliable=True)
+        except Exception:
+            pass
+
+        await _apply_audio_settings({"vad_threshold": new_vad, "speech_threshold": new_speech})
+
     # Verifica tools registrati
     if hasattr(agent, '_tools') and agent._tools:
         logger.info(f"📹 Tools registrati: {len(agent._tools)} funzioni")
@@ -3883,6 +4007,7 @@ FORMATO TTS:
             MIN_SPEECH_FRAMES = 30  # ~1.5 secondi di speech prima di trascrivere
             MIN_AUDIO_BYTES = 32000  # Almeno 1 secondo di audio (16kHz * 16bit = 32 bytes/ms * 1000ms)
             # NOTA: SILENCE_THRESHOLD è ora globale e configurabile da database (default 60 = ~3 sec silenzio)
+            _last_audio_level_send = 0.0
             
             async for event in audio_stream:
                 if not isinstance(event, rtc.AudioFrameEvent):
@@ -3906,8 +4031,30 @@ FORMATO TTS:
                 else:
                     energy = 0
                 
-                # Soglia energia per rilevare speech (configurabile da database)
-                # NOTA: SPEECH_ENERGY_THRESHOLD è globale e configurabile
+                if _calibration_active and time.time() < _calibration_end_time:
+                    _calibration_samples.append(energy)
+                
+                # ==================== STREAM AUDIO LEVEL AL FRONTEND ====================
+                _now = time.time()
+                if _now - _last_audio_level_send >= 0.2:
+                    _last_audio_level_send = _now
+                    try:
+                        _al_msg = json.dumps({
+                            "type": "audio_level",
+                            "energy": round(energy, 1),
+                            "vad_threshold": VAD_ENERGY_THRESHOLD,
+                            "speech_threshold": SPEECH_ENERGY_THRESHOLD,
+                            "silence_threshold": SILENCE_THRESHOLD,
+                            "tts_cooldown_seconds": TTS_COOLDOWN_SECONDS,
+                            "is_speech": energy > SPEECH_ENERGY_THRESHOLD,
+                            "tts_active": is_tts_speaking(),
+                            "tts_cooldown": is_in_tts_cooldown(),
+                            "channel": "sip" if is_sip_participant else "mic",
+                            "participant": participant_identity,
+                        })
+                        await ctx.room.local_participant.publish_data(_al_msg.encode(), reliable=False)
+                    except Exception:
+                        pass
                 
                 # ==================== CHECK FLAG TTS MANUALE ====================
                 # NOTA: session.agent_state NON ritorna 'speaking' durante TTS (bug LiveKit?)
@@ -4203,6 +4350,13 @@ FORMATO TTS:
                 logger.info("🔄 Reset storico conversazione (nuova chat)")
                 _post_debug_snapshot(session_conversation)
 
+            elif msg_type == "update_audio_settings":
+                asyncio.create_task(_apply_audio_settings(msg))
+
+            elif msg_type == "start_calibration":
+                duration = msg.get("duration", 3)
+                asyncio.create_task(auto_calibrate_noise(duration))
+
         except Exception as e:
             logger.error(f"Errore parsing messaggio frontend: {e}")
 
@@ -4215,7 +4369,17 @@ FORMATO TTS:
 
     async def handle_text_message(session: AgentSession, user_text: str, send_callback, sender_identity: str = None):
         """Gestisce un messaggio testuale dal frontend e genera sempre una risposta agent."""
-        # Genera ID univoco per il messaggio utente
+        if is_tts_speaking():
+            logger.info("✋ Nuovo messaggio chat - interruzione TTS")
+            try:
+                result = session.interrupt()
+                if asyncio.iscoroutine(result):
+                    await result
+                set_tts_speaking(False)
+                request_cancel_llm()
+            except Exception as e:
+                logger.error(f"Errore interrupt TTS da chat: {e}")
+
         user_message_id = generate_message_id()
         
         # SEMPRE invia il messaggio utente a tutti i partecipanti (broadcast)

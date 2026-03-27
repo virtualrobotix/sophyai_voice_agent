@@ -901,7 +901,13 @@
                 <div class="logo-subtitle">Pannello Admin</div>
             </div>
         </div>
-        <a href="/" class="back-btn">← Torna alla Chat</a>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/" class="back-btn">← Torna alla Chat</a>
+            <div id="admin-logout-area" style="display:none;align-items:center;gap:8px;">
+                <span style="color:var(--text-muted);font-size:0.82rem;" id="admin-username"></span>
+                <button onclick="adminLogout()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-secondary);padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.82rem;">Esci</button>
+            </div>
+        </div>
     </div>
 
     <!-- Tabs -->
@@ -915,6 +921,8 @@
             <button class="tab" data-tab="voice" onclick="switchTab('voice')">🎙️ Voice</button>
             <button class="tab" data-tab="sip" onclick="switchTab('sip')">📞 SIP</button>
             <button class="tab" data-tab="listen" onclick="switchTab('listen')">🎧 Ascolto Live</button>
+            <button class="tab" data-tab="smtp" onclick="switchTab('smtp')">📧 Email / SMTP</button>
+            <button class="tab" data-tab="users" onclick="switchTab('users')">👤 Utenti</button>
         </div>
     </div>
 
@@ -1813,6 +1821,158 @@ Authorization: Bearer &lt;token&gt;
         </div>
     </div>
 
+    <!-- SMTP / Email Configuration -->
+    <div class="tab-content" id="tab-smtp">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📧</div>
+                <div>
+                    <div class="card-title">Configurazione Email / SMTP</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Configura il provider SMTP per l'invio email di reset password</div>
+                </div>
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">Provider SMTP</label>
+                <select id="smtp-provider" class="setting-select" onchange="onSmtpProviderChange()">
+                    <option value="none">Nessuno (disabilitato)</option>
+                    <option value="gmail">Gmail</option>
+                    <option value="brevo">Brevo / Sendinblue</option>
+                    <option value="resend">Resend</option>
+                    <option value="mailgun">Mailgun</option>
+                    <option value="custom">Personalizzato</option>
+                </select>
+            </div>
+            <div id="smtp-fields" style="display:none;">
+                <div class="setting-group">
+                    <label class="setting-label">Host SMTP</label>
+                    <input type="text" id="smtp-host" class="setting-input" placeholder="smtp.example.com">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Porta</label>
+                    <input type="number" id="smtp-port" class="setting-input" placeholder="587">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Username / API Key</label>
+                    <input type="text" id="smtp-user" class="setting-input" placeholder="user@example.com">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Password / API Secret</label>
+                    <input type="password" id="smtp-password" class="setting-input" placeholder="password">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Email mittente (From)</label>
+                    <input type="email" id="smtp-from-email" class="setting-input" placeholder="noreply@example.com">
+                </div>
+                <div class="setting-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="smtp-use-tls" checked>
+                    <label for="smtp-use-tls" class="setting-label" style="margin-bottom:0;">Usa TLS (STARTTLS)</label>
+                </div>
+                <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button class="btn btn-primary" onclick="saveSmtpSettings()">💾 Salva Configurazione</button>
+                    <button class="btn btn-secondary" onclick="testSmtp()">📧 Invia Email di Test</button>
+                </div>
+                <div id="smtp-provider-note" style="margin-top:12px; padding:10px 14px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:8px; font-size:0.82rem; color:var(--text-secondary); display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management -->
+    <div class="tab-content" id="tab-users">
+        <div class="card">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="card-icon">👤</div>
+                    <div>
+                        <div class="card-title">Gestione Utenti</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Crea, modifica e gestisci gli utenti della piattaforma</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="showCreateUserModal()">+ Nuovo Utente</button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">ID</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Username</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Email</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Ruolo</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Stato</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Ultimo accesso</th>
+                            <th style="padding:10px 12px; color:var(--text-muted); font-weight:600;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr><td colspan="7" style="padding:20px; text-align:center; color:var(--text-muted);">Caricamento...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Create/Edit Modal -->
+    <div class="log-modal-overlay" id="user-modal-overlay" onclick="closeUserModal(event)" style="display:none;">
+        <div class="log-modal" onclick="event.stopPropagation()" style="max-width:480px;">
+            <div class="log-modal-header">
+                <h2 id="user-modal-title">Nuovo Utente</h2>
+                <button class="log-modal-close" onclick="closeUserModal()">&times;</button>
+            </div>
+            <div class="log-modal-body">
+                <form id="user-form" onsubmit="handleUserFormSubmit(event)">
+                    <input type="hidden" id="user-form-id">
+                    <div class="setting-group">
+                        <label class="setting-label">Username</label>
+                        <input type="text" id="user-form-username" class="setting-input" required minlength="3">
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">Email</label>
+                        <input type="email" id="user-form-email" class="setting-input">
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">Ruolo</label>
+                        <select id="user-form-role" class="setting-select">
+                            <option value="user">Utente</option>
+                            <option value="admin">Amministratore</option>
+                        </select>
+                    </div>
+                    <div class="setting-group" id="user-form-pw-group">
+                        <label class="setting-label">Password iniziale</label>
+                        <input type="text" id="user-form-password" class="setting-input" value="changeme1" minlength="8">
+                        <span style="font-size:0.75rem;color:var(--text-muted);">L'utente dovra' cambiarla al primo accesso</span>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-top:16px;">
+                        <button type="submit" class="btn btn-primary" id="user-form-submit-btn">Crea Utente</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Annulla</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="log-modal-overlay" id="reset-pw-modal-overlay" onclick="closeResetPwModal(event)" style="display:none;">
+        <div class="log-modal" onclick="event.stopPropagation()" style="max-width:420px;">
+            <div class="log-modal-header">
+                <h2 id="reset-pw-modal-title">Reset Password</h2>
+                <button class="log-modal-close" onclick="closeResetPwModal()">&times;</button>
+            </div>
+            <div class="log-modal-body">
+                <form id="reset-pw-form" onsubmit="handleResetPwSubmit(event)">
+                    <input type="hidden" id="reset-pw-user-id">
+                    <div class="setting-group">
+                        <label class="setting-label">Nuova password per <strong id="reset-pw-username"></strong></label>
+                        <input type="text" id="reset-pw-value" class="setting-input" value="changeme1" minlength="8">
+                    </div>
+                    <div style="display:flex; gap:12px; margin-top:16px;">
+                        <button type="submit" class="btn btn-primary">Imposta Password</button>
+                        <button type="button" class="btn btn-secondary" id="reset-pw-email-btn" onclick="sendResetEmail()" style="display:none;">📧 Invia via Email</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeResetPwModal()">Annulla</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Call Detail Modal -->
     <div class="log-modal-overlay" id="log-modal-overlay" onclick="closeCallModal(event)">
         <div class="log-modal" onclick="event.stopPropagation()">
@@ -1830,6 +1990,29 @@ Authorization: Bearer &lt;token&gt;
     <div class="toast" id="toast"></div>
 
     <script>
+        // ==================== Auth Guard ====================
+        let _currentUser = null;
+        (async function authGuard() {
+            try {
+                const resp = await fetch('/api/auth/me');
+                if (resp.status === 401) { window.location.href = '/login.html'; return; }
+                if (!resp.ok) return;
+                _currentUser = await resp.json();
+                if (_currentUser.role !== 'admin') { window.location.href = '/'; return; }
+                if (_currentUser.must_change_password) { window.location.href = '/login.html'; return; }
+
+                const logoutArea = document.getElementById('admin-logout-area');
+                if (logoutArea) logoutArea.style.display = 'flex';
+                const usernameEl = document.getElementById('admin-username');
+                if (usernameEl) usernameEl.textContent = _currentUser.username;
+            } catch (e) {}
+        })();
+
+        async function adminLogout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
         // ==================== State ====================
         let ollamaModels = [];
         let openrouterModels = [];
@@ -3520,6 +3703,12 @@ Authorization: Bearer &lt;token&gt;
             if (tabId === 'listen') {
                 loadListenPage();
             }
+            if (tabId === 'smtp') {
+                loadSmtpSettings();
+            }
+            if (tabId === 'users') {
+                loadUsers();
+            }
         }
 
         // ==================== Log Chiamate ====================
@@ -3779,6 +3968,265 @@ Authorization: Bearer &lt;token&gt;
                 const exitBtn = document.getElementById('exit-fullscreen-btn');
                 if (exitBtn) exitBtn.remove();
             }
+        }
+
+        // ==================== SMTP Configuration ====================
+
+        const SMTP_PRESETS = {
+            gmail: { host: 'smtp.gmail.com', port: '587', use_tls: true, note: 'Per Gmail devi usare una "App Password". Vai su myaccount.google.com > Sicurezza > Password per le app.' },
+            brevo: { host: 'smtp-relay.brevo.com', port: '587', use_tls: true, note: 'Registrati su brevo.com (gratis fino a 300 email/giorno). Usa la SMTP Key come password.' },
+            resend: { host: 'smtp.resend.com', port: '465', use_tls: false, note: 'Registrati su resend.com (gratis fino a 100 email/giorno). Usa API Key come password, "resend" come username.' },
+            mailgun: { host: 'smtp.mailgun.org', port: '587', use_tls: true, note: 'Registrati su mailgun.com. Usa il dominio sandbox per test o configura un dominio personalizzato.' },
+        };
+
+        async function loadSmtpSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                if (!resp.ok) return;
+                const settings = await resp.json();
+                document.getElementById('smtp-provider').value = settings.smtp_provider || 'none';
+                document.getElementById('smtp-host').value = settings.smtp_host || '';
+                document.getElementById('smtp-port').value = settings.smtp_port || '587';
+                document.getElementById('smtp-user').value = settings.smtp_user || '';
+                document.getElementById('smtp-password').value = settings.smtp_password || '';
+                document.getElementById('smtp-from-email').value = settings.smtp_from_email || '';
+                document.getElementById('smtp-use-tls').checked = (settings.smtp_use_tls || 'true') === 'true';
+                onSmtpProviderChange();
+            } catch (e) { console.error('Error loading SMTP settings', e); }
+        }
+
+        function onSmtpProviderChange() {
+            const provider = document.getElementById('smtp-provider').value;
+            const fields = document.getElementById('smtp-fields');
+            const note = document.getElementById('smtp-provider-note');
+            if (provider === 'none') {
+                fields.style.display = 'none';
+                return;
+            }
+            fields.style.display = 'block';
+            const preset = SMTP_PRESETS[provider];
+            if (preset) {
+                document.getElementById('smtp-host').value = preset.host;
+                document.getElementById('smtp-port').value = preset.port;
+                document.getElementById('smtp-use-tls').checked = preset.use_tls;
+                note.textContent = preset.note;
+                note.style.display = 'block';
+            } else {
+                note.style.display = 'none';
+            }
+        }
+
+        async function saveSmtpSettings() {
+            const data = {
+                smtp_provider: document.getElementById('smtp-provider').value,
+                smtp_host: document.getElementById('smtp-host').value,
+                smtp_port: document.getElementById('smtp-port').value,
+                smtp_user: document.getElementById('smtp-user').value,
+                smtp_password: document.getElementById('smtp-password').value,
+                smtp_from_email: document.getElementById('smtp-from-email').value,
+                smtp_use_tls: document.getElementById('smtp-use-tls').checked ? 'true' : 'false',
+            };
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) showToast('Configurazione SMTP salvata', 'success');
+                else showToast('Errore nel salvataggio', 'error');
+            } catch (e) { showToast('Errore di connessione', 'error'); }
+        }
+
+        async function testSmtp() {
+            try {
+                await saveSmtpSettings();
+                const resp = await fetch('/api/auth/test-smtp', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) showToast(data.message || 'Email di test inviata!', 'success');
+                else showToast(data.detail || 'Errore test SMTP', 'error');
+            } catch (e) { showToast('Errore di connessione', 'error'); }
+        }
+
+        // ==================== User Management ====================
+
+        let _allUsers = [];
+        let _smtpConfigured = false;
+
+        async function loadUsers() {
+            try {
+                const [usersResp, settingsResp] = await Promise.all([
+                    fetch('/api/admin/users'),
+                    fetch('/api/settings')
+                ]);
+                if (!usersResp.ok) return;
+                _allUsers = await usersResp.json();
+                if (settingsResp.ok) {
+                    const s = await settingsResp.json();
+                    _smtpConfigured = s.smtp_provider && s.smtp_provider !== 'none';
+                }
+                renderUsersTable();
+            } catch (e) { console.error('Error loading users', e); }
+        }
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('users-table-body');
+            if (!_allUsers.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text-muted);">Nessun utente</td></tr>';
+                return;
+            }
+            tbody.innerHTML = _allUsers.map(u => `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 12px;">${u.id}</td>
+                    <td style="padding:10px 12px;font-weight:600;">${u.username}</td>
+                    <td style="padding:10px 12px;color:var(--text-secondary);">${u.email || '-'}</td>
+                    <td style="padding:10px 12px;">
+                        <span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:0.75rem;font-weight:600;
+                            background:${u.role === 'admin' ? 'rgba(139,92,246,0.15);color:#a78bfa' : 'rgba(255,255,255,0.06);color:var(--text-secondary)'};">
+                            ${u.role === 'admin' ? 'Admin' : 'Utente'}
+                        </span>
+                    </td>
+                    <td style="padding:10px 12px;">
+                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;
+                            background:${u.is_active ? 'var(--success)' : '#ef4444'};"></span>
+                        ${u.is_active ? 'Attivo' : 'Disabilitato'}
+                    </td>
+                    <td style="padding:10px 12px;color:var(--text-muted);font-size:0.82rem;">${u.last_login ? new Date(u.last_login).toLocaleString('it-IT') : 'Mai'}</td>
+                    <td style="padding:10px 12px;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="showEditUserModal(${u.id})">Modifica</button>
+                            <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="showResetPwModal(${u.id}, '${u.username}', '${u.email || ''}')">Reset PW</button>
+                            ${u.is_active
+                                ? `<button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;color:#ef4444;" onclick="toggleUserActive(${u.id}, false)">Disabilita</button>`
+                                : `<button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;color:var(--success);" onclick="toggleUserActive(${u.id}, true)">Abilita</button>`
+                            }
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showCreateUserModal() {
+            document.getElementById('user-modal-title').textContent = 'Nuovo Utente';
+            document.getElementById('user-form-id').value = '';
+            document.getElementById('user-form-username').value = '';
+            document.getElementById('user-form-username').disabled = false;
+            document.getElementById('user-form-email').value = '';
+            document.getElementById('user-form-role').value = 'user';
+            document.getElementById('user-form-password').value = 'changeme1';
+            document.getElementById('user-form-pw-group').style.display = 'block';
+            document.getElementById('user-form-submit-btn').textContent = 'Crea Utente';
+            document.getElementById('user-modal-overlay').style.display = 'flex';
+        }
+
+        function showEditUserModal(userId) {
+            const u = _allUsers.find(x => x.id === userId);
+            if (!u) return;
+            document.getElementById('user-modal-title').textContent = 'Modifica Utente';
+            document.getElementById('user-form-id').value = u.id;
+            document.getElementById('user-form-username').value = u.username;
+            document.getElementById('user-form-username').disabled = true;
+            document.getElementById('user-form-email').value = u.email || '';
+            document.getElementById('user-form-role').value = u.role;
+            document.getElementById('user-form-pw-group').style.display = 'none';
+            document.getElementById('user-form-submit-btn').textContent = 'Salva Modifiche';
+            document.getElementById('user-modal-overlay').style.display = 'flex';
+        }
+
+        function closeUserModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('user-modal-overlay').style.display = 'none';
+        }
+
+        async function handleUserFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('user-form-id').value;
+            if (id) {
+                const data = {
+                    email: document.getElementById('user-form-email').value || null,
+                    role: document.getElementById('user-form-role').value,
+                };
+                try {
+                    const resp = await fetch(`/api/admin/users/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (resp.ok) { showToast('Utente aggiornato', 'success'); closeUserModal(); loadUsers(); }
+                    else { const d = await resp.json(); showToast(d.detail || 'Errore', 'error'); }
+                } catch (e) { showToast('Errore di connessione', 'error'); }
+            } else {
+                const data = {
+                    username: document.getElementById('user-form-username').value,
+                    email: document.getElementById('user-form-email').value || null,
+                    role: document.getElementById('user-form-role').value,
+                    password: document.getElementById('user-form-password').value,
+                };
+                try {
+                    const resp = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (resp.ok) {
+                        const d = await resp.json();
+                        showToast(`Utente ${d.username} creato. Password: ${d.default_password}`, 'success');
+                        closeUserModal(); loadUsers();
+                    } else { const d = await resp.json(); showToast(d.detail || 'Errore', 'error'); }
+                } catch (e) { showToast('Errore di connessione', 'error'); }
+            }
+        }
+
+        async function toggleUserActive(userId, active) {
+            try {
+                const resp = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: active })
+                });
+                if (resp.ok) { showToast(active ? 'Utente abilitato' : 'Utente disabilitato', 'success'); loadUsers(); }
+                else { const d = await resp.json(); showToast(d.detail || 'Errore', 'error'); }
+            } catch (e) { showToast('Errore', 'error'); }
+        }
+
+        function showResetPwModal(userId, username, email) {
+            document.getElementById('reset-pw-user-id').value = userId;
+            document.getElementById('reset-pw-username').textContent = username;
+            document.getElementById('reset-pw-value').value = 'changeme1';
+            document.getElementById('reset-pw-modal-title').textContent = 'Reset Password - ' + username;
+            const emailBtn = document.getElementById('reset-pw-email-btn');
+            emailBtn.style.display = (_smtpConfigured && email) ? 'inline-block' : 'none';
+            emailBtn.setAttribute('data-user-id', userId);
+            document.getElementById('reset-pw-modal-overlay').style.display = 'flex';
+        }
+
+        function closeResetPwModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('reset-pw-modal-overlay').style.display = 'none';
+        }
+
+        async function handleResetPwSubmit(e) {
+            e.preventDefault();
+            const userId = document.getElementById('reset-pw-user-id').value;
+            const newPw = document.getElementById('reset-pw-value').value;
+            try {
+                const resp = await fetch(`/api/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: newPw })
+                });
+                if (resp.ok) { showToast('Password reimpostata. L\'utente dovra\' cambiarla al prossimo accesso.', 'success'); closeResetPwModal(); loadUsers(); }
+                else { const d = await resp.json(); showToast(d.detail || 'Errore', 'error'); }
+            } catch (e) { showToast('Errore', 'error'); }
+        }
+
+        async function sendResetEmail() {
+            const userId = document.getElementById('reset-pw-email-btn').getAttribute('data-user-id');
+            try {
+                const resp = await fetch(`/api/admin/users/${userId}/send-reset-email`, { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) showToast(data.message || 'Email inviata', 'success');
+                else showToast(data.detail || 'Errore', 'error');
+            } catch (e) { showToast('Errore', 'error'); }
         }
     </script>
 </body>

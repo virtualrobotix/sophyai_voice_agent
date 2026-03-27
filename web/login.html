@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SophyAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f12;
+            --bg-secondary: #18181f;
+            --bg-card: #1e1e28;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.06);
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bg-glow {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 100% 100%, rgba(139, 92, 246, 0.08), transparent);
+        }
+        .login-card {
+            position: relative; z-index: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px 36px;
+            width: 100%; max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .login-logo {
+            text-align: center; margin-bottom: 28px;
+        }
+        .login-logo h1 {
+            font-size: 1.8rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .login-logo p {
+            color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block; font-size: 0.78rem; font-weight: 600;
+            color: var(--text-secondary); margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .form-group input {
+            width: 100%; padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text-primary);
+            font-family: inherit; font-size: 0.95rem;
+            outline: none; transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            border-color: var(--accent);
+        }
+        .btn {
+            width: 100%; padding: 13px;
+            background: var(--accent); color: #fff;
+            border: none; border-radius: 10px;
+            font-family: inherit; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .btn:hover { background: #7c3aed; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.secondary {
+            background: rgba(255,255,255,0.06); color: var(--text-secondary);
+            margin-top: 10px;
+        }
+        .btn.secondary:hover { background: rgba(255,255,255,0.12); }
+        .error-msg {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: var(--danger); padding: 10px 14px;
+            border-radius: 8px; font-size: 0.82rem;
+            margin-bottom: 16px; display: none;
+        }
+        .success-msg {
+            background: rgba(34,197,94,0.1);
+            border: 1px solid rgba(34,197,94,0.3);
+            color: var(--success); padding: 10px 14px;
+            border-radius: 8px; font-size: 0.82rem;
+            margin-bottom: 16px; display: none;
+        }
+        .forgot-link {
+            text-align: center; margin-top: 16px;
+        }
+        .forgot-link a {
+            color: var(--text-muted); font-size: 0.8rem;
+            text-decoration: none;
+        }
+        .forgot-link a:hover { color: var(--accent); }
+        .view-toggle {
+            display: none;
+        }
+        .view-toggle.active { display: block; }
+        .pw-requirements {
+            font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="login-card">
+        <div class="login-logo">
+            <h1 id="app-title">SophyAI</h1>
+            <p id="app-subtitle">Accedi alla piattaforma</p>
+        </div>
+
+        <!-- LOGIN VIEW -->
+        <div id="view-login" class="view-toggle active">
+            <div class="error-msg" id="login-error"></div>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn" id="login-btn">Accedi</button>
+            </form>
+            <div class="forgot-link">
+                <a href="#" onclick="showView('forgot')">Password dimenticata?</a>
+            </div>
+        </div>
+
+        <!-- CHANGE PASSWORD VIEW (first login) -->
+        <div id="view-change-pw" class="view-toggle">
+            <div class="error-msg" id="change-error"></div>
+            <div class="success-msg" id="change-success"></div>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+                Devi cambiare la password al primo accesso.
+            </p>
+            <form id="change-pw-form" onsubmit="handleChangePassword(event)">
+                <div class="form-group">
+                    <label for="old-pw">Password attuale</label>
+                    <input type="password" id="old-pw" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-pw">Nuova password</label>
+                    <input type="password" id="new-pw" required minlength="8">
+                    <span class="pw-requirements">Minimo 8 caratteri</span>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-pw">Conferma nuova password</label>
+                    <input type="password" id="confirm-pw" required minlength="8">
+                </div>
+                <button type="submit" class="btn" id="change-btn">Cambia Password</button>
+            </form>
+        </div>
+
+        <!-- FORGOT PASSWORD VIEW -->
+        <div id="view-forgot" class="view-toggle">
+            <div class="error-msg" id="forgot-error"></div>
+            <div class="success-msg" id="forgot-success"></div>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+                Inserisci la tua email per ricevere un link di reset.
+            </p>
+            <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+                <div class="form-group">
+                    <label for="reset-email">Email</label>
+                    <input type="email" id="reset-email" required>
+                </div>
+                <button type="submit" class="btn" id="forgot-btn">Invia Link Reset</button>
+            </form>
+            <button class="btn secondary" onclick="showView('login')">Torna al Login</button>
+        </div>
+
+        <!-- RESET PASSWORD VIEW (from email link) -->
+        <div id="view-reset" class="view-toggle">
+            <div class="error-msg" id="reset-error"></div>
+            <div class="success-msg" id="reset-success"></div>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+                Imposta la tua nuova password.
+            </p>
+            <form id="reset-form" onsubmit="handleResetPassword(event)">
+                <div class="form-group">
+                    <label for="reset-new-pw">Nuova password</label>
+                    <input type="password" id="reset-new-pw" required minlength="8">
+                    <span class="pw-requirements">Minimo 8 caratteri</span>
+                </div>
+                <div class="form-group">
+                    <label for="reset-confirm-pw">Conferma password</label>
+                    <input type="password" id="reset-confirm-pw" required minlength="8">
+                </div>
+                <button type="submit" class="btn" id="reset-btn">Imposta Password</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let _loginData = null;
+        let _resetToken = null;
+
+        function showView(name) {
+            document.querySelectorAll('.view-toggle').forEach(v => v.classList.remove('active'));
+            const el = document.getElementById('view-' + name);
+            if (el) el.classList.add('active');
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg; el.style.display = 'block';
+        }
+        function hideError(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+        function showSuccess(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg; el.style.display = 'block';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            hideError('login-error');
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; btn.textContent = 'Accesso...';
+
+            try {
+                const resp = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value,
+                    })
+                });
+                if (!resp.ok) {
+                    const data = await resp.json();
+                    throw new Error(data.detail || 'Credenziali non valide');
+                }
+                _loginData = await resp.json();
+
+                if (_loginData.must_change_password) {
+                    document.getElementById('old-pw').value = document.getElementById('password').value;
+                    showView('change-pw');
+                } else {
+                    window.location.href = _loginData.role === 'admin' ? '/admin' : '/';
+                }
+            } catch (err) {
+                showError('login-error', err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Accedi';
+            }
+        }
+
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            hideError('change-error');
+            const newPw = document.getElementById('new-pw').value;
+            const confirmPw = document.getElementById('confirm-pw').value;
+            if (newPw !== confirmPw) {
+                showError('change-error', 'Le password non coincidono');
+                return;
+            }
+            if (newPw.length < 8) {
+                showError('change-error', 'La password deve avere almeno 8 caratteri');
+                return;
+            }
+            const btn = document.getElementById('change-btn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        old_password: document.getElementById('old-pw').value,
+                        new_password: newPw,
+                    })
+                });
+                if (!resp.ok) {
+                    const data = await resp.json();
+                    throw new Error(data.detail || 'Errore cambio password');
+                }
+                window.location.href = _loginData && _loginData.role === 'admin' ? '/admin' : '/';
+            } catch (err) {
+                showError('change-error', err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            hideError('forgot-error');
+            const btn = document.getElementById('forgot-btn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: document.getElementById('reset-email').value })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Errore');
+                showSuccess('forgot-success', data.message || 'Se l\'email esiste, riceverai un link di reset.');
+            } catch (err) {
+                showError('forgot-error', err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            hideError('reset-error');
+            const newPw = document.getElementById('reset-new-pw').value;
+            const confirmPw = document.getElementById('reset-confirm-pw').value;
+            if (newPw !== confirmPw) {
+                showError('reset-error', 'Le password non coincidono');
+                return;
+            }
+            const btn = document.getElementById('reset-btn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: _resetToken, new_password: newPw })
+                });
+                if (!resp.ok) {
+                    const data = await resp.json();
+                    throw new Error(data.detail || 'Errore reset password');
+                }
+                showSuccess('reset-success', 'Password reimpostata! Reindirizzamento al login...');
+                setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+            } catch (err) {
+                showError('reset-error', err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // On page load: check for reset token in URL
+        (async function init() {
+            const params = new URLSearchParams(window.location.search);
+            _resetToken = params.get('reset_token');
+            if (_resetToken) {
+                showView('reset');
+                return;
+            }
+
+            // Check if already logged in
+            try {
+                const resp = await fetch('/api/auth/me');
+                if (resp.ok) {
+                    const user = await resp.json();
+                    if (user.must_change_password) {
+                        showView('change-pw');
+                    } else {
+                        window.location.href = user.role === 'admin' ? '/admin' : '/';
+                    }
+                }
+            } catch {}
+
+            // Load branding
+            try {
+                const resp = await fetch('/api/branding');
+                if (resp.ok) {
+                    const b = await resp.json();
+                    if (b.app_name) document.getElementById('app-title').textContent = b.app_name;
+                }
+            } catch {}
+        })();
+    </script>
+</body>
+</html>

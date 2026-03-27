@@ -75,7 +75,27 @@ FORMATO TTS:
     ('speech_energy_threshold', '100'),
     ('silence_threshold', '30'),
     ('tts_cooldown_seconds', '5'),
-    ('sip_phone_contexts', '{}')
+    ('sip_phone_contexts', '{}'),
+    -- Per-channel audio settings (SIP)
+    ('sip_vad_energy_threshold', '120'),
+    ('sip_speech_energy_threshold', '100'),
+    ('sip_silence_threshold', '30'),
+    ('sip_tts_cooldown_seconds', '5'),
+    -- Per-channel audio settings (Web/Mic)
+    ('web_vad_energy_threshold', '120'),
+    ('web_speech_energy_threshold', '25'),
+    ('web_silence_threshold', '60'),
+    ('web_tts_cooldown_seconds', '5'),
+    -- SMTP settings
+    ('smtp_provider', 'none'),
+    ('smtp_host', ''),
+    ('smtp_port', '587'),
+    ('smtp_user', ''),
+    ('smtp_password', ''),
+    ('smtp_from_email', ''),
+    ('smtp_use_tls', 'true'),
+    -- Auth settings
+    ('jwt_secret_key', '')
 ON CONFLICT (key) DO NOTHING;
 
 -- Function to update updated_at timestamp
@@ -97,6 +117,45 @@ CREATE TRIGGER update_settings_updated_at
 DROP TRIGGER IF EXISTS update_chats_updated_at ON chats;
 CREATE TRIGGER update_chats_updated_at
     BEFORE UPDATE ON chats
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- USERS: Autenticazione e autorizzazione
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    must_change_password BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Password reset tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
