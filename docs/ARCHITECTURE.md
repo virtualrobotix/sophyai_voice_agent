@@ -131,15 +131,39 @@ Usato internamente da LiveKit per la gestione delle stanze e del signaling.
 **Modello**: faster-whisper (large-v3 default)
 Server HTTP per trascrizione vocale con GPU CUDA.
 
-### 9. TTS Server (profilo NVIDIA)
+### 9. TTS Server / Proxy (profilo NVIDIA)
 
 **Porta**: 8092
-Serve motori TTS multipli (Piper, Kokoro, Edge, VibeVoice, Chatterbox, ElevenLabs, Coqui).
+Espone sintesi vocale con motori multipli (Edge, Piper, Kokoro, Qwen, Coqui, Chatterbox, VibeVoice).
+
+Modalita' supportate:
+- **Monolitica**: un server TTS unico.
+- **Split Docker + Proxy**: `tts-proxy` instrada verso container dedicati (`tts-core`, `tts-coqui`, `tts-chatterbox`, `tts-vibevoice`).
+
+Nel flusso aggiornato non si usa fallback silenzioso tra engine durante i test:
+se il motore richiesto non e' disponibile, viene ritornato errore esplicito.
 
 ### 10. Ollama (host)
 
 **Porta**: 11434
 Runtime LLM locale. I container accedono via `host.docker.internal:11434`.
+
+### 11. Benchmark Tooling (offline validation)
+
+**Script**:
+- `scripts/benchmark_ollama_toolcalling.py`
+- `scripts/benchmark_tts_stt.py`
+
+Responsabilita':
+- Misurare tool-calling policy e latenza modelli Ollama
+- Valutare qualita' receptionist con scoring ibrido (rule-based + judge LLM)
+- Stimare concorrenza stabile con soglie realtime e early-stop
+- Misurare pipeline TTS/STT end-to-end (latenza, successo, WER)
+
+Artifact output:
+- `benchmark/*.json` e `benchmark/*.md` per benchmark LLM
+- `benchmark/system_benchmark_<timestamp>/results.json`
+- `benchmark/system_benchmark_<timestamp>/REPORT_BENCHMARK_TTS_STT.md`
 
 ## Flusso di una Conversazione Vocale
 
@@ -154,6 +178,11 @@ Runtime LLM locale. I container accedono via `host.docker.internal:11434`.
 8. Agent -> TTS Engine -> Audio sintetizzato
 9. Audio -> LiveKit -> Browser -> Altoparlante
 ```
+
+Nota TTS:
+- Il worker usa `TTS_SERVER_URL` per raggiungere il servizio TTS.
+- Nel setup split, `tts-proxy` mantiene routing per engine e status centralizzato (`/status`).
+- I test TTS verificano l'header `X-Engine` per confermare il motore realmente usato.
 
 ## Flusso Chiamata SIP
 
@@ -227,15 +256,27 @@ Browser esterno
 | `whisper_models` | Modelli Whisper scaricati |
 | `tts_models` | Modelli TTS scaricati |
 
+## Flusso Benchmark (osservabilita' prestazionale)
+
+```
+1. Script benchmark -> Ollama / TTS / STT endpoints
+2. Raccolta metriche: latency, ttft, success_rate, quality score, WER
+3. Generazione artifact JSON + report Markdown in benchmark/
+4. Uso report per tuning prompt, scelta modelli e limiti di concorrenza
+```
+
 ## File di Configurazione
 
 | File | Descrizione |
 |------|-------------|
 | `.env` | Variabili d'ambiente (da `env.example`) |
 | `docker-compose.yml` | Definizione servizi Docker |
+| `docker-compose.tts.yml` | Stack TTS dedicato (monolitico) |
+| `docker-compose.tts.split.yml` | Stack TTS split con proxy e container engine separati |
 | `livekit-server.yaml` | Configurazione LiveKit Server |
 | `sip-config.yaml` | Configurazione SIP trunk/dispatch |
 | `nginx-livekit-proxy.conf` | Nginx TLS proxy per LiveKit |
+| `tts_proxy_server.py` | Routing TTS tra engine/container e endpoint di stato |
 | `certs/` | Certificati SSL (cert.pem, key.pem) |
 | `agent/config.py` | Configurazione runtime agent (da env) |
 | DB `settings` | Parametri operativi persistiti |

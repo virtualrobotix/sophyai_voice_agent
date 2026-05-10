@@ -12,9 +12,10 @@
 8. [Configurazione SIP](#configurazione-sip)
 9. [Installazione con GPU NVIDIA](#installazione-con-gpu-nvidia)
 10. [TTS Split Docker con Proxy (Linux NVIDIA)](#tts-split-docker-con-proxy-linux-nvidia)
-11. [Aggiornamento](#aggiornamento)
-12. [Backup e Ripristino](#backup-e-ripristino)
-13. [Risoluzione Problemi](#risoluzione-problemi)
+11. [Benchmark e Validazione (LLM/TTS/STT)](#benchmark-e-validazione-llmttsstt)
+12. [Aggiornamento](#aggiornamento)
+13. [Backup e Ripristino](#backup-e-ripristino)
+14. [Risoluzione Problemi](#risoluzione-problemi)
 
 ---
 
@@ -224,6 +225,9 @@ docker compose ps
 docker compose logs -f web
 ```
 
+Per usare la modalita' TTS split con proxy dedicato (`:8092`) su Linux NVIDIA,
+vedi la sezione [TTS Split Docker con Proxy (Linux NVIDIA)](#tts-split-docker-con-proxy-linux-nvidia).
+
 ### 5. Primo Accesso
 
 1. Apri `https://<ip-server>:8443` nel browser
@@ -401,9 +405,13 @@ rtc:
   tcp_port: 7881
   port_range_start: 50000
   port_range_end: 60000
-  use_external_ip: true
+  use_external_ip: false
 redis:
   address: 127.0.0.1:6379
+webhook:
+  urls:
+    - http://127.0.0.1:8080/api/livekit/webhook
+  api_key: devkey
 keys:
   devkey: secret_dev_key_change_in_production
 logging:
@@ -525,6 +533,15 @@ Se il client gira sullo stesso host, usare direttamente:
 TTS_SERVER_URL=http://127.0.0.1:8092
 ```
 
+### Comportamento no-fallback (consigliato)
+
+Nel setup split/proxy, il motore richiesto deve coincidere con quello effettivo.
+Se un engine non e' disponibile, il proxy/server restituisce errore (`503`) invece
+di fare fallback silenzioso.
+
+Per i test TTS, la risposta espone `X-Engine` e i test lato API validano che non
+ci siano fallback impliciti.
+
 ### Limitazione Apple Silicon
 
 Questa architettura **non e' supportata su Apple Silicon**:
@@ -533,6 +550,67 @@ Questa architettura **non e' supportata su Apple Silicon**:
 - CUDA non e' disponibile/visibile nei container su Apple Silicon.
 
 Su Apple Silicon usare la modalita' host-native per TTS (senza split Docker CUDA), oppure engine cloud.
+
+---
+
+## Benchmark e Validazione (LLM/TTS/STT)
+
+I benchmark operativi sono disponibili negli script:
+
+- `scripts/benchmark_ollama_toolcalling.py` (tool calling, qualita' receptionist, concorrenza realtime)
+- `scripts/benchmark_tts_stt.py` (pipeline TTS + STT end-to-end)
+
+### Benchmark Ollama (tool calling / quality / concurrency)
+
+Esempio completo:
+
+```bash
+python3 scripts/benchmark_ollama_toolcalling.py \
+  --ollama-url http://127.0.0.1:11434 \
+  --quality-benchmark \
+  --concurrency-benchmark \
+  --models qwen3.6:latest llama3.2:latest
+```
+
+Flag utili:
+
+- `--skip-tool-benchmark`: esegue solo quality/concurrency
+- `--quality-repeats`: ripetizioni per domanda quality
+- `--concurrency-max-workers`: livello massimo concorrenza
+- `--concurrency-realtime-avg-ms` e `--concurrency-realtime-p95-ms`: soglie realtime
+- `--no-concurrency-stop-on-realtime-degradation`: disabilita early-stop realtime
+
+Output principali (default, in `benchmark/`):
+
+- `ollama_toolcalling_results.json` e `ollama_toolcalling_report.md`
+- `ollama_quality_results.json` e `ollama_quality_report.md`
+- `ollama_concurrency_results.json` e `ollama_concurrency_report.md`
+- `ollama_optimized_prompts_by_model.json` e `.md`
+
+### Benchmark TTS + STT end-to-end
+
+Esempio:
+
+```bash
+python3 scripts/benchmark_tts_stt.py \
+  --tts-url http://127.0.0.1:8092 \
+  --stt-url http://127.0.0.1:8091 \
+  --runs 2 \
+  --stt-reference-engine edge
+```
+
+Output:
+
+- cartella `benchmark/system_benchmark_<timestamp>/`
+- `results.json` (run grezzi + summary)
+- `REPORT_BENCHMARK_TTS_STT.md` (report leggibile)
+
+### Interpretazione rapida risultati
+
+- **Tool benchmark**: guarda `tool_policy_success_rate` e `avg_wall_ms`
+- **Quality benchmark**: guarda `quality_avg`, `hallucination_risk_rate`, `avg_ttft_ms`
+- **Concurrency benchmark**: guarda `max_stable_concurrency`, `recommended_concurrency`, `stopped_early_for_realtime`
+- **TTS/STT benchmark**: guarda `success_rate`, `latency_avg_ms`, `latency_p95_ms`, `wer_avg`
 
 ---
 
@@ -550,6 +628,14 @@ docker compose up -d --build web agent
 # Se ci sono modifiche al database schema,
 # riavvia il container postgres (le migrazioni sono automatiche)
 docker compose restart web
+```
+
+Se usi la modalita' split TTS, aggiorna anche lo stack dedicato:
+
+```bash
+./scripts/restart_tts_split_docker.sh
+# oppure:
+docker compose -f docker-compose.tts.split.yml up -d --build
 ```
 
 ### Aggiornamento delle Dipendenze
