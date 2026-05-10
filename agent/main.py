@@ -2644,9 +2644,8 @@ class VisionAgent(Agent):
             # Analizza con LLM multimodale
             result = await self._multimodal_llm.analyze_image(image_base64, prompt)
             
-            # Pulisci il risultato da caratteri markdown
-            result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
-            result = result.replace("\n\n", ". ").replace("\n", ". ")
+            # Pulisci il risultato per evitare che il TTS pronunci simboli.
+            result = _sanitize_text_for_tts(result)
             
             return result
             
@@ -2664,7 +2663,7 @@ class VisionAgent(Agent):
         logger.info(f"📹 FUNCTION TOOL analyze_video CHIAMATO: has_video={self._has_video()}")
         prompt = """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
 Sii conciso, usa 2-3 frasi al massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce.
 Rispondi come se stessi parlando direttamente a qualcuno."""
         
@@ -2696,8 +2695,8 @@ Rispondi come se stessi parlando direttamente a qualcuno."""
         prompt = """Analizza questo documento e leggi i dati visibili.
 Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
 Per esempio: Il nome è Mario Rossi, nato il 15 marzo 1985, numero documento AB123456.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
-Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale."""
+IMPORTANTE: Non usare caratteri speciali o markdown.
+Scrivi solo testo semplice e discorsivo, senza JSON. Sii conversazionale."""
         
         result = await self._analyze_with_prompt(prompt)
         
@@ -2726,7 +2725,7 @@ Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazion
         prompt = """Osserva la persona in questa immagine e stima la sua età approssimativa.
 Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
 Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere."""
         
         result = await self._analyze_with_prompt(prompt)
@@ -2756,7 +2755,7 @@ Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere."""
         prompt = """Descrivi l'ambiente o la stanza che vedi in questa immagine.
 Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
 Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo."""
         
         result = await self._analyze_with_prompt(prompt)
@@ -2885,6 +2884,27 @@ Scrivi solo testo semplice e discorsivo."""
             return "Si e verificato un errore durante il controllo disponibilita camere."
 
 
+def _sanitize_prompt_for_tts_engines(prompt_text: str) -> str:
+    """Rimuove caratteri speciali che possono essere pronunciati da alcuni TTS."""
+    if not prompt_text:
+        return ""
+    sanitized = re.sub(r"[*#@€$%&/|<>\[\]\{\}~`^\"“”()]", " ", prompt_text)
+    sanitized = sanitized.replace("-", " ")
+    sanitized = re.sub(r"[ ]{2,}", " ", sanitized)
+    sanitized = re.sub(r"\n{3,}", "\n\n", sanitized)
+    return sanitized.strip()
+
+
+def _sanitize_text_for_tts(text: str) -> str:
+    """Pulisce output da markdown e simboli speciali prima della sintesi vocale."""
+    if not text:
+        return ""
+    cleaned = _sanitize_prompt_for_tts_engines(text)
+    cleaned = cleaned.replace("\n\n", ". ").replace("\n", ". ")
+    cleaned = re.sub(r"[ ]{2,}", " ", cleaned)
+    return cleaned.strip()
+
+
 async def handle_video_analysis(
     analysis_type: str,
     frame_extractor: VideoFrameExtractor,
@@ -2920,28 +2940,28 @@ async def handle_video_analysis(
             "document": """Analizza questo documento e leggi i dati visibili.
 Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
 Per esempio: Il nome è Mario Rossi, nato il quindici marzo millenovecentottantacinque, numero documento AB centoventitremilaquattrocentocinquantasei.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
-Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale. Scrivi i numeri in lettere.""",
+IMPORTANTE: Non usare caratteri speciali o markdown.
+Scrivi solo testo semplice e discorsivo, senza JSON. Sii conversazionale. Scrivi i numeri in lettere.""",
             
             "age": """Osserva la persona in questa immagine e stima la sua età approssimativa.
 Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
 Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere.""",
             
             "environment": """Descrivi l'ambiente o la stanza che vedi in questa immagine.
 Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
 Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo.""",
             
             "generic": """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
 Sii conciso, usa due o tre frasi al massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         }
         
-        prompt = prompts.get(analysis_type, prompts["generic"])
+        prompt = _sanitize_prompt_for_tts_engines(prompts.get(analysis_type, prompts["generic"]))
         
         # Crea MultimodalLLM
         llm_provider = db_settings.get("llm_provider", "ollama")
@@ -2952,9 +2972,8 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         
         logger.info(f"📹 Analisi completata: {result[:100]}...")
         
-        # Pulisci il risultato da caratteri markdown per TTS
-        tts_result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
-        tts_result = tts_result.replace("\n\n", ". ").replace("\n", ". ")
+        # Pulisci il risultato per evitare che il TTS pronunci simboli.
+        tts_result = _sanitize_text_for_tts(result)
         
         # Invia risultato al frontend con ID
         await send_callback(json.dumps({
@@ -3028,36 +3047,38 @@ async def handle_image_analysis(
             }), "system", image_analysis_id)
             return
         
-        # Se c'è un prompt personalizzato, usalo (con aggiunta di istruzioni sui caratteri speciali)
+        # Se c'è un prompt personalizzato, usalo con istruzioni semplici per TTS.
         if custom_prompt and custom_prompt.strip():
-            prompt = custom_prompt.strip() + "\nIMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione. Scrivi solo testo semplice e discorsivo."
+            prompt = custom_prompt.strip() + "\nIMPORTANTE: Non usare caratteri speciali o markdown. Scrivi solo testo semplice e discorsivo."
         else:
             # Seleziona prompt in base al tipo (stessi prompt di handle_video_analysis)
             prompts = {
                 "document": """Analizza questo documento e leggi i dati visibili.
 Elenca i dati in modo naturale, come se li stessi leggendo a voce alta.
 Per esempio: Il nome è Mario Rossi, nato il quindici marzo millenovecentottantacinque, numero documento AB centoventitremilaquattrocentocinquantasei.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
-Scrivi solo testo semplice e discorsivo, senza JSON o markdown. Sii conversazionale. Scrivi i numeri in lettere.""",
+IMPORTANTE: Non usare caratteri speciali o markdown.
+Scrivi solo testo semplice e discorsivo, senza JSON. Sii conversazionale. Scrivi i numeri in lettere.""",
                 
                 "age": """Osserva la persona in questa immagine e stima la sua età approssimativa.
 Rispondi in modo naturale, per esempio: Direi che ha circa trenta trentacinque anni, basandomi sui lineamenti del viso.
 Se non vedi una persona chiaramente, dillo. Sii conversazionale e breve.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo. Scrivi i numeri in lettere.""",
                 
                 "environment": """Descrivi l'ambiente o la stanza che vedi in questa immagine.
 Menziona gli elementi principali come mobili, oggetti, colori, illuminazione.
 Sii conciso e conversazionale, come se stessi descrivendo a voce. Due o tre frasi massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo.""",
                 
                 "generic": """Descrivi in modo naturale e conversazionale cosa vedi in questa immagine.
 Sii conciso, usa due o tre frasi al massimo.
-IMPORTANTE: Non usare MAI caratteri speciali come asterischi, hashtag, trattini, elenchi puntati, parentesi, virgolette, simboli matematici o qualsiasi formattazione.
+IMPORTANTE: Non usare caratteri speciali o markdown.
 Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
             }
             prompt = prompts.get(analysis_type, prompts["generic"])
+
+        prompt = _sanitize_prompt_for_tts_engines(prompt)
         
         # Crea MultimodalLLM
         llm_provider = db_settings.get("llm_provider", "ollama")
@@ -3068,9 +3089,8 @@ Scrivi solo testo semplice e discorsivo, come se stessi parlando a voce."""
         
         logger.info(f"🖼️ Analisi immagine completata: {result[:100]}...")
         
-        # Pulisci il risultato da caratteri markdown per TTS
-        tts_result = result.replace("**", "").replace("*", "").replace("#", "").replace("`", "")
-        tts_result = tts_result.replace("\n\n", ". ").replace("\n", ". ")
+        # Pulisci il risultato per evitare che il TTS pronunci simboli.
+        tts_result = _sanitize_text_for_tts(result)
         
         # Invia risultato al frontend con ID
         await send_callback(json.dumps({
@@ -3403,10 +3423,15 @@ async def entrypoint(ctx: JobContext):
         ollama_base_url = config.ollama.host + "/v1"
         ollama_model = db_settings.get("ollama_model", config.ollama.model)
         ollama_extra_body = None
+        ollama_max_completion_tokens = None
         if str(ollama_model).lower().startswith("qwen3"):
-            # Qwen3 in modalita' "thinking" aumenta molto la latenza e causa timeout.
+            # I modelli Qwen3 (compreso qwen3.6) emettono prima un blocco di "thinking"
+            # interno e poi la risposta vera. Sull'endpoint OpenAI-compatibile di Ollama
+            # il flag {"think": false} non viene onorato, quindi dobbiamo dare margine
+            # sufficiente di token per consentire al modello di completare il reasoning
+            # ed emettere il content finale (altrimenti finish_reason=length e content vuoto).
             ollama_extra_body = {"think": False}
-            llm_chat_extra_kwargs = {"extra_body": ollama_extra_body}
+            ollama_max_completion_tokens = 2048
         
         ollama_llm_kwargs = {
             "model": ollama_model,
@@ -3415,6 +3440,8 @@ async def entrypoint(ctx: JobContext):
         }
         if ollama_extra_body:
             ollama_llm_kwargs["extra_body"] = ollama_extra_body
+        if ollama_max_completion_tokens:
+            ollama_llm_kwargs["max_completion_tokens"] = ollama_max_completion_tokens
         base_llm = openai.LLM(**ollama_llm_kwargs)
         logger.info(f"🦙 LLM: Ollama ({ollama_model})")
     
@@ -3687,47 +3714,55 @@ async def entrypoint(ctx: JobContext):
     
     # Costruisci il prompt usando quello dal database (se disponibile)
     # I trigger per l'attivazione vengono dalla configurazione branding
-    triggers_str = ", ".join([f'"{t}"' for t in ASSISTANT_TRIGGERS[:3]])  # Primi 3 trigger
-    default_prompt = f"""Sei {ASSISTANT_NAME}, assistente vocale ultra-veloce. PRIORITÀ ASSOLUTA: VELOCITÀ E SINTESI.
+    triggers_str = ", ".join(ASSISTANT_TRIGGERS[:3])  # Primi 3 trigger
+    default_prompt = f"""Sei {ASSISTANT_NAME} assistente vocale ultra veloce.
+Priorita assoluta velocita e sintesi.
 
-ATTIVAZIONE:
-IMPORTANTE: Rispondi SOLO quando vieni menzionato esplicitamente con {triggers_str} o varianti simili.
-Se il messaggio NON contiene il tuo nome o una menzione diretta a te, NON rispondere affatto.
-Quando sei menzionato, rispondi in modo utile e conciso.
+Attivazione
+Rispondi solo quando vieni menzionato esplicitamente con {triggers_str} o varianti simili.
+Se il messaggio non contiene il tuo nome o una menzione diretta a te non rispondere.
+Quando sei menzionato rispondi in modo utile e conciso.
 
-REGOLE FONDAMENTALI:
-1. RISPOSTE ULTRA-BREVI: massimo 1-2 frasi, mai più di 30 parole
-2. VAI DRITTO AL PUNTO: niente preamboli, saluti inutili o ripetizioni
-3. LINGUA: rispondi nella stessa lingua dell'utente
+Regole fondamentali
+Risposte ultra brevi massimo due frasi e mai oltre trenta parole.
+Vai dritto al punto senza preamboli saluti inutili o ripetizioni.
+Rispondi nella stessa lingua dell utente.
 
-CAPACITÀ VISION:
-Hai accesso a webcam e screen sharing. Quando l'utente ti chiede di:
-- Vedere, guardare, o descrivere cosa c'è nel video: usa analyze_video
-- Leggere documenti, carte d'identità, patenti: usa analyze_document
-- Stimare l'età di qualcuno: usa estimate_age
-- Descrivere l'ambiente o la stanza: usa describe_environment
-Usa sempre le funzioni appropriate quando l'utente fa richieste visive.
+Capacita vision
+Hai accesso a webcam e condivisione schermo.
+Se l utente chiede di vedere guardare o descrivere il video usa analyze_video.
+Se l utente chiede di leggere documenti usa analyze_document.
+Se l utente chiede di stimare l eta usa estimate_age.
+Se l utente chiede di descrivere ambiente o stanza usa describe_environment.
+Usa sempre la funzione corretta per richieste visive.
 
-CAPACITÀ HOTEL:
-Quando l'utente chiede disponibilità camere, camere libere o ricerca camere tra date specifiche:
-1. PRIMA chiama get_current_datetime per conoscere la data odierna
-2. POI usa la data odierna per calcolare le date corrette (es. "domani" = data odierna + 1 giorno)
-3. INFINE chiama check_room_availability passando:
-   - start_date in formato YYYY-MM-DD
-   - end_date in formato YYYY-MM-DD
-   - count come numero richiesto
-IMPORTANTE: NON inventare o indovinare mai la data corrente. Usa SEMPRE get_current_datetime.
+Capacita hotel
+Quando l utente chiede disponibilita camere o ricerca camere tra date specifiche.
+Prima chiama get_current_datetime per conoscere la data odierna.
+Poi usa la data odierna per calcolare le date corrette.
+Infine chiama check_room_availability con start_date end_date e count.
+Non inventare mai la data corrente usa sempre get_current_datetime.
 
-STILE:
-- Rispondi come un amico esperto: diretto, chiaro, utile
-- Se non sai qualcosa, dillo in 5 parole
-- Preferisci risposte secche e precise
+Stile
+Rispondi come un amico esperto diretto chiaro utile.
+Se non sai qualcosa dillo in cinque parole.
+Preferisci risposte secche e precise.
 
-FORMATO TTS:
-- NO simboli: * # @ euro dollaro percentuale ampersand / | minore maggiore parentesi graffe quadre tilde
-- NO emoji
-- Numeri in parole (ventitre, non 23)
-- NO elenchi puntati, scrivi discorsivo"""
+Formato tts
+Non usare simboli speciali.
+Non usare emoji.
+Scrivi i numeri in parole.
+Non usare elenchi puntati scrivi in modo discorsivo."""
+
+    def _sanitize_system_prompt_for_tts(prompt_text: str) -> str:
+        """Rimuove simboli speciali che alcuni TTS tendono a pronunciare."""
+        if not prompt_text:
+            return ""
+        sanitized = re.sub(r"[*#@€$%&/|<>\[\]\{\}~`^\"“”()]", " ", prompt_text)
+        sanitized = sanitized.replace("-", " ")
+        sanitized = re.sub(r"[ ]{2,}", " ", sanitized)
+        sanitized = re.sub(r"\n{3,}", "\n\n", sanitized)
+        return sanitized.strip()
 
     # Usa prompt dal database se disponibile
     system_prompt = db_settings.get("system_prompt", "").strip()
@@ -3737,7 +3772,7 @@ FORMATO TTS:
     # Aggiungi context injection se presente
     context_injection = db_settings.get("context_injection", "").strip()
     if context_injection:
-        system_prompt = f"{system_prompt}\n\n--- INFORMAZIONI AGGIUNTIVE ---\n{context_injection}"
+        system_prompt = f"{system_prompt}\n\nInformazioni aggiuntive\n{context_injection}"
         logger.info(f"📝 Context injection aggiunto: {len(context_injection)} caratteri")
 
     sip_context_injection = db_settings.get("sip_context_injection", "").strip()
@@ -3749,8 +3784,10 @@ FORMATO TTS:
     except: pass
     # #endregion
     if sip_context_injection:
-        system_prompt = f"{system_prompt}\n\n--- CONTESTO SIP PER NUMERO CHIAMATO ---\n{sip_context_injection}"
+        system_prompt = f"{system_prompt}\n\nContesto sip per numero chiamato\n{sip_context_injection}"
         logger.info(f"🏨 Context SIP aggiunto: {len(sip_context_injection)} caratteri")
+
+    system_prompt = _sanitize_system_prompt_for_tts(system_prompt)
     
     # #region agent log
     try:

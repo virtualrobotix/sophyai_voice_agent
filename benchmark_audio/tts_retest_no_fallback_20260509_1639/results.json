@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-05-09 14:44:49",
+  "server": "http://127.0.0.1:8092",
+  "standard": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 687,
+      "x_engine": "edge",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/standard_edge.wav",
+      "sha256": "0af0b45b75ea766bf3c08d75b8f5ac2ef4f99a47d6972f01b58d527ff4ed6310"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"500: Engine TTS sconosciuto: coqui\"}"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1214,
+      "x_engine": "piper",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/standard_piper.wav",
+      "sha256": "aff17fee253e91053375896fae2eceb63edc490e0886d5c56475789b5879052c"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 5454,
+      "x_engine": "kokoro",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/standard_kokoro.wav",
+      "sha256": "be4d5564903bdef22a43ea305af03971adacbe17ec958ff98b3ffcf0f099e5f3"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 7643,
+      "x_engine": "qwen",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/standard_qwen.wav",
+      "sha256": "92de2c5ab082a607d3c6ebf8d73a24d7dfb9331e28131f4c7b5a632ec25ebc3d"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 6368,
+      "error": "{\"detail\":\"503: Engine requested 'chatterbox' unavailable: 500: 'NoneType' object is not callable\"}"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"503: Engine requested 'vibevoice' unavailable: Nessuna voce disponibile\"}"
+    }
+  ],
+  "stream": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 538,
+      "ttfb_ms": 538,
+      "x_engine": "edge",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/stream_edge.wav",
+      "sha256": "0af0b45b75ea766bf3c08d75b8f5ac2ef4f99a47d6972f01b58d527ff4ed6310"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 500,
+      "elapsed_ms": 0,
+      "error": "{\"detail\":\"500: Engine TTS sconosciuto: coqui\"}"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1105,
+      "ttfb_ms": 1105,
+      "x_engine": "piper",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/stream_piper.wav",
+      "sha256": "aff17fee253e91053375896fae2eceb63edc490e0886d5c56475789b5879052c"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 2437,
+      "ttfb_ms": 2437,
+      "x_engine": "kokoro",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/stream_kokoro.wav",
+      "sha256": "9776d071ce0072553bdec43ad50e54c4c316abf34f449699883fc34413ee54dd"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 3530,
+      "ttfb_ms": 3530,
+      "x_engine": "qwen",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1639/stream_qwen.wav",
+      "sha256": "33fa1b865d29efbf4ea651254814ddcf9a13e7b37ea264f065ce157ff0e661f2"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 6069,
+      "error": "{\"detail\":\"503: Engine requested 'chatterbox' unavailable: 500: 'NoneType' object is not callable\"}"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"503: Engine requested 'vibevoice' unavailable: Nessuna voce disponibile\"}"
+    }
+  ]
+}

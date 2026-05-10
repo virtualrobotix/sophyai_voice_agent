@@ -34,6 +34,26 @@ app = FastAPI(title="TTS Server", description="Local TTS server with VibeVoice s
 _tts_engine = None
 _tts_type = None
 _device = None
+_ALL_ENGINES = ["edge", "coqui", "piper", "kokoro", "vibevoice", "qwen", "chatterbox"]
+
+
+def _parse_allowed_engines() -> list[str]:
+    raw = os.getenv("TTS_ALLOWED_ENGINES", "").strip()
+    if not raw:
+        return list(_ALL_ENGINES)
+    allowed = [x.strip().lower() for x in raw.split(",") if x.strip()]
+    # Mantiene ordine definito in _ALL_ENGINES
+    return [e for e in _ALL_ENGINES if e in set(allowed)]
+
+
+def _bootstrap_engine(engine: str) -> bool:
+    eng = (engine or "").strip().lower()
+    if eng == "vibevoice":
+        return load_vibevoice()
+    if eng == "edge":
+        return load_edge_tts()
+    # Altri engine sono on-demand
+    return True
 
 
 class TTSRequest(BaseModel):
@@ -172,12 +192,25 @@ def load_edge_tts():
 async def startup():
     """Carica il TTS engine all'avvio"""
     logger.info("🚀 Avvio TTS Server...")
-    
-    # Prova prima VibeVoice, poi Edge TTS
-    if not load_vibevoice():
-        logger.info("Provo Edge TTS come fallback...")
-        if not load_edge_tts():
-            logger.error("❌ Nessun TTS engine disponibile!")
+    allowed = _parse_allowed_engines()
+    boot_engine = os.getenv("TTS_BOOT_ENGINE", "").strip().lower()
+
+    if boot_engine and boot_engine not in allowed:
+        logger.warning(f"⚠️ TTS_BOOT_ENGINE '{boot_engine}' non in TTS_ALLOWED_ENGINES={allowed}")
+        boot_engine = ""
+
+    # Se non specificato, preferisci edge per startup rapido/stabile.
+    if not boot_engine:
+        boot_engine = "edge" if "edge" in allowed else (allowed[0] if allowed else "")
+
+    if boot_engine:
+        ok = _bootstrap_engine(boot_engine)
+        if ok:
+            logger.info(f"✅ Bootstrap engine caricato: {boot_engine}")
+        else:
+            logger.warning(f"⚠️ Bootstrap engine non caricabile: {boot_engine}")
+    else:
+        logger.warning("⚠️ Nessun engine consentito configurato (TTS_ALLOWED_ENGINES vuoto)")
 
 
 @app.get("/")
@@ -197,12 +230,13 @@ async def health():
 @app.get("/status", response_model=TTSStatus)
 async def status():
     """Ritorna lo stato del TTS server"""
+    allowed = _parse_allowed_engines()
     return TTSStatus(
         status="ready" if _tts_engine else "not_ready",
         engine=_tts_type or "none",
         device=_device or "none",
         model_loaded=_tts_engine is not None,
-        available_engines=["vibevoice", "edge", "chatterbox", "kokoro", "piper", "qwen"]
+        available_engines=allowed
     )
 
 
@@ -215,11 +249,16 @@ async def synthesize(request: TTSRequest):
     """
     global _tts_engine, _tts_type
     
-    # Chatterbox non richiede pre-caricamento, può essere usato on-demand
-    if request.engine == "chatterbox":
-        # Non controlla _tts_engine per Chatterbox, verrà caricato on-demand
-        pass
-    elif not _tts_engine:
+    allowed = _parse_allowed_engines()
+    if request.engine.lower() not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Engine '{request.engine}' non consentito su questo server. Allowed: {allowed}",
+        )
+
+    # Engine on-demand che non richiedono bootstrap globale.
+    on_demand_engines = {"chatterbox", "coqui", "piper", "kokoro", "qwen", "vibevoice"}
+    if request.engine not in on_demand_engines and not _tts_engine:
         raise HTTPException(status_code=503, detail="TTS engine non caricato")
     
     t_start = time.time()
@@ -270,50 +309,63 @@ async def synthesize(request: TTSRequest):
         if engine_to_use == "chatterbox":
             try:
                 pcm_data = await synthesize_chatterbox(
-                    text, 
+                    text,
                     request.language,
                     request.model,
                     request.device,
                     request.exaggeration,
-                    request.audio_prompt_path
+                    request.audio_prompt_path,
                 )
             except Exception as e:
-                # Se Chatterbox fallisce, usa EdgeTTS come fallback
-                error_str = str(e).lower()
-                if any(keyword in error_str for keyword in ["transformers", "torchvision", "circular import", "partially initialized", "extension", "nms", "import"]):
-                    logger.warning(f"⚠️ Chatterbox non disponibile, uso EdgeTTS come fallback")
-                    actual_engine_used = "edge"
-                    pcm_data = await synthesize_edge(text, request.language)
-                else:
-                    raise
+                # Nei test non vogliamo generare audio in fallback.
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
         elif engine_to_use == "piper":
             try:
                 pcm_data = await synthesize_piper(text, request.model)
             except Exception as e:
-                logger.warning(f"⚠️ Piper non disponibile, uso EdgeTTS come fallback: {e}")
-                actual_engine_used = "edge"
-                pcm_data = await synthesize_edge(text, request.language)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
+        elif engine_to_use == "coqui":
+            try:
+                pcm_data = await synthesize_coqui(text, request.model)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
         elif engine_to_use == "kokoro":
             try:
                 pcm_data = await synthesize_kokoro(text, request.language, request.speed)
             except Exception as e:
-                logger.warning(f"⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: {e}")
-                actual_engine_used = "edge"
-                pcm_data = await synthesize_edge(text, request.language)
-        elif engine_to_use == "vibevoice" or _tts_type == "vibevoice":
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
+        elif engine_to_use == "vibevoice":
             try:
+                # Tenta caricamento on-demand se non è già attivo.
+                if _tts_type != "vibevoice":
+                    if not load_vibevoice():
+                        raise RuntimeError("VibeVoice non installato o non caricabile")
                 pcm_data = await synthesize_vibevoice(text, request.speaker, request.speed)
             except Exception as e:
-                logger.warning(f"⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: {e}")
-                actual_engine_used = "edge"
-                pcm_data = await synthesize_edge(text, request.language)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
         elif engine_to_use == "qwen":
             try:
                 pcm_data = await synthesize_qwen(text, request.language, request.speaker)
             except Exception as e:
-                logger.warning(f"⚠️ Qwen non disponibile, uso EdgeTTS come fallback: {e}")
-                actual_engine_used = "edge"
-                pcm_data = await synthesize_edge(text, request.language)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Engine requested '{engine_to_use}' unavailable: {e}",
+                )
         elif engine_to_use == "edge" or _tts_type == "edge":
             pcm_data = await synthesize_edge(text, request.language)
         else:
@@ -553,21 +605,30 @@ async def synthesize_kokoro(text: str, language: str = "it", speed: float = 1.0)
         sys.path.insert(0, project_root)
     from agent.tts.kokoro_tts import KokoroTTS
     
-    # Seleziona voce in base alla lingua (it_sara è la voce italiana Kokoro)
-    voice = "it_sara" if language == "it" else "af_bella"
+    # Alcune build Kokoro non espongono voci italiane dedicate.
+    # Proviamo prima la voce italiana, poi un fallback compatibile.
+    candidate_voices = ["it_sara", "af_bella"] if language == "it" else ["af_bella"]
     try:
         import torch as _torch
         _use_gpu = bool(_torch.cuda.is_available())
     except Exception:
         _use_gpu = False
     
-    logger.info(f"🎤 Kokoro TTS: voice={voice}, speed={speed}, gpu={_use_gpu}")
-    
-    # Crea istanza e sintetizza
-    kokoro = KokoroTTS(voice=voice, speed=speed, gpu=_use_gpu)
-    
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, kokoro.synthesize, text)
+    last_error = None
+    result = None
+    for voice in candidate_voices:
+        logger.info(f"🎤 Kokoro TTS: voice={voice}, speed={speed}, gpu={_use_gpu}")
+        try:
+            kokoro = KokoroTTS(voice=voice, speed=speed, gpu=_use_gpu)
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, kokoro.synthesize, text)
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning(f"⚠️ Kokoro voice '{voice}' fallita: {e}")
+
+    if result is None:
+        raise RuntimeError(f"Kokoro synthesis failed for voices {candidate_voices}: {last_error}")
     
     # Converti audio float32 in PCM int16
     audio_float = result.audio_data
@@ -603,7 +664,7 @@ async def synthesize_chatterbox(
         from agent.tts.chatterbox_tts import ChatterboxTTS
         
         chatterbox = ChatterboxTTS(
-            model=model or "turbo",
+            model=model or "multilingual",
             language=language,
             device=device or "auto",
             exaggeration=exaggeration,
@@ -750,6 +811,38 @@ async def synthesize_qwen(text: str, language: str = "it", speaker: str = "Ryan"
     pcm_data = (audio_data * 32767).astype(np.int16).tobytes()
     
     return pcm_data
+
+
+async def synthesize_coqui(text: str, model: str = None) -> bytes:
+    """Sintetizza con Coqui TTS (self-hosted)."""
+    import asyncio
+
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    from agent.tts.coqui_tts import CoquiTTS
+
+    coqui_model = model or "tts_models/it/mai_female/vits"
+    try:
+        import torch as _torch
+        _use_gpu = bool(_torch.cuda.is_available())
+    except Exception:
+        _use_gpu = False
+
+    logger.info(f"🎤 Coqui TTS: model={coqui_model}, gpu={_use_gpu}")
+    coqui = CoquiTTS(model=coqui_model, gpu=_use_gpu)
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, coqui.synthesize, text)
+
+    audio_float = result.audio_data
+    if result.sample_rate != 24000:
+        import scipy.signal as signal
+        num_samples = int(len(audio_float) * 24000 / result.sample_rate)
+        audio_float = signal.resample(audio_float, num_samples)
+
+    audio_float = np.clip(audio_float, -1.0, 1.0)
+    audio_int16 = (audio_float * 32767).astype(np.int16)
+    return audio_int16.tobytes()
 
 
 # Variabile globale per modello Qwen (singleton)

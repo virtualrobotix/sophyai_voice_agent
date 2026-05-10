@@ -1,0 +1,402 @@
+[
+  {
+    "id": "q01_checkin_time",
+    "question": "A che ora posso fare il check-in oggi?",
+    "intent": "checkin_info",
+    "required_points": ["check in", "orario"],
+    "forbidden_points": ["garantito"],
+    "priority": "high"
+  },
+  {
+    "id": "q02_checkout_time",
+    "question": "Qual e l orario massimo per il check-out?",
+    "intent": "checkout_info",
+    "required_points": ["check out", "orario"],
+    "forbidden_points": ["mai"],
+    "priority": "high"
+  },
+  {
+    "id": "q03_room_availability_tonight",
+    "question": "Avete una camera libera per stasera?",
+    "intent": "availability",
+    "required_points": ["disponibil", "data"],
+    "forbidden_points": ["sempre disponibile"],
+    "priority": "high"
+  },
+  {
+    "id": "q04_double_room_price",
+    "question": "Quanto costa una matrimoniale per una notte?",
+    "intent": "pricing",
+    "required_points": ["tariff", "dipende", "date"],
+    "forbidden_points": ["prezzo fisso sempre"],
+    "priority": "high"
+  },
+  {
+    "id": "q05_breakfast_included",
+    "question": "La colazione e inclusa nella tariffa?",
+    "intent": "service_info",
+    "required_points": ["colazione", "inclus"],
+    "forbidden_points": ["sempre inclusa"],
+    "priority": "medium"
+  },
+  {
+    "id": "q06_parking_available",
+    "question": "Avete parcheggio privato?",
+    "intent": "service_info",
+    "required_points": ["parcheggio", "disponibil"],
+    "forbidden_points": ["illimitato"],
+    "priority": "medium"
+  },
+  {
+    "id": "q07_late_checkin",
+    "question": "Arrivo molto tardi, posso fare check-in dopo mezzanotte?",
+    "intent": "exception_checkin",
+    "required_points": ["check in", "tardi", "confermare"],
+    "forbidden_points": ["nessun problema sicuro"],
+    "priority": "high"
+  },
+  {
+    "id": "q08_cancel_reservation",
+    "question": "Come posso cancellare la mia prenotazione?",
+    "intent": "cancellation",
+    "required_points": ["cancell", "prenotazione", "policy"],
+    "forbidden_points": ["nessuna penale mai"],
+    "priority": "high"
+  },
+  {
+    "id": "q09_modify_booking_dates",
+    "question": "Posso spostare la prenotazione di due giorni?",
+    "intent": "modify_booking",
+    "required_points": ["modifica", "date", "verifica"],
+    "forbidden_points": ["sempre possibile"],
+    "priority": "high"
+  },
+  {
+    "id": "q10_invoice_request",
+    "question": "Mi potete fare fattura intestata alla mia azienda?",
+    "intent": "billing",
+    "required_points": ["fattura", "dati fiscali"],
+    "forbidden_points": ["non serve alcun dato"],
+    "priority": "medium"
+  },
+  {
+    "id": "q11_pet_policy",
+    "question": "Posso portare il mio cane in camera?",
+    "intent": "pet_policy",
+    "required_points": ["animali", "policy"],
+    "forbidden_points": ["tutti gli animali gratis sempre"],
+    "priority": "medium"
+  },
+  {
+    "id": "q12_extra_bed",
+    "question": "E possibile aggiungere un letto extra?",
+    "intent": "room_setup",
+    "required_points": ["letto extra", "disponibil"],
+    "forbidden_points": ["sempre disponibile"],
+    "priority": "medium"
+  },
+  {
+    "id": "q13_baby_cot",
+    "question": "Avete culla per neonato?",
+    "intent": "family_service",
+    "required_points": ["culla", "disponibil"],
+    "forbidden_points": ["infinite culle"],
+    "priority": "medium"
+  },
+  {
+    "id": "q14_accessible_room",
+    "question": "Ci sono camere accessibili per sedia a rotelle?",
+    "intent": "accessibility",
+    "required_points": ["accessibil", "camera", "verifica"],
+    "forbidden_points": ["tutte le camere sono accessibili"],
+    "priority": "high"
+  },
+  {
+    "id": "q15_wifi_info",
+    "question": "Il wifi e gratuito?",
+    "intent": "service_info",
+    "required_points": ["wifi", "gratuit"],
+    "forbidden_points": ["internet perfetto garantito"],
+    "priority": "low"
+  },
+  {
+    "id": "q16_airport_transfer",
+    "question": "Organizzate transfer da e per aeroporto?",
+    "intent": "transport_service",
+    "required_points": ["transfer", "aeroporto", "prenot"],
+    "forbidden_points": ["sempre incluso"],
+    "priority": "medium"
+  },
+  {
+    "id": "q17_early_checkin",
+    "question": "Posso fare check-in alle dieci del mattino?",
+    "intent": "exception_checkin",
+    "required_points": ["early check in", "disponibil", "confermare"],
+    "forbidden_points": ["sempre possibile"],
+    "priority": "high"
+  },
+  {
+    "id": "q18_late_checkout",
+    "question": "Mi servirebbe late check-out, e possibile?",
+    "intent": "exception_checkout",
+    "required_points": ["late check out", "disponibil", "supplemento"],
+    "forbidden_points": ["gratuito sempre"],
+    "priority": "high"
+  },
+  {
+    "id": "q19_city_tax",
+    "question": "La tassa di soggiorno e inclusa?",
+    "intent": "pricing_policy",
+    "required_points": ["tassa di soggiorno", "inclus"],
+    "forbidden_points": ["mai prevista"],
+    "priority": "medium"
+  },
+  {
+    "id": "q20_payment_methods",
+    "question": "Quali metodi di pagamento accettate?",
+    "intent": "payment",
+    "required_points": ["pagamento", "carta", "contanti"],
+    "forbidden_points": ["solo bitcoin"],
+    "priority": "medium"
+  },
+  {
+    "id": "q21_deposit_required",
+    "question": "Serve una caparra per confermare?",
+    "intent": "payment_policy",
+    "required_points": ["caparra", "conferma", "policy"],
+    "forbidden_points": ["mai richiesta"],
+    "priority": "medium"
+  },
+  {
+    "id": "q22_group_booking",
+    "question": "Siamo un gruppo di dodici persone, avete soluzioni?",
+    "intent": "group_booking",
+    "required_points": ["gruppo", "disponibil", "preventivo"],
+    "forbidden_points": ["nessun limite camere"],
+    "priority": "high"
+  },
+  {
+    "id": "q23_quiet_room_request",
+    "question": "Potrei avere una camera silenziosa?",
+    "intent": "special_request",
+    "required_points": ["richiesta", "camera silenziosa", "preferenza"],
+    "forbidden_points": ["garantita al cento per cento"],
+    "priority": "medium"
+  },
+  {
+    "id": "q24_high_floor_request",
+    "question": "Vorrei un piano alto, si puo richiedere?",
+    "intent": "special_request",
+    "required_points": ["richiesta", "piano alto", "disponibil"],
+    "forbidden_points": ["sempre garantito"],
+    "priority": "low"
+  },
+  {
+    "id": "q25_non_smoking_room",
+    "question": "Avete camere non fumatori?",
+    "intent": "room_policy",
+    "required_points": ["non fumatori", "camera"],
+    "forbidden_points": ["si puo fumare ovunque"],
+    "priority": "medium"
+  },
+  {
+    "id": "q26_connecting_rooms",
+    "question": "Ci sono camere comunicanti per famiglia?",
+    "intent": "family_room",
+    "required_points": ["camere comunicanti", "disponibil"],
+    "forbidden_points": ["sempre disponibili"],
+    "priority": "medium"
+  },
+  {
+    "id": "q27_child_discount",
+    "question": "Fate sconti per bambini?",
+    "intent": "pricing_policy",
+    "required_points": ["scont", "bambin", "policy"],
+    "forbidden_points": ["sconto garantito"],
+    "priority": "medium"
+  },
+  {
+    "id": "q28_weekly_stay_discount",
+    "question": "Per una settimana c e una tariffa migliore?",
+    "intent": "pricing_negotiation",
+    "required_points": ["soggiorno", "tariffa", "offerta"],
+    "forbidden_points": ["prezzo bloccato senza verifica"],
+    "priority": "medium"
+  },
+  {
+    "id": "q29_business_trip_receipt",
+    "question": "Sono in trasferta lavoro, come ricevo ricevuta e fattura?",
+    "intent": "billing",
+    "required_points": ["ricevuta", "fattura", "dati"],
+    "forbidden_points": ["automatico senza dati"],
+    "priority": "medium"
+  },
+  {
+    "id": "q30_checkin_documents",
+    "question": "Che documenti devo portare al check-in?",
+    "intent": "checkin_requirements",
+    "required_points": ["documento", "check in"],
+    "forbidden_points": ["nessun documento"],
+    "priority": "high"
+  },
+  {
+    "id": "q31_booking_for_other_person",
+    "question": "Posso prenotare a nome di un altra persona?",
+    "intent": "booking_policy",
+    "required_points": ["prenotazione", "nome", "dati"],
+    "forbidden_points": ["non servono dati ospite"],
+    "priority": "medium"
+  },
+  {
+    "id": "q32_arrival_delay",
+    "question": "Il treno e in ritardo, arrivo verso le ventitre. Va bene?",
+    "intent": "arrival_update",
+    "required_points": ["arrivo", "ritardo", "avvisare"],
+    "forbidden_points": ["non importa mai l orario"],
+    "priority": "high"
+  },
+  {
+    "id": "q33_cancel_free_window",
+    "question": "Entro quando posso cancellare senza penali?",
+    "intent": "cancellation",
+    "required_points": ["cancellazione", "penali", "policy"],
+    "forbidden_points": ["sempre gratis"],
+    "priority": "high"
+  },
+  {
+    "id": "q34_no_show_policy",
+    "question": "Cosa succede se non mi presento?",
+    "intent": "cancellation",
+    "required_points": ["no show", "addebito", "policy"],
+    "forbidden_points": ["nessuna conseguenza"],
+    "priority": "high"
+  },
+  {
+    "id": "q35_breakfast_time",
+    "question": "A che ora viene servita la colazione?",
+    "intent": "service_schedule",
+    "required_points": ["colazione", "orario"],
+    "forbidden_points": ["ventiquattro ore su ventiquattro"],
+    "priority": "low"
+  },
+  {
+    "id": "q36_gluten_free_breakfast",
+    "question": "Avete opzioni senza glutine a colazione?",
+    "intent": "dietary_request",
+    "required_points": ["senza glutine", "colazione", "richiesta"],
+    "forbidden_points": ["sempre disponibile sicuro"],
+    "priority": "medium"
+  },
+  {
+    "id": "q37_luggage_storage",
+    "question": "Potete tenere le valigie dopo il check-out?",
+    "intent": "service_info",
+    "required_points": ["bagagli", "check out", "deposito"],
+    "forbidden_points": ["responsabilita zero assoluta"],
+    "priority": "medium"
+  },
+  {
+    "id": "q38_before_checkin_luggage",
+    "question": "Arrivo prima del check-in, posso lasciare le valigie?",
+    "intent": "service_info",
+    "required_points": ["bagagli", "prima del check in", "deposito"],
+    "forbidden_points": ["sempre garantito"],
+    "priority": "medium"
+  },
+  {
+    "id": "q39_noise_complaint",
+    "question": "La stanza accanto fa molto rumore, potete aiutarmi?",
+    "intent": "guest_support",
+    "required_points": ["dispiace", "intervenire", "assistenza"],
+    "forbidden_points": ["non possiamo fare nulla"],
+    "priority": "high"
+  },
+  {
+    "id": "q40_room_too_cold",
+    "question": "La camera e troppo fredda, come risolviamo?",
+    "intent": "maintenance_support",
+    "required_points": ["assistenza", "camera", "intervento"],
+    "forbidden_points": ["arrangiati"],
+    "priority": "high"
+  },
+  {
+    "id": "q41_lost_item",
+    "question": "Ho dimenticato un caricatore in camera, come posso recuperarlo?",
+    "intent": "lost_found",
+    "required_points": ["oggetto smarrito", "verifica", "contatto"],
+    "forbidden_points": ["impossibile sempre"],
+    "priority": "medium"
+  },
+  {
+    "id": "q42_two_separate_beds",
+    "question": "Avrei bisogno di due letti separati, e fattibile?",
+    "intent": "room_setup",
+    "required_points": ["letti separati", "richiesta", "disponibil"],
+    "forbidden_points": ["sempre disponibili"],
+    "priority": "medium"
+  },
+  {
+    "id": "q43_honeymoon_note",
+    "question": "E il nostro anniversario, potete preparare qualcosa in camera?",
+    "intent": "special_request",
+    "required_points": ["richiesta speciale", "camera", "confermare"],
+    "forbidden_points": ["servizio gratuito garantito"],
+    "priority": "medium"
+  },
+  {
+    "id": "q44_restaurant_recommendation",
+    "question": "Mi consigliate un ristorante vicino?",
+    "intent": "local_info",
+    "required_points": ["ristorante", "vicino", "preferenze"],
+    "forbidden_points": ["invenzione indirizzi"],
+    "priority": "low"
+  },
+  {
+    "id": "q45_taxi_booking",
+    "question": "Potete chiamarmi un taxi per domani mattina?",
+    "intent": "transport_service",
+    "required_points": ["taxi", "orario", "conferma"],
+    "forbidden_points": ["prenotato senza dati"],
+    "priority": "medium"
+  },
+  {
+    "id": "q46_shuttle_station",
+    "question": "C e navetta per la stazione?",
+    "intent": "transport_service",
+    "required_points": ["navetta", "stazione", "orari"],
+    "forbidden_points": ["servizio continuo garantito"],
+    "priority": "medium"
+  },
+  {
+    "id": "q47_smoking_area",
+    "question": "Dove posso fumare senza problemi?",
+    "intent": "property_policy",
+    "required_points": ["area fumatori", "regole"],
+    "forbidden_points": ["fuma ovunque"],
+    "priority": "low"
+  },
+  {
+    "id": "q48_pool_access",
+    "question": "La piscina e accessibile anche la sera?",
+    "intent": "facility_schedule",
+    "required_points": ["piscina", "orari", "accesso"],
+    "forbidden_points": ["sempre aperta"],
+    "priority": "medium"
+  },
+  {
+    "id": "q49_booking_channel",
+    "question": "Conviene prenotare dal sito o direttamente con voi?",
+    "intent": "booking_channel",
+    "required_points": ["prenotazione diretta", "tariffe", "verifica"],
+    "forbidden_points": ["prezzo migliore garantito sempre"],
+    "priority": "medium"
+  },
+  {
+    "id": "q50_human_operator",
+    "question": "Vorrei parlare con una persona, mi puoi passare un operatore?",
+    "intent": "escalation",
+    "required_points": ["operatore", "contatto", "assistenza"],
+    "forbidden_points": ["rifiuto totale"],
+    "priority": "high"
+  }
+]

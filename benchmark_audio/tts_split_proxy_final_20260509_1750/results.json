@@ -1,0 +1,142 @@
+{
+  "timestamp": "2026-05-09 15:47:48",
+  "proxy": "http://127.0.0.1:8092",
+  "text": "Report finale post-fix: test TTS split + proxy, senza fallback.",
+  "standard": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 1524,
+      "x_engine": "edge",
+      "bytes": 285696,
+      "sha256": "e5044d10f64440ba2d042649bd629bf106c231b3aa241fd4ec4e6a77872c8611",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_edge.wav"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1771,
+      "x_engine": "piper",
+      "bytes": 201984,
+      "sha256": "32cf7961952c7220fa13706646d2efaaa7d0fee086a57ea1973c9d17a29a356b",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 11500,
+      "x_engine": "kokoro",
+      "bytes": 289200,
+      "sha256": "e2266f8b48d3c3117147780e0d1185b523c0b10f9bc630d8382a3c8c13fbdab5",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 61540,
+      "x_engine": "qwen",
+      "bytes": 268800,
+      "sha256": "429e7fca830bac311030f09365ddd2cb8d53d056925b68343ce1c5717c820937",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_qwen.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 200,
+      "elapsed_ms": 504,
+      "x_engine": "coqui",
+      "bytes": 235824,
+      "sha256": "66aad6774786ce820364a226e827181649aa016c5adde063778f623c2defef41",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_coqui.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 200,
+      "elapsed_ms": 563,
+      "x_engine": "chatterbox",
+      "bytes": 285696,
+      "sha256": "e5044d10f64440ba2d042649bd629bf106c231b3aa241fd4ec4e6a77872c8611",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_chatterbox.wav"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 200,
+      "elapsed_ms": 5909,
+      "x_engine": "vibevoice",
+      "bytes": 256000,
+      "sha256": "b7c0d0f665e10cc6d8752e31ee56498cbbdeab5c86eba942e1ce40bbbf708052",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/std_vibevoice.wav"
+    }
+  ],
+  "stream": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "ttfb_ms": 411,
+      "elapsed_ms": 411,
+      "x_engine": "edge",
+      "bytes": 285696,
+      "sha256": "e5044d10f64440ba2d042649bd629bf106c231b3aa241fd4ec4e6a77872c8611",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_edge.wav"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "ttfb_ms": 1131,
+      "elapsed_ms": 1131,
+      "x_engine": "piper",
+      "bytes": 201984,
+      "sha256": "32cf7961952c7220fa13706646d2efaaa7d0fee086a57ea1973c9d17a29a356b",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "ttfb_ms": 3040,
+      "elapsed_ms": 3040,
+      "x_engine": "kokoro",
+      "bytes": 289200,
+      "sha256": "4fdfa4afa15ad01966d5a75f6c0689d994c17eecbc555675bb60551719738abd",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "ttfb_ms": 11195,
+      "elapsed_ms": 11195,
+      "x_engine": "qwen",
+      "bytes": 330240,
+      "sha256": "dbdec8e8b934636fdffe8c62e2c7eeef356e4de89c4a4c3fc20023c0097c1cad",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_qwen.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 200,
+      "ttfb_ms": 672,
+      "elapsed_ms": 672,
+      "x_engine": "coqui",
+      "bytes": 248112,
+      "sha256": "adc8ef56a96d8cb6b79e72bd87281575c5edb09166ebba37daa34cae925b104c",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_coqui.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 200,
+      "ttfb_ms": 481,
+      "elapsed_ms": 481,
+      "x_engine": "chatterbox",
+      "bytes": 285696,
+      "sha256": "e5044d10f64440ba2d042649bd629bf106c231b3aa241fd4ec4e6a77872c8611",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_chatterbox.wav"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 200,
+      "ttfb_ms": 6201,
+      "elapsed_ms": 6201,
+      "x_engine": "vibevoice",
+      "bytes": 288000,
+      "sha256": "546cf8e227951ce48d0b11f725e04008ddea55b4f102160a5a0677509318ec21",
+      "wav": "benchmark_audio/tts_split_proxy_final_20260509_1750/str_vibevoice.wav"
+    }
+  ]
+}

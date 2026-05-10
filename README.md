@@ -53,6 +53,7 @@ telefonia SIP e chat testuale con autenticazione utenti e pannello di amministra
 - **LiveKit Server** installato sull'host
 - 16 GB+ RAM (32 GB consigliati)
 - GPU NVIDIA (opzionale, consigliato per Whisper large e TTS avanzati)
+- Per architettura TTS split Docker + proxy: Linux + NVIDIA (non supportata su Apple Silicon)
 
 ## Installazione Rapida
 
@@ -77,6 +78,9 @@ docker compose up -d
 # https://<ip-server>:8443
 # Login: admin / admin123 (cambio password obbligatorio)
 ```
+
+Per setup TTS avanzato con container separati per engine e proxy su `:8092`,
+vedi [docs/INSTALLATION.md](docs/INSTALLATION.md#tts-split-docker-con-proxy-linux-nvidia).
 
 ## Documentazione
 

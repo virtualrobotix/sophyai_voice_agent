@@ -1,0 +1,865 @@
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | ==========
+voice-agent-tts-dedicated  | == CUDA ==
+voice-agent-tts-dedicated  | ==========
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | CUDA Version 12.2.0
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+voice-agent-tts-dedicated  | By pulling and using the container, you accept the terms and conditions of this license:
+voice-agent-tts-dedicated  | https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | WARNING: The NVIDIA Driver was not detected.  GPU functionality will not be available.
+voice-agent-tts-dedicated  |    Use the NVIDIA Container Toolkit to start this container with GPU support; see
+voice-agent-tts-dedicated  |    https://docs.nvidia.com/datacenter/cloud-native/ .
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | /app/tts_server.py:171: DeprecationWarning: 
+voice-agent-tts-dedicated  |         on_event is deprecated, use lifespan event handlers instead.
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  |         Read more about it in the
+voice-agent-tts-dedicated  |         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+voice-agent-tts-dedicated  |         
+voice-agent-tts-dedicated  |   @app.on_event("startup")
+voice-agent-tts-dedicated  | 2026-05-09 14:05:25,926 | INFO | 🎤 TTS Server avviato su http://0.0.0.0:8092
+voice-agent-tts-dedicated  | INFO:     Started server process [1]
+voice-agent-tts-dedicated  | INFO:     Waiting for application startup.
+voice-agent-tts-dedicated  | 2026-05-09 14:05:25,938 | INFO | 🚀 Avvio TTS Server...
+voice-agent-tts-dedicated  | 2026-05-09 14:05:26,732 | ERROR | ❌ VibeVoice non installato: No module named 'vibevoice'
+voice-agent-tts-dedicated  | 2026-05-09 14:05:26,732 | INFO | Provo Edge TTS come fallback...
+voice-agent-tts-dedicated  | 2026-05-09 14:05:26,849 | INFO | ✅ Edge TTS disponibile (cloud)
+voice-agent-tts-dedicated  | INFO:     Application startup complete.
+voice-agent-tts-dedicated  | INFO:     Uvicorn running on http://0.0.0.0:8092 (Press CTRL+C to quit)
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:40406 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:56720 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:49800 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46528 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46544 - "GET /status HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:06:52,692 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:06:52,702 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | 2026-05-09 14:06:52.702 | INFO     | agent.tts.piper_tts:__init__:62 - Inizializzazione Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | 2026-05-09 14:06:53.920 | DEBUG    | agent.tts.piper_tts:synthesize:125 - Piper audio: 81664 samples, 5.10s, sr=16000
+voice-agent-tts-dedicated  | 2026-05-09 14:06:54,458 | INFO | ✅ Sintesi completata: 1767ms, audio: 5.10s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:40248 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:06:54,465 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:06:54,465 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | 2026-05-09 14:06:54.465 | INFO     | agent.tts.kokoro_tts:__init__:63 - Inizializzazione Kokoro TTS: voice=it_sara
+voice-agent-tts-dedicated  | [32m14:06:56[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:44216 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | [32m14:07:01[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:07:01[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff3f85-3204313c20491d191c87cbb3;16132663-de60-407d-92df-f00c44e16ff2)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:07:01,765 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff3f85-3204313c20491d191c87cbb3;16132663-de60-407d-92df-f00c44e16ff2)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,231 | INFO | ✅ Sintesi completata: 7767ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:40262 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,238 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,460 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,460 | INFO | 📥 Caricamento modello Qwen TTS...
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,639 | INFO | speaker_encoder_config is None. Initializing talker model with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,640 | INFO | talker_config is None. Initializing talker model with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,640 | INFO | speaker_encoder_config is None. Initializing talker model with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,640 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:02,641 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | ********
+voice-agent-tts-dedicated  | Warning: flash-attn is not installed. Will only run the manual PyTorch version. Please install flash-attn for faster inference.
+voice-agent-tts-dedicated  | ********
+voice-agent-tts-dedicated  |  
+voice-agent-tts-dedicated  | Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:01,  2.52it/s]Fetching 4 files:  75%|███████▌  | 3/4 [00:07<00:02,  2.79s/it]Fetching 4 files: 100%|██████████| 4/4 [00:07<00:00,  1.92s/it]
+voice-agent-tts-dedicated  | 2026-05-09 14:07:50,197 | INFO | encoder_config is None. Initializing encoder with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:50,197 | INFO | decoder_config is None. Initializing decoder with default values
+voice-agent-tts-dedicated  | 2026-05-09 14:07:53,357 | INFO | ✅ Qwen TTS caricato su cpu
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:43374 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:07:53,366 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | 2026-05-09 14:08:02,686 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:08:02[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:08:02[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:  10%|█         | 1/10 [00:01<00:09,  1.08s/it]Fetching 10 files:  20%|██        | 2/10 [00:02<00:08,  1.01s/it]Fetching 10 files:  40%|████      | 4/10 [00:42<01:17, 12.93s/it]Fetching 10 files:  50%|█████     | 5/10 [00:42<00:44,  8.98s/it]Fetching 10 files:  70%|███████   | 7/10 [00:43<00:15,  5.10s/it]Fetching 10 files: 100%|██████████| 10/10 [00:43<00:00,  4.37s/it]
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/diffusers/models/lora.py:393: FutureWarning: `LoRACompatibleLinear` is deprecated and will be removed in version 1.0.0. Use of `LoRACompatibleLinear` is deprecated. Please switch to PEFT backend by installing PEFT: `pip install peft`.
+voice-agent-tts-dedicated  |   deprecate("LoRACompatibleLinear", "1.0.0", deprecation_message)
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,487 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:08:52[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,872 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,872 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:51766 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,874 | INFO | ✅ Sintesi completata: 110636ms, audio: 6.64s
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:55466 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:59654 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,878 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:08:52,878 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:08:53,369 | INFO | ✅ Sintesi completata: 490ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:56432 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:10,626 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:10,626 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:09:10[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:11,816 | INFO | ✅ Sintesi completata: 1190ms, audio: 5.10s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58968 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:11,821 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:11,821 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:09:11[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:12,953 | INFO | ✅ Sintesi completata: 1132ms, audio: 5.10s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58980 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:12,958 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:12,958 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:09:12[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:14,082 | INFO | ✅ Sintesi completata: 1125ms, audio: 5.10s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58982 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:14,087 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:14,087 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:09:14[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:09:14[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:09:15[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:09:15[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff400b-22bbabb47e82a0b050cede56;cec19bf2-008b-442f-b834-89f97c725827)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:15,226 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff400b-22bbabb47e82a0b050cede56;cec19bf2-008b-442f-b834-89f97c725827)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:09:15,645 | INFO | ✅ Sintesi completata: 1558ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58988 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:15,650 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:15,650 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:09:15[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:09:15[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:09:16[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:09:16[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff400c-068ec1f7085dfe7a54ff48f4;16336e7a-2e00-4e17-88d1-f681b2b0ca34)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:16,603 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff400c-068ec1f7085dfe7a54ff48f4;16336e7a-2e00-4e17-88d1-f681b2b0ca34)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:09:17,017 | INFO | ✅ Sintesi completata: 1367ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:59000 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:17,023 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:17,023 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:09:17[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:09:17[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:09:17[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:09:17[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff400d-5a34304d1bcacc84657f7ec5;9a0d78ae-80d5-4bf2-b4bc-297a9d22f79d)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:17,873 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff400d-5a34304d1bcacc84657f7ec5;9a0d78ae-80d5-4bf2-b4bc-297a9d22f79d)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,323 | INFO | ✅ Sintesi completata: 1300ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:59010 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,328 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,328 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,745 | INFO | ✅ Sintesi completata: 417ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:52740 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,749 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:18,749 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,098 | INFO | ✅ Sintesi completata: 349ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:52750 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,102 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,102 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,532 | INFO | ✅ Sintesi completata: 430ms, audio: 6.34s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:52762 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,536 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,536 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:09:19,541 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:42556 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:28,866 | INFO | ✅ Sintesi completata: 9331ms, audio: 6.16s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:52766 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:28,873 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:28,873 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:09:28,877 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | 2026-05-09 14:09:40,137 | INFO | ✅ Sintesi completata: 11264ms, audio: 7.84s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:59640 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:40,144 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:40,144 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:09:40,148 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | 2026-05-09 14:09:48,131 | INFO | ✅ Sintesi completata: 7987ms, audio: 5.68s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:50968 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:48,137 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:09:48[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:09:48[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 213995.10it/s]
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/diffusers/models/lora.py:393: FutureWarning: `LoRACompatibleLinear` is deprecated and will be removed in version 1.0.0. Use of `LoRACompatibleLinear` is deprecated. Please switch to PEFT backend by installing PEFT: `pip install peft`.
+voice-agent-tts-dedicated  |   deprecate("LoRACompatibleLinear", "1.0.0", deprecation_message)
+voice-agent-tts-dedicated  | 2026-05-09 14:09:53,650 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:09:54[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:09:54,015 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:09:54,015 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46616 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:43224 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:09:54,020 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:09:54[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:09:54[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 29959.31it/s]
+voice-agent-tts-dedicated  | 2026-05-09 14:09:59,846 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:10:00[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:00,174 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:10:00,175 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46620 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:10:00,180 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:10:00[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:10:00[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 26886.56it/s]
+voice-agent-tts-dedicated  | 2026-05-09 14:10:05,658 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:10:06[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:06,017 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:10:06,017 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:60616 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:10:15,369 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:10:15,369 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:10:15[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:16,511 | INFO | ✅ Sintesi completata: 1142ms, audio: 5.06s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:55660 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:10:16,516 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:10:16,516 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:10:16[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:10:16[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:10:17[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:10:17[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff4049-68481da83474dd3c40c8777e;39696f7d-79b1-40b5-b8b6-ae86e4594255)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:17,519 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff4049-68481da83474dd3c40c8777e;39696f7d-79b1-40b5-b8b6-ae86e4594255)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:10:17,966 | INFO | ✅ Sintesi completata: 1450ms, audio: 6.00s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:55674 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:10:17,971 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:10:17,971 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:10:18,388 | INFO | ✅ Sintesi completata: 417ms, audio: 6.00s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58024 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:10:18,392 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:10:18,392 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:10:18,400 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:51822 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:10:27,563 | INFO | ✅ Sintesi completata: 9171ms, audio: 6.24s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58038 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:10:27,570 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:10:27[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:10:27[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 35544.95it/s]
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/diffusers/models/lora.py:393: FutureWarning: `LoRACompatibleLinear` is deprecated and will be removed in version 1.0.0. Use of `LoRACompatibleLinear` is deprecated. Please switch to PEFT backend by installing PEFT: `pip install peft`.
+voice-agent-tts-dedicated  |   deprecate("LoRACompatibleLinear", "1.0.0", deprecation_message)
+voice-agent-tts-dedicated  | 2026-05-09 14:10:32,882 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:10:33[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:33,383 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:10:33,384 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:58040 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:10:33,389 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:10:33[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:10:33[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 43374.40it/s]
+voice-agent-tts-dedicated  | 2026-05-09 14:10:38,736 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:10:39[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:39,088 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:10:39,088 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:47650 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:10:39,094 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova audio standard per confro...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:10:39[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:10:39[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 19355.35it/s]
+voice-agent-tts-dedicated  | 2026-05-09 14:10:44,297 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:10:44[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:10:44,646 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:10:44,646 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:52630 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:39260 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:46074 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:34556 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:38442 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:56960 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:39656 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:58560 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:55106 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:53864 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:55792 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:44214 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:41958 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:48656 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:37830 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:46454 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:36540 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:36064 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:55930 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:49744 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:41888 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:48622 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:33626 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:57526 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:52214 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:41412 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:58172 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:48524 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:33378 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:39050 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:51712 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:38192 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:58802 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:44768 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:32852 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:59722 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:53302 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:50290 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:44736 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:54688 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:43808 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:52116 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:33032 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:60408 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:37994 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:38008 - "GET /status HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:60818 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:32:50,626 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:32:50,626 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:32:50[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:32:51,770 | INFO | ✅ Sintesi completata: 1145ms, audio: 7.50s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:57092 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:32:51,776 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:32:51,776 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:32:51[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:32:51[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:32:52[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:32:52[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff4594-23ee7bc27e83704924f5e41e;c777efea-db52-476b-b141-276a86cc900d)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:32:52,912 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff4594-23ee7bc27e83704924f5e41e;c777efea-db52-476b-b141-276a86cc900d)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:32:53,376 | INFO | ✅ Sintesi completata: 1600ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:57104 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:32:53,383 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:32:53,383 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:32:53,388 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:52982 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:07,547 | INFO | ✅ Sintesi completata: 14164ms, audio: 10.32s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:57106 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:07,555 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:33:07[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:33:07[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 36126.65it/s]
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/diffusers/models/lora.py:393: FutureWarning: `LoRACompatibleLinear` is deprecated and will be removed in version 1.0.0. Use of `LoRACompatibleLinear` is deprecated. Please switch to PEFT backend by installing PEFT: `pip install peft`.
+voice-agent-tts-dedicated  |   deprecate("LoRACompatibleLinear", "1.0.0", deprecation_message)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,025 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:33:13[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,384 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,385 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:54658 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,391 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,391 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,782 | INFO | ✅ Sintesi completata: 392ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:59924 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:13,787 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=edge, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:14,219 | INFO | ✅ Sintesi completata: 432ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46470 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:14,222 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=coqui, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:14,663 | INFO | ✅ Sintesi completata: 442ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46476 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:14,666 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=piper, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:14,666 | INFO | 🎤 Piper TTS: model=it_IT-riccardo-x_low
+voice-agent-tts-dedicated  | [32m14:33:14[0m | [36m       piper_tts:62[0m | [1m    INFO[0m | [1mInizializzazione Piper TTS: model=it_IT-riccardo-x_low[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:33:15,850 | INFO | ✅ Sintesi completata: 1185ms, audio: 7.50s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46482 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:15,853 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=kokoro, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:15,853 | INFO | 🎤 Kokoro TTS: voice=it_sara, speed=1.0, gpu=False
+voice-agent-tts-dedicated  | [32m14:33:15[0m | [36m      kokoro_tts:63[0m | [1m    INFO[0m | [1mInizializzazione Kokoro TTS: voice=it_sara[0m
+voice-agent-tts-dedicated  | [32m14:33:15[0m | [36m      kokoro_tts:83[0m | [1m    INFO[0m | [1mCaricamento modello Kokoro...[0m
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/modules/rnn.py:123: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+voice-agent-tts-dedicated  |   warnings.warn(
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+voice-agent-tts-dedicated  |   WeightNorm.apply(module, name, dim)
+voice-agent-tts-dedicated  | [32m14:33:16[0m | [36m      kokoro_tts:93[0m | [1m    INFO[0m | [1mModello Kokoro caricato (lang=i)[0m
+voice-agent-tts-dedicated  | [32m14:33:16[0m | [36m      kokoro_tts:145[0m | [31m[1m   ERROR[0m | [31m[1mErrore sintesi Kokoro: 404 Client Error. (Request ID: Root=1-69ff45ac-49bdd9a41cee78053224b747;fb372fe7-01ac-49a2-8fd8-b733354131df)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:33:16,772 | WARNING | ⚠️ Kokoro non disponibile, uso EdgeTTS come fallback: 404 Client Error. (Request ID: Root=1-69ff45ac-49bdd9a41cee78053224b747;fb372fe7-01ac-49a2-8fd8-b733354131df)
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Entry Not Found for url: https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/it_sara.pt.
+voice-agent-tts-dedicated  | 2026-05-09 14:33:17,818 | INFO | ✅ Sintesi completata: 1966ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:46498 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:17,821 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=qwen, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:17,821 | INFO | 🎤 Qwen TTS: speaker=ryan, language=Italian
+voice-agent-tts-dedicated  | 2026-05-09 14:33:17,825 | INFO | code_predictor_config is None. Initializing code_predictor model with default values
+voice-agent-tts-dedicated  | Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:50492 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:27,369 | INFO | ✅ Sintesi completata: 9548ms, audio: 7.20s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:51104 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | 2026-05-09 14:33:27,372 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=chatterbox, lang=it)
+voice-agent-tts-dedicated  | [32m14:33:27[0m | [36m  chatterbox_tts:83[0m | [1m    INFO[0m | [1mInizializzazione Chatterbox TTS: model=turbo, language=it, device=auto[0m
+voice-agent-tts-dedicated  | [32m14:33:27[0m | [36m  chatterbox_tts:119[0m | [1m    INFO[0m | [1mCaricamento Chatterbox Turbo su cpu...[0m
+voice-agent-tts-dedicated  | Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 27887.66it/s]
+voice-agent-tts-dedicated  | /usr/local/lib/python3.12/dist-packages/diffusers/models/lora.py:393: FutureWarning: `LoRACompatibleLinear` is deprecated and will be removed in version 1.0.0. Use of `LoRACompatibleLinear` is deprecated. Please switch to PEFT backend by installing PEFT: `pip install peft`.
+voice-agent-tts-dedicated  |   deprecate("LoRACompatibleLinear", "1.0.0", deprecation_message)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:32,576 | INFO | input frame rate=25
+voice-agent-tts-dedicated  | [32m14:33:32[0m | [36m  chatterbox_tts:138[0m | [31m[1m   ERROR[0m | [31m[1mErrore caricamento Chatterbox TTS: 'NoneType' object is not callable[0m
+voice-agent-tts-dedicated  | 2026-05-09 14:33:32,922 | ERROR | ❌ Errore sintesi Chatterbox: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 2026-05-09 14:33:32,922 | ERROR | ❌ Errore sintesi: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 614, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     result = chatterbox.synthesize(text)
+voice-agent-tts-dedicated  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 143, in synthesize
+voice-agent-tts-dedicated  |     self._load_model()
+voice-agent-tts-dedicated  |   File "/app/agent/tts/chatterbox_tts.py", line 120, in _load_model
+voice-agent-tts-dedicated  |     self.model = ChatterboxTurboTTS.from_pretrained(device=device)
+voice-agent-tts-dedicated  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 202, in from_pretrained
+voice-agent-tts-dedicated  |     return cls.from_local(local_path, device)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 183, in from_local
+voice-agent-tts-dedicated  |     return cls(t3, s3gen, ve, tokenizer, device, conds=conds)
+voice-agent-tts-dedicated  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/usr/local/lib/python3.12/dist-packages/chatterbox/tts_turbo.py", line 130, in __init__
+voice-agent-tts-dedicated  |     self.watermarker = perth.PerthImplicitWatermarker()
+voice-agent-tts-dedicated  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  | TypeError: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | During handling of the above exception, another exception occurred:
+voice-agent-tts-dedicated  | 
+voice-agent-tts-dedicated  | Traceback (most recent call last):
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 272, in synthesize
+voice-agent-tts-dedicated  |     pcm_data = await synthesize_chatterbox(
+voice-agent-tts-dedicated  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+voice-agent-tts-dedicated  |   File "/app/tts_server.py", line 650, in synthesize_chatterbox
+voice-agent-tts-dedicated  |     raise HTTPException(status_code=500, detail=str(e))
+voice-agent-tts-dedicated  | fastapi.exceptions.HTTPException: 500: 'NoneType' object is not callable
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:51112 - "POST /synthesize HTTP/1.1" 500 Internal Server Error
+voice-agent-tts-dedicated  | 2026-05-09 14:33:32,924 | INFO | 🎤 Sintesi: 'Ciao, questa è una prova completa di sintesi vocal...' (engine=vibevoice, lang=it)
+voice-agent-tts-dedicated  | 2026-05-09 14:33:32,924 | WARNING | ⚠️ VibeVoice non disponibile, uso EdgeTTS come fallback: 'model'
+voice-agent-tts-dedicated  | 2026-05-09 14:33:33,384 | INFO | ✅ Sintesi completata: 459ms, audio: 9.72s
+voice-agent-tts-dedicated  | INFO:     172.19.0.1:44406 - "POST /synthesize HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:42186 - "GET /health HTTP/1.1" 200 OK
+voice-agent-tts-dedicated  | INFO:     127.0.0.1:54306 - "GET /health HTTP/1.1" 200 OK

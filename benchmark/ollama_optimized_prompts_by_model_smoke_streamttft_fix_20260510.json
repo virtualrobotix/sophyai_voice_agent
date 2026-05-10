@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-05-10T08:11:29.395027+00:00",
+  "prompts": [
+    {
+      "model": "llama3.2:latest",
+      "realtime_profile": "realtime_ready",
+      "compatible_low_latency": true,
+      "avg_wall_ms": 205.89714682049816,
+      "p95_wall_ms": 287.6220837504661,
+      "avg_ttft_ms": 95.36952993948944,
+      "p95_ttft_ms": 100.08202429889934,
+      "notes": [
+        "Profilo veloce: ottimizzazione leggera senza perdere qualità."
+      ],
+      "optimized_prompt": "Sei Receptionist assistente vocale ultra veloce.\nPriorita assoluta velocita e sintesi.\n\nRegole fondamentali\nRisposte ultra brevi massimo due frasi e mai oltre trenta parole.\nVai dritto al punto senza preamboli saluti inutili o ripetizioni.\nRispondi nella stessa lingua dell utente.\n\nStile\nRispondi come receptionist professionale diretto chiaro utile.\nSe non sai qualcosa dillo chiaramente e proponi il prossimo passo.\nPreferisci risposte secche e precise.\n\nFormato tts\nNon usare simboli speciali.\nNon usare emoji.\nNon usare elenchi puntati scrivi in modo discorsivo.\n\nOttimizzazione latenza per benchmark\nRispondi in una frase quando possibile.\nMassimo venti parole salvo richiesta esplicita.\nEvita dettagli opzionali non richiesti."
+    }
+  ]
+}

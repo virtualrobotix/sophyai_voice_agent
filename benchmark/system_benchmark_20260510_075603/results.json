@@ -1,0 +1,333 @@
+{
+  "meta": {
+    "timestamp": "2026-05-10 07:55:53",
+    "tts_url": "http://127.0.0.1:8092",
+    "stt_url": "http://127.0.0.1:8091",
+    "runs_per_text": 2,
+    "texts": [
+      "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+      "SophyAI deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+      "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech to text e text to speech."
+    ]
+  },
+  "services": {
+    "tts_status": {
+      "status_code": 200,
+      "payload": {
+        "status": "ready",
+        "routes": {
+          "edge": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "piper": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "kokoro": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "qwen": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "coqui": {
+            "http_status": 200,
+            "url": "http://tts-coqui:8092",
+            "body": "{\"status\":\"no_engine\",\"engine\":null,\"device\":null}"
+          },
+          "chatterbox": {
+            "http_status": 200,
+            "url": "http://tts-chatterbox:8092",
+            "body": "{\"status\":\"no_engine\",\"engine\":null,\"device\":null}"
+          },
+          "vibevoice": {
+            "http_status": 200,
+            "url": "http://tts-vibevoice:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"vibevoice\",\"device\":\"cpu\"}"
+          }
+        }
+      },
+      "error": null
+    },
+    "stt_info": {
+      "status_code": 200,
+      "payload": {
+        "model": "large-v3",
+        "language": "it",
+        "device": "cuda",
+        "mps_available": false,
+        "cuda_available": true,
+        "ready": true
+      },
+      "error": null
+    }
+  },
+  "tts": {
+    "runs": [
+      {
+        "engine": "edge",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 787.6820350065827,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.11356430723854999,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 396.4324679982383,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.057155776816355,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 715.4170949943364,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.09969580476509704,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 436.5959739952814,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.060841133499899856,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 763.5119390033651,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.10004087251092311,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 748.2352890074253,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.0980392150166962,
+        "x_engine": "edge",
+        "error": null
+      }
+    ],
+    "summary": [
+      {
+        "engine": "edge",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 641.3124666675382,
+        "latency_p95_ms": 787.6820350065827,
+        "audio_avg_s": 7.248,
+        "rtf_avg": 0.08822285164125353
+      }
+    ]
+  },
+  "stt": {
+    "runs": [
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 499.51599301130045,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 494.38029799785,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 485.74652399111073,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 490.704789001029,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 563.37658999837,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 468.72110399999656,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 462.9106159991352,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 462.4961869994877,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 486.96674199891277,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 489.05574801028706,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 489.88474400539417,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 486.4332670113072,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      }
+    ],
+    "summary": [
+      {
+        "mode": "transcribe_raw",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 481.96523216999293,
+        "latency_p95_ms": 494.38029799785,
+        "wer_avg": 0.025641025641025644
+      },
+      {
+        "mode": "transcribe_wav",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 498.06686816737056,
+        "latency_p95_ms": 563.37658999837,
+        "wer_avg": 0.025641025641025644
+      }
+    ]
+  }
+}

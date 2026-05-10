@@ -1,0 +1,57 @@
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+RUN pip3 install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    python-multipart \
+    numpy \
+    soundfile \
+    scipy \
+    pydantic \
+    aiohttp \
+    requests \
+    edge-tts
+
+RUN pip3 install --no-cache-dir \
+    torch \
+    torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121
+
+RUN pip3 install --no-cache-dir "git+https://github.com/microsoft/VibeVoice.git"
+
+# Prepara voice presets per evitare "Nessuna voce disponibile".
+RUN git clone --depth 1 https://github.com/microsoft/VibeVoice.git /tmp/vibevoice_repo && \
+    mkdir -p /app/vibevoice_voices && \
+    cp -r /tmp/vibevoice_repo/demo/voices/streaming_model/* /app/vibevoice_voices/ || true
+
+COPY tts_server.py /app/tts_server.py
+COPY agent/tts/ /app/agent/tts/
+
+ENV TTS_ALLOWED_ENGINES=vibevoice
+ENV TTS_BOOT_ENGINE=vibevoice
+ENV HF_HOME=/app/models
+
+RUN mkdir -p /app/models
+
+EXPOSE 8092
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8092/health || exit 1
+
+CMD ["python3", "tts_server.py", "--port", "8092"]

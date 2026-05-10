@@ -1,0 +1,431 @@
+{
+  "timestamp": "2026-05-09 14:32:48",
+  "text": "Ciao, questa è una prova completa di sintesi vocale per verificare prestazioni e qualità dei motori TTS in modalità standard e stream.",
+  "api_base": "http://127.0.0.1:8080",
+  "tts_server": "http://127.0.0.1:8092",
+  "standard_tests": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 1284,
+      "x_engine": "edge",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "bytes": 466604,
+      "sha256": "85edd186f96795518fec48da4d32bf6957781781550af9d45aff2e4ef6da3267",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_edge.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 200,
+      "elapsed_ms": 361,
+      "x_engine": "coqui",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "bytes": 466604,
+      "sha256": "85edd186f96795518fec48da4d32bf6957781781550af9d45aff2e4ef6da3267",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_coqui.wav"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1149,
+      "x_engine": "piper",
+      "x_duration_s": "7.504",
+      "x_sample_rate": "24000",
+      "bytes": 360236,
+      "sha256": "d4560e8bf60775e0481f8b3b67736aa20a10fbd36dca62a8c0819b3de939e1d7",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 1605,
+      "x_engine": "kokoro",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "bytes": 466604,
+      "sha256": "3e968664d671728429be8e39317ed0f33339458c5428821a45dbc497927a06c8",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 14171,
+      "x_engine": "qwen",
+      "x_duration_s": "10.32",
+      "x_sample_rate": "24000",
+      "bytes": 495404,
+      "sha256": "3d2a5ae327ab96cf82287f0d3bfac673a3b8ff4533047155a708a2d33e766b2c",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_qwen.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 5834,
+      "error": "{\"detail\":\"500: 500: {\\\"detail\\\":\\\"500: 'NoneType' object is not callable\\\"}\"}"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 200,
+      "elapsed_ms": 398,
+      "x_engine": "vibevoice",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "bytes": 466604,
+      "sha256": "3e968664d671728429be8e39317ed0f33339458c5428821a45dbc497927a06c8",
+      "file": "benchmark_audio/tts_retest_20260509_1632/standard_vibevoice.wav"
+    }
+  ],
+  "stream_tests": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "ttfb_ms": 433,
+      "elapsed_ms": 433,
+      "chunks": 114,
+      "pcm_bytes": 466560,
+      "x_engine": "edge",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "d47c129524cf122efed79d59f358eb4cd1b4efebd41aa677e79a65fd1b41b4ff",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_edge.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_edge.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 200,
+      "ttfb_ms": 442,
+      "elapsed_ms": 443,
+      "chunks": 114,
+      "pcm_bytes": 466560,
+      "x_engine": "coqui",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "d47c129524cf122efed79d59f358eb4cd1b4efebd41aa677e79a65fd1b41b4ff",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_coqui.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_coqui.wav"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "ttfb_ms": 1185,
+      "elapsed_ms": 1186,
+      "chunks": 88,
+      "pcm_bytes": 360192,
+      "x_engine": "piper",
+      "x_duration_s": "7.504",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "825e41efbeb0ace2b87589e342109e15b41a23fab31a59952e80a7e3e2d368ce",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_piper.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "ttfb_ms": 1967,
+      "elapsed_ms": 1967,
+      "chunks": 114,
+      "pcm_bytes": 466560,
+      "x_engine": "edge",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "d47c129524cf122efed79d59f358eb4cd1b4efebd41aa677e79a65fd1b41b4ff",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_kokoro.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "ttfb_ms": 9549,
+      "elapsed_ms": 9550,
+      "chunks": 85,
+      "pcm_bytes": 345600,
+      "x_engine": "qwen",
+      "x_duration_s": "7.2",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "b1b0f533a1fbcc916430520c745da06d181fd5568ff91adf68fededeb0542b03",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_qwen.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_qwen.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 5552,
+      "error": ""
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 200,
+      "ttfb_ms": 460,
+      "elapsed_ms": 460,
+      "chunks": 114,
+      "pcm_bytes": 466560,
+      "x_engine": "edge",
+      "x_duration_s": "9.72",
+      "x_sample_rate": "24000",
+      "sha256_pcm": "d47c129524cf122efed79d59f358eb4cd1b4efebd41aa677e79a65fd1b41b4ff",
+      "pcm_file": "benchmark_audio/tts_retest_20260509_1632/stream_vibevoice.pcm",
+      "wav_file": "benchmark_audio/tts_retest_20260509_1632/stream_vibevoice.wav"
+    }
+  ],
+  "engines_endpoint": {
+    "http_status": 200,
+    "payload": {
+      "engines": [
+        {
+          "id": "piper",
+          "name": "Piper TTS",
+          "self_hosted": true,
+          "description": "Veloce e leggero, ottimo supporto italiano"
+        },
+        {
+          "id": "coqui",
+          "name": "Coqui TTS",
+          "self_hosted": true,
+          "description": "Alta qualità, richiede più risorse"
+        },
+        {
+          "id": "edge",
+          "name": "Edge TTS (Microsoft)",
+          "self_hosted": false,
+          "description": "Qualità eccellente, richiede internet"
+        },
+        {
+          "id": "kokoro",
+          "name": "Kokoro 82M",
+          "self_hosted": true,
+          "description": "Multilingua, alta qualità"
+        },
+        {
+          "id": "vibevoice",
+          "name": "VibeVoice (Microsoft)",
+          "self_hosted": true,
+          "description": "Espressivo, multi-speaker, real-time streaming"
+        },
+        {
+          "id": "qwen",
+          "name": "Qwen TTS (Alibaba)",
+          "self_hosted": true,
+          "description": "Alta qualità, 10 lingue, controllo stile"
+        }
+      ],
+      "default": "edge"
+    }
+  },
+  "current_tts": {
+    "http_status": 200,
+    "payload": {
+      "engine": "edge",
+      "language": "it",
+      "voice": null,
+      "default_engine": "edge",
+      "last_updated": "2026-05-08T17:33:26.595113",
+      "is_default": false,
+      "source": "file"
+    }
+  },
+  "voices": {
+    "edge": {
+      "http_status": 200,
+      "count": 15,
+      "sample": [
+        {
+          "id": "diego",
+          "voice": "it-IT-DiegoNeural",
+          "description": "Voce maschile italiana - Diego",
+          "gender": "male",
+          "language": "it"
+        },
+        {
+          "id": "elsa",
+          "voice": "it-IT-ElsaNeural",
+          "description": "Voce femminile italiana - Elsa",
+          "gender": "female",
+          "language": "it"
+        },
+        {
+          "id": "isabella",
+          "voice": "it-IT-IsabellaNeural",
+          "description": "Voce femminile italiana - Isabella",
+          "gender": "female",
+          "language": "it"
+        }
+      ]
+    },
+    "coqui": {
+      "http_status": 200,
+      "count": 3,
+      "sample": [
+        {
+          "id": "mai_female_glow",
+          "model": "tts_models/it/mai_female/glow-tts",
+          "vocoder": "vocoder_models/it/mai_female/vits",
+          "description": "Voce femminile italiana - Glow TTS",
+          "language": "it"
+        },
+        {
+          "id": "mai_female_vits",
+          "model": "tts_models/it/mai_female/vits",
+          "vocoder": null,
+          "description": "Voce femminile italiana - VITS (end-to-end)",
+          "language": "it"
+        },
+        {
+          "id": "mai_male",
+          "model": "tts_models/it/mai_male/glow-tts",
+          "vocoder": "vocoder_models/it/mai_male/vits",
+          "description": "Voce maschile italiana - Glow TTS",
+          "language": "it"
+        }
+      ]
+    },
+    "piper": {
+      "http_status": 200,
+      "count": 2,
+      "sample": [
+        {
+          "id": "riccardo",
+          "model": "it_IT-riccardo-x_low",
+          "description": "Voce maschile italiana, qualità bassa",
+          "language": "it"
+        },
+        {
+          "id": "paola",
+          "model": "it_IT-paola-medium",
+          "description": "Voce femminile italiana, qualità media",
+          "language": "it"
+        }
+      ]
+    },
+    "kokoro": {
+      "http_status": 200,
+      "count": 3,
+      "sample": [
+        {
+          "id": "sara",
+          "voice_id": "it_sara",
+          "description": "Voce femminile italiana - Sara",
+          "gender": "female",
+          "language": "it"
+        },
+        {
+          "id": "nicola",
+          "voice_id": "it_nicola",
+          "description": "Voce maschile italiana - Nicola",
+          "gender": "male",
+          "language": "it"
+        },
+        {
+          "id": "giulia",
+          "voice_id": "it_giulia",
+          "description": "Voce femminile italiana - Giulia",
+          "gender": "female",
+          "language": "it"
+        }
+      ]
+    },
+    "qwen": {
+      "http_status": 200,
+      "count": 9,
+      "sample": [
+        {
+          "id": "vivian",
+          "name": "Vivian",
+          "description": "Voce femminile giovane, brillante",
+          "gender": "female",
+          "native_language": "Chinese"
+        },
+        {
+          "id": "serena",
+          "name": "Serena",
+          "description": "Voce femminile calda, gentile",
+          "gender": "female",
+          "native_language": "Chinese"
+        },
+        {
+          "id": "uncle_fu",
+          "name": "Uncle_Fu",
+          "description": "Voce maschile matura, profonda",
+          "gender": "male",
+          "native_language": "Chinese"
+        }
+      ]
+    },
+    "chatterbox": {
+      "http_status": 200,
+      "count": 15,
+      "sample": [
+        {
+          "id": "diego",
+          "voice": "it-IT-DiegoNeural",
+          "description": "Voce maschile italiana - Diego",
+          "gender": "male",
+          "language": "it"
+        },
+        {
+          "id": "elsa",
+          "voice": "it-IT-ElsaNeural",
+          "description": "Voce femminile italiana - Elsa",
+          "gender": "female",
+          "language": "it"
+        },
+        {
+          "id": "isabella",
+          "voice": "it-IT-IsabellaNeural",
+          "description": "Voce femminile italiana - Isabella",
+          "gender": "female",
+          "language": "it"
+        }
+      ]
+    },
+    "vibevoice": {
+      "http_status": 200,
+      "count": 4,
+      "sample": [
+        {
+          "id": "speaker_1",
+          "voice_id": "speaker_1",
+          "description": "Speaker 1 - Voce principale",
+          "gender": "neutral",
+          "language": "multi",
+          "model": "realtime"
+        },
+        {
+          "id": "speaker_2",
+          "voice_id": "speaker_2",
+          "description": "Speaker 2 - Voce secondaria",
+          "gender": "neutral",
+          "language": "multi",
+          "model": "realtime"
+        },
+        {
+          "id": "speaker_3",
+          "voice_id": "speaker_3",
+          "description": "Speaker 3 - Terza voce",
+          "gender": "neutral",
+          "language": "multi",
+          "model": "realtime"
+        }
+      ]
+    }
+  },
+  "identical_standard_tests": [
+    [
+      "edge",
+      "coqui"
+    ],
+    [
+      "kokoro",
+      "vibevoice"
+    ]
+  ],
+  "identical_stream_tests": [
+    [
+      "edge",
+      "coqui",
+      "kokoro",
+      "vibevoice"
+    ]
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "timestamp": "2026-05-09 14:52:08",
+  "server": "http://127.0.0.1:8092",
+  "text": "Ciao, questa è una prova completa senza fallback: il test deve riuscire solo con il motore richiesto.",
+  "standard": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 615,
+      "x_engine": "edge",
+      "pcm_bytes": 331776,
+      "sha256": "b7b884a4afcc8127ff5445926de94d2f156c55170c2d932f8f4034916c5a70c7",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_edge.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_edge.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"500: Engine TTS sconosciuto: coqui\"}"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1163,
+      "x_engine": "piper",
+      "pcm_bytes": 279552,
+      "sha256": "d88eed838b68764cd2249bb1c4c8796e8af95c49ccabe442a2590e304ebc9f9f",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_piper.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 2967,
+      "x_engine": "kokoro",
+      "pcm_bytes": 402000,
+      "sha256": "93e66c78ef2377e8450273eb51d6ebd71d45a2e6a1143a990e76b18ed101c65c",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_kokoro.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 9082,
+      "x_engine": "qwen",
+      "pcm_bytes": 299520,
+      "sha256": "3633434c70d6a85306cb87025c456f0d09e85241e5e100ef2c4f8d318735934a",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_qwen.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/standard_qwen.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 6028,
+      "error": "{\"detail\":\"503: Engine requested 'chatterbox' unavailable: 500: 'NoneType' object is not callable\"}"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"503: Engine requested 'vibevoice' unavailable: Nessuna voce disponibile\"}"
+    }
+  ],
+  "stream": [
+    {
+      "engine": "edge",
+      "http_status": 200,
+      "elapsed_ms": 428,
+      "ttfb_ms": 428,
+      "x_engine": "edge",
+      "chunks": 81,
+      "pcm_bytes": 331776,
+      "sha256": "b7b884a4afcc8127ff5445926de94d2f156c55170c2d932f8f4034916c5a70c7",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_edge.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_edge.wav"
+    },
+    {
+      "engine": "coqui",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"500: Engine TTS sconosciuto: coqui\"}"
+    },
+    {
+      "engine": "piper",
+      "http_status": 200,
+      "elapsed_ms": 1187,
+      "ttfb_ms": 1187,
+      "x_engine": "piper",
+      "chunks": 69,
+      "pcm_bytes": 279552,
+      "sha256": "d88eed838b68764cd2249bb1c4c8796e8af95c49ccabe442a2590e304ebc9f9f",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_piper.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_piper.wav"
+    },
+    {
+      "engine": "kokoro",
+      "http_status": 200,
+      "elapsed_ms": 2995,
+      "ttfb_ms": 2994,
+      "x_engine": "kokoro",
+      "chunks": 99,
+      "pcm_bytes": 402000,
+      "sha256": "369a4cdd22feb9765f00683740cf051a0214be1bb01949844c52416f0a99b63f",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_kokoro.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_kokoro.wav"
+    },
+    {
+      "engine": "qwen",
+      "http_status": 200,
+      "elapsed_ms": 10398,
+      "ttfb_ms": 10397,
+      "x_engine": "qwen",
+      "chunks": 80,
+      "pcm_bytes": 326400,
+      "sha256": "becacb4dd66867e2917e70ff104d29fe4eb38a4d87fb4bcdae8a0e5983dbe0df",
+      "pcm_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_qwen.pcm",
+      "wav_file": "benchmark_audio/tts_retest_no_fallback_20260509_1651/stream_qwen.wav"
+    },
+    {
+      "engine": "chatterbox",
+      "http_status": 500,
+      "elapsed_ms": 5809,
+      "error": "{\"detail\":\"503: Engine requested 'chatterbox' unavailable: 500: 'NoneType' object is not callable\"}"
+    },
+    {
+      "engine": "vibevoice",
+      "http_status": 500,
+      "elapsed_ms": 1,
+      "error": "{\"detail\":\"503: Engine requested 'vibevoice' unavailable: Nessuna voce disponibile\"}"
+    }
+  ],
+  "health": {
+    "http_status": 200,
+    "body": "{\"status\":\"healthy\",\"engine\":\"vibevoice\",\"device\":\"cpu\"}"
+  },
+  "status": {
+    "http_status": 200,
+    "body": "{\"status\":\"ready\",\"engine\":\"vibevoice\",\"device\":\"cpu\",\"model_loaded\":true,\"available_engines\":[\"vibevoice\",\"edge\",\"chatterbox\",\"kokoro\",\"piper\",\"qwen\"]}"
+  }
+}

@@ -1,0 +1,861 @@
+{
+  "meta": {
+    "timestamp": "2026-05-10 07:56:52",
+    "tts_url": "http://127.0.0.1:8092",
+    "stt_url": "http://127.0.0.1:8091",
+    "runs_per_text": 2,
+    "texts": [
+      "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+      "SophyAI deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+      "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech to text e text to speech."
+    ]
+  },
+  "services": {
+    "tts_status": {
+      "status_code": 200,
+      "payload": {
+        "status": "ready",
+        "routes": {
+          "edge": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "piper": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "kokoro": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "qwen": {
+            "http_status": 200,
+            "url": "http://tts-core:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"edge\",\"device\":\"cloud\"}"
+          },
+          "coqui": {
+            "http_status": 200,
+            "url": "http://tts-coqui:8092",
+            "body": "{\"status\":\"no_engine\",\"engine\":null,\"device\":null}"
+          },
+          "chatterbox": {
+            "http_status": 200,
+            "url": "http://tts-chatterbox:8092",
+            "body": "{\"status\":\"no_engine\",\"engine\":null,\"device\":null}"
+          },
+          "vibevoice": {
+            "http_status": 200,
+            "url": "http://tts-vibevoice:8092",
+            "body": "{\"status\":\"healthy\",\"engine\":\"vibevoice\",\"device\":\"cpu\"}"
+          }
+        }
+      },
+      "error": null
+    },
+    "stt_info": {
+      "status_code": 200,
+      "payload": {
+        "model": "large-v3",
+        "language": "it",
+        "device": "cuda",
+        "mps_available": false,
+        "cuda_available": true,
+        "ready": true
+      },
+      "error": null
+    }
+  },
+  "tts": {
+    "runs": [
+      {
+        "engine": "edge",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 505.88271000015084,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.07293580017303213,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 442.40674799948465,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.06378413321791877,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 645.0967709970428,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.08989642851129358,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 480.2922389935702,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.06693035660445515,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 810.0531289965147,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.10613903681820162,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "edge",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 460.9275289985817,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.060394068265013326,
+        "x_engine": "edge",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1135.1861689909128,
+        "pcm_bytes": 280320,
+        "audio_s": 5.84,
+        "rtf": 0.1943811933203618,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1124.8246360046323,
+        "pcm_bytes": 280320,
+        "audio_s": 5.84,
+        "rtf": 0.19260695821997129,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1191.4218180027092,
+        "pcm_bytes": 326400,
+        "audio_s": 6.8,
+        "rtf": 0.17520909088275136,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1141.1834610044025,
+        "pcm_bytes": 326400,
+        "audio_s": 6.8,
+        "rtf": 0.1678210972065298,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1124.0067180042388,
+        "pcm_bytes": 283392,
+        "audio_s": 5.904,
+        "rtf": 0.19038054166738463,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "piper",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 1160.7109920005314,
+        "pcm_bytes": 283392,
+        "audio_s": 5.904,
+        "rtf": 0.19659739024399245,
+        "x_engine": "piper",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 3187.373253997066,
+        "pcm_bytes": 432000,
+        "audio_s": 9.0,
+        "rtf": 0.3541525837774518,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 3050.0728210026864,
+        "pcm_bytes": 432000,
+        "audio_s": 9.0,
+        "rtf": 0.3388969801114096,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 3227.2009660082404,
+        "pcm_bytes": 453600,
+        "audio_s": 9.45,
+        "rtf": 0.34150274772573974,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 3040.682355000172,
+        "pcm_bytes": 453600,
+        "audio_s": 9.45,
+        "rtf": 0.3217653285714468,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 3335.2480539906537,
+        "pcm_bytes": 388800,
+        "audio_s": 8.1,
+        "rtf": 0.41175901901119183,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "kokoro",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 2909.3274750048295,
+        "pcm_bytes": 388800,
+        "audio_s": 8.1,
+        "rtf": 0.3591762314820777,
+        "x_engine": "kokoro",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 11953.021701992839,
+        "pcm_bytes": 326400,
+        "audio_s": 6.8,
+        "rtf": 1.757797309116594,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 10996.509728996898,
+        "pcm_bytes": 337920,
+        "audio_s": 7.04,
+        "rtf": 1.5620042228688775,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 10109.127557996544,
+        "pcm_bytes": 303360,
+        "audio_s": 6.32,
+        "rtf": 1.5995454996829974,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 14251.319559989497,
+        "pcm_bytes": 418560,
+        "audio_s": 8.72,
+        "rtf": 1.6343256376134743,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 13532.689426996512,
+        "pcm_bytes": 414720,
+        "audio_s": 8.64,
+        "rtf": 1.5662834984949665,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "qwen",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 11111.417293999693,
+        "pcm_bytes": 330240,
+        "audio_s": 6.88,
+        "rtf": 1.615031583430188,
+        "x_engine": "qwen",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 661.6383770015091,
+        "pcm_bytes": 327984,
+        "audio_s": 6.833,
+        "rtf": 0.09682985174908665,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 658.9626369968755,
+        "pcm_bytes": 328752,
+        "audio_s": 6.849,
+        "rtf": 0.09621297079820054,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 708.7853039993206,
+        "pcm_bytes": 350256,
+        "audio_s": 7.297,
+        "rtf": 0.09713379525823224,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 573.9136209886055,
+        "pcm_bytes": 329520,
+        "audio_s": 6.865,
+        "rtf": 0.08359994479076556,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 709.9051810073433,
+        "pcm_bytes": 379440,
+        "audio_s": 7.905,
+        "rtf": 0.08980457697752604,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "coqui",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 660.2413700020406,
+        "pcm_bytes": 346416,
+        "audio_s": 7.217,
+        "rtf": 0.09148418595012342,
+        "x_engine": "coqui",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 504.0145220118575,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.07266645357725743,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 376.395343002514,
+        "pcm_bytes": 332928,
+        "audio_s": 6.936,
+        "rtf": 0.054266917964606975,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 395.7687009969959,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.05515171418575751,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 438.4086599893635,
+        "pcm_bytes": 344448,
+        "audio_s": 7.176,
+        "rtf": 0.06109373745671175,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 420.26713499217294,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.05506644850526375,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "chatterbox",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 445.0303560006432,
+        "pcm_bytes": 366336,
+        "audio_s": 7.632,
+        "rtf": 0.058311105345996234,
+        "x_engine": "chatterbox",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 8021.714280010201,
+        "pcm_bytes": 339200,
+        "audio_s": 7.066666666666666,
+        "rtf": 1.1351482471712548,
+        "x_engine": "vibevoice",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 7637.635399005376,
+        "pcm_bytes": 313600,
+        "audio_s": 6.533333333333333,
+        "rtf": 1.169025826378374,
+        "x_engine": "vibevoice",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 7738.8032890012255,
+        "pcm_bytes": 332800,
+        "audio_s": 6.933333333333334,
+        "rtf": 1.1161735512982536,
+        "x_engine": "vibevoice",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 8423.704931003158,
+        "pcm_bytes": 358400,
+        "audio_s": 7.466666666666667,
+        "rtf": 1.1281747675450657,
+        "x_engine": "vibevoice",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 9294.998277007835,
+        "pcm_bytes": 396800,
+        "audio_s": 8.266666666666667,
+        "rtf": 1.1243949528638508,
+        "x_engine": "vibevoice",
+        "error": null
+      },
+      {
+        "engine": "vibevoice",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 8734.451903001172,
+        "pcm_bytes": 371200,
+        "audio_s": 7.733333333333333,
+        "rtf": 1.129454987457048,
+        "x_engine": "vibevoice",
+        "error": null
+      }
+    ],
+    "summary": [
+      {
+        "engine": "chatterbox",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 429.98078616559116,
+        "latency_p95_ms": 504.0145220118575,
+        "audio_avg_s": 7.248,
+        "rtf_avg": 0.05942606283926561
+      },
+      {
+        "engine": "coqui",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 662.2410816659491,
+        "latency_p95_ms": 709.9051810073433,
+        "audio_avg_s": 7.161,
+        "rtf_avg": 0.09251088758732241
+      },
+      {
+        "engine": "edge",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 557.4431876642242,
+        "latency_p95_ms": 810.0531289965147,
+        "audio_avg_s": 7.248,
+        "rtf_avg": 0.0766799705983191
+      },
+      {
+        "engine": "kokoro",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 3124.9841541672745,
+        "latency_p95_ms": 3335.2480539906537,
+        "audio_avg_s": 8.85,
+        "rtf_avg": 0.3545421484465529
+      },
+      {
+        "engine": "piper",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 1146.2222990012378,
+        "latency_p95_ms": 1191.4218180027092,
+        "audio_avg_s": 6.181333333333333,
+        "rtf_avg": 0.1861660452568319
+      },
+      {
+        "engine": "qwen",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 11992.347544995331,
+        "latency_p95_ms": 14251.319559989497,
+        "audio_avg_s": 7.4,
+        "rtf_avg": 1.6224979585345163
+      },
+      {
+        "engine": "vibevoice",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 8308.551346504828,
+        "latency_p95_ms": 9294.998277007835,
+        "audio_avg_s": 7.333333333333334,
+        "rtf_avg": 1.1337287221189745
+      }
+    ]
+  },
+  "stt": {
+    "runs": [
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 503.6513230006676,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 0,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 575.1529209956061,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 659.1447969985893,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 0,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 590.104920003796,
+        "recognized_text": "Ciao, questa è una prova di sintesi vocale per misurare prestazioni e qualità dei motori disponibili.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 463.84528900671285,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 1,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 464.5909349928843,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 460.83086098951753,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 1,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 460.2705360011896,
+        "recognized_text": "Sofie deve rispondere rapidamente mantenendo una voce naturale e comprensibile durante una conversazione.",
+        "wer": 0.07692307692307693,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 486.08894599601626,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 2,
+        "run_idx": 0,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 487.429748987779,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_wav",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 486.1635830020532,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      },
+      {
+        "mode": "transcribe_raw",
+        "text_idx": 2,
+        "run_idx": 1,
+        "ok": true,
+        "status": 200,
+        "elapsed_ms": 484.9316949985223,
+        "recognized_text": "Questo benchmark confronta latenza, stabilità e accuratezza della pipeline speech-to-text e text-to-speech.",
+        "wer": 0.0,
+        "language": "it",
+        "error": null
+      }
+    ],
+    "summary": [
+      {
+        "mode": "transcribe_raw",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 510.4134593299629,
+        "latency_p95_ms": 590.104920003796,
+        "wer_avg": 0.025641025641025644
+      },
+      {
+        "mode": "transcribe_wav",
+        "runs_total": 6,
+        "runs_ok": 6,
+        "success_rate": 1.0,
+        "latency_avg_ms": 509.9541331655928,
+        "latency_p95_ms": 659.1447969985893,
+        "wer_avg": 0.025641025641025644
+      }
+    ]
+  }
+}

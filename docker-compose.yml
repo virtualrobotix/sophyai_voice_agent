@@ -253,7 +253,7 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        pip install -q pyjwt && sleep 5 && /init-sip.sh
+        apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1 && pip install -q pyjwt && sleep 5 && /init-sip.sh
 
   # TLS proxy for LiveKit WebSocket (wss://host:7443 -> ws://livekit:7880)
   livekit-tls-proxy:

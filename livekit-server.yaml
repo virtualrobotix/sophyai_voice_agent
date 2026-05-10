@@ -3,13 +3,13 @@ port: 7880
 rtc:
   tcp_port: 7881
   udp_port: 7882
-  use_external_ip: true
+  use_external_ip: false
   
 keys:
   devkey: secret_dev_key_change_in_production
 
 redis:
-  address: livekit-redis:6379
+  address: 127.0.0.1:6379
 
 logging:
   level: info
@@ -21,5 +21,5 @@ room:
 
 webhook:
   urls:
-    - http://voice-agent-web:8080/api/livekit/webhook
+    - http://127.0.0.1:8080/api/livekit/webhook
   api_key: devkey

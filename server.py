@@ -1200,6 +1200,7 @@ async def get_ollama_models():
         {"id": "qwen3:32b", "name": "qwen3:32b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
         {"id": "qwen3.5:9b", "name": "qwen3.5:9b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
         {"id": "qwen3.5:27b", "name": "qwen3.5:27b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
+        {"id": "gemma4:31b", "name": "gemma4:31b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
         {"id": "ministral-3:14b", "name": "ministral-3:14b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
         {"id": "devstral-small-2:24b", "name": "devstral-small-2:24b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
         {"id": "olmo-3.1:32b", "name": "olmo-3.1:32b", "size": 0, "modified_at": "", "details": {"recommended": True, "installed": False}},
@@ -2424,6 +2425,17 @@ async def test_tts_via_external_server(request: TTSTestRequest, tts_server_url: 
                 pcm_data = await resp.read()
                 sample_rate = int(resp.headers.get("X-Sample-Rate", "24000"))
                 duration = float(resp.headers.get("X-Duration", "0"))
+                actual_engine = resp.headers.get("X-Engine", request.engine)
+
+                # Non accettare fallback durante il test: segnala problema senza generare audio.
+                if actual_engine.lower() != request.engine.lower():
+                    raise HTTPException(
+                        status_code=503,
+                        detail=(
+                            f"Fallback rilevato: richiesto '{request.engine}', "
+                            f"usato '{actual_engine}'."
+                        ),
+                    )
                 
                 # Converti PCM in numpy array e poi in WAV
                 audio_array = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32767.0
@@ -2441,7 +2453,7 @@ async def test_tts_via_external_server(request: TTSTestRequest, tts_server_url: 
                     headers={
                         "X-Sample-Rate": str(sample_rate),
                         "X-Duration": str(duration),
-                        "X-Engine": request.engine
+                        "X-Engine": actual_engine
                     }
                 )
     except aiohttp.ClientError as e:

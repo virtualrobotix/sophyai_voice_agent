@@ -1,0 +1,121 @@
+services:
+  tts-core:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts
+    container_name: voice-agent-tts-core
+    restart: unless-stopped
+    environment:
+      - TTS_ALLOWED_ENGINES=edge,piper,kokoro,qwen
+      - TTS_BOOT_ENGINE=edge
+      - HF_HOME=/app/models
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    volumes:
+      - tts_core_models:/app/models
+      - ./.cursor:/app/.cursor
+      - ./tts_server.py:/app/tts_server.py:ro
+      - ./agent/tts:/app/agent/tts:ro
+    expose:
+      - "8092"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tts-coqui:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts.coqui
+    container_name: voice-agent-tts-coqui
+    restart: unless-stopped
+    environment:
+      - TTS_ALLOWED_ENGINES=coqui
+      - TTS_BOOT_ENGINE=edge
+      - HF_HOME=/app/models
+    volumes:
+      - tts_coqui_models:/app/models
+      - ./.cursor:/app/.cursor
+      - ./tts_server.py:/app/tts_server.py:ro
+      - ./agent/tts:/app/agent/tts:ro
+    expose:
+      - "8092"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tts-chatterbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts.chatterbox
+    container_name: voice-agent-tts-chatterbox
+    restart: unless-stopped
+    environment:
+      - TTS_ALLOWED_ENGINES=chatterbox
+      - TTS_BOOT_ENGINE=edge
+      - HF_HOME=/app/models
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    volumes:
+      - tts_chatterbox_models:/app/models
+      - ./.cursor:/app/.cursor
+      - ./tts_server.py:/app/tts_server.py:ro
+      - ./agent/tts:/app/agent/tts:ro
+    expose:
+      - "8092"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tts-vibevoice:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts.vibevoice
+    container_name: voice-agent-tts-vibevoice
+    restart: unless-stopped
+    environment:
+      - TTS_ALLOWED_ENGINES=vibevoice
+      - TTS_BOOT_ENGINE=vibevoice
+      - HF_HOME=/app/models
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    volumes:
+      - tts_vibevoice_models:/app/models
+      - ./.cursor:/app/.cursor
+      - ./tts_server.py:/app/tts_server.py:ro
+      - ./agent/tts:/app/agent/tts:ro
+    expose:
+      - "8092"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tts-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts.proxy
+    container_name: voice-agent-tts-proxy
+    restart: unless-stopped
+    ports:
+      - "8092:8092"
+    environment:
+      - TTS_CORE_URL=http://tts-core:8092
+      - TTS_EDGE_URL=http://tts-core:8092
+      - TTS_PIPER_URL=http://tts-core:8092
+      - TTS_KOKORO_URL=http://tts-core:8092
+      - TTS_QWEN_URL=http://tts-core:8092
+      - TTS_COQUI_URL=http://tts-coqui:8092
+      - TTS_CHATTERBOX_URL=http://tts-chatterbox:8092
+      - TTS_VIBEVOICE_URL=http://tts-vibevoice:8092
+    depends_on:
+      - tts-core
+      - tts-coqui
+      - tts-chatterbox
+      - tts-vibevoice
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8092/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  tts_core_models:
+  tts_coqui_models:
+  tts_chatterbox_models:
+  tts_vibevoice_models:

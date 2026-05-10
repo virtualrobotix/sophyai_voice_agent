@@ -11,9 +11,10 @@
 7. [Installazione LiveKit Server](#installazione-livekit-server)
 8. [Configurazione SIP](#configurazione-sip)
 9. [Installazione con GPU NVIDIA](#installazione-con-gpu-nvidia)
-10. [Aggiornamento](#aggiornamento)
-11. [Backup e Ripristino](#backup-e-ripristino)
-12. [Risoluzione Problemi](#risoluzione-problemi)
+10. [TTS Split Docker con Proxy (Linux NVIDIA)](#tts-split-docker-con-proxy-linux-nvidia)
+11. [Aggiornamento](#aggiornamento)
+12. [Backup e Ripristino](#backup-e-ripristino)
+13. [Risoluzione Problemi](#risoluzione-problemi)
 
 ---
 
@@ -35,6 +36,10 @@
 | RTX 3060 | 12 GB | LLM 7B + Whisper medium |
 | RTX 3090 / 4090 | 24 GB | LLM 13B + Whisper large + TTS |
 | A100 / H100 | 40-80 GB | LLM 30B+ + tutti i servizi |
+
+> Nota importante: la modalita' TTS "split Docker + proxy" usa container CUDA dedicati
+> per i diversi engine TTS ed e' supportata solo su Linux con NVIDIA Container Toolkit.
+> Su Apple Silicon i container non vedono CUDA, quindi questa modalita' non e' supportata.
 
 ### Porte di Rete
 
@@ -465,6 +470,69 @@ WHISPER_DEVICE=cuda
 WHISPER_MODEL=large-v3
 TTS_DEVICE=cuda
 ```
+
+---
+
+## TTS Split Docker con Proxy (Linux NVIDIA)
+
+Questa modalita' avvia un proxy TTS su porta `8092` e separa i motori in container dedicati
+per ridurre incompatibilita' di librerie:
+
+- `tts-core` (edge, piper, kokoro, qwen)
+- `tts-coqui`
+- `tts-chatterbox`
+- `tts-vibevoice`
+- `tts-proxy` (routing per engine + blocco fallback)
+
+### Requisiti specifici
+
+- Linux x86_64
+- GPU NVIDIA con driver funzionanti (`nvidia-smi`)
+- NVIDIA Container Toolkit configurato per Docker
+- Spazio disco adeguato (immagini CUDA grandi, consigliati almeno 80-100 GB liberi)
+
+### Avvio stack split
+
+```bash
+# Metodo consigliato
+./scripts/restart_tts_split_docker.sh
+
+# Oppure manuale
+docker compose -f docker-compose.tts.split.yml up -d --build
+```
+
+### Verifica
+
+```bash
+# Health proxy
+curl http://127.0.0.1:8092/health
+
+# Stato route e servizi TTS
+curl http://127.0.0.1:8092/status
+```
+
+### Integrazione con il sistema
+
+Se il worker/servizi consumatori sono in Docker e usano host-gateway, mantenere:
+
+```env
+TTS_SERVER_URL=http://host.docker.internal:8092
+```
+
+Se il client gira sullo stesso host, usare direttamente:
+
+```env
+TTS_SERVER_URL=http://127.0.0.1:8092
+```
+
+### Limitazione Apple Silicon
+
+Questa architettura **non e' supportata su Apple Silicon**:
+
+- i container TTS dedicati richiedono runtime CUDA;
+- CUDA non e' disponibile/visibile nei container su Apple Silicon.
+
+Su Apple Silicon usare la modalita' host-native per TTS (senza split Docker CUDA), oppure engine cloud.
 
 ---
 

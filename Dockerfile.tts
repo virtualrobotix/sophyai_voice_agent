@@ -58,7 +58,7 @@ RUN pip3 install --no-cache-dir \
     requests \
     aiohttp \
     loguru \
-    transformers \
+    transformers==4.57.3 \
     accelerate \
     safetensors \
     sentencepiece
@@ -82,6 +82,12 @@ RUN pip3 install --no-cache-dir qwen-tts && \
     python3 -c "from qwen_tts import Qwen3TTSModel; print('✅ Qwen TTS installato')"
 
 # ========================================
+# TTS ENGINE 3b: VibeVoice (Microsoft, opzionale)
+# ========================================
+RUN pip3 install --no-cache-dir "git+https://github.com/microsoft/VibeVoice.git" || \
+    echo "⚠️ VibeVoice non installato (opzionale)"
+
+# ========================================
 # TTS ENGINE 4: Piper TTS (Self-hosted, veloce)
 # ========================================
 RUN pip3 install --no-cache-dir piper-tts pathvalidate && \
@@ -92,6 +98,10 @@ RUN pip3 install --no-cache-dir piper-tts pathvalidate && \
 # ========================================
 RUN pip3 install --no-cache-dir chatterbox-tts || \
     echo "⚠️ Chatterbox TTS non installato (opzionale)"
+
+# Chatterbox può aggiornare transformers a versioni incompatibili con qwen-tts.
+# Ripristina una versione compatibile con qwen-tts.
+RUN pip3 install --no-cache-dir --force-reinstall "transformers==4.57.3"
 
 # ========================================
 # TTS ENGINE 6: Coqui TTS (Self-hosted, alta qualità) - OPZIONALE  
@@ -123,10 +133,11 @@ RUN mkdir -p /app/models/piper && \
 
 # Verifica finale installazioni
 RUN echo "=== VERIFICA INSTALLAZIONI ===" && \
-    python3 -c "import edge_tts; print('✅ edge-tts')" && \
-    python3 -c "import kokoro; print('✅ kokoro')" && \
-    python3 -c "from qwen_tts import Qwen3TTSModel; print('✅ qwen-tts')" && \
-    python3 -c "from piper import PiperVoice; print('✅ piper-tts')" && \
+    (python3 -c "import edge_tts; print('✅ edge-tts')" || echo "❌ edge-tts") && \
+    (python3 -c "import kokoro; print('✅ kokoro')" || echo "❌ kokoro") && \
+    (python3 -c "from qwen_tts import Qwen3TTSModel; print('✅ qwen-tts')" || echo "❌ qwen-tts") && \
+    (python3 -c "import vibevoice; print('✅ vibevoice')" || echo "❌ vibevoice") && \
+    (python3 -c "from piper import PiperVoice; print('✅ piper-tts')" || echo "❌ piper-tts") && \
     (python3 -c "from chatterbox.tts import ChatterboxTTS; print('✅ chatterbox-tts')" || echo "❌ chatterbox-tts") && \
     (python3 -c "from TTS.api import TTS; print('✅ coqui-tts')" || echo "❌ coqui-tts") && \
     echo "=== FINE VERIFICA ==="

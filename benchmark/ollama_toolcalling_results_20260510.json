@@ -1,0 +1,1885 @@
+{
+  "generated_at_utc": "2026-05-10T06:29:01.803240+00:00",
+  "ollama_url": "http://127.0.0.1:11434",
+  "repeats": 2,
+  "warmups": 1,
+  "tasks": [
+    {
+      "id": "weather_rome",
+      "prompt": "Devo sapere il meteo a Roma in celsius. Usa lo strumento corretto.",
+      "expected_tool": "get_weather",
+      "required_args": [
+        "city",
+        "unit"
+      ],
+      "expect_no_tool": false
+    },
+    {
+      "id": "meeting_booking",
+      "prompt": "Prenota una riunione domani alle 15:30 con Giulia Rossi. Usa lo strumento corretto.",
+      "expected_tool": "book_meeting",
+      "required_args": [
+        "date",
+        "time",
+        "person"
+      ],
+      "expect_no_tool": false
+    },
+    {
+      "id": "invoice_lookup",
+      "prompt": "Cerca la fattura INV-2026-0042 con lo strumento disponibile.",
+      "expected_tool": "search_invoice",
+      "required_args": [
+        "invoice_id"
+      ],
+      "expect_no_tool": false
+    },
+    {
+      "id": "smalltalk_no_tool",
+      "prompt": "Dimmi una frase motivazionale di una riga in italiano.",
+      "expected_tool": null,
+      "required_args": [],
+      "expect_no_tool": true
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma4:31b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1918.1924419972347,
+          "total_duration_ms": 1917.212071,
+          "load_duration_ms": 170.818193,
+          "prompt_eval_duration_ms": 78.349481,
+          "eval_duration_ms": 1621.442338,
+          "eval_count": 96,
+          "prompt_eval_count": 250,
+          "raw_tool_calls": [
+            {
+              "id": "call_tu74jqfy",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1863.205330009805,
+          "total_duration_ms": 1862.253329,
+          "load_duration_ms": 161.75305,
+          "prompt_eval_duration_ms": 27.783299,
+          "eval_duration_ms": 1616.69838,
+          "eval_count": 96,
+          "prompt_eval_count": 250,
+          "raw_tool_calls": [
+            {
+              "id": "call_4s11o540",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 4970.608916002675,
+          "total_duration_ms": 4969.573579,
+          "load_duration_ms": 155.992334,
+          "prompt_eval_duration_ms": 29.017851,
+          "eval_duration_ms": 4664.246745,
+          "eval_count": 273,
+          "prompt_eval_count": 256,
+          "raw_tool_calls": [
+            {
+              "id": "call_eshw59jp",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 5494.939387004706,
+          "total_duration_ms": 5493.902606,
+          "load_duration_ms": 160.651925,
+          "prompt_eval_duration_ms": 25.274929,
+          "eval_duration_ms": 5173.957422,
+          "eval_count": 308,
+          "prompt_eval_count": 256,
+          "raw_tool_calls": [
+            {
+              "id": "call_wf4xzg3n",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2087.4985650007147,
+          "total_duration_ms": 2086.540574,
+          "load_duration_ms": 157.86142,
+          "prompt_eval_duration_ms": 28.251007,
+          "eval_duration_ms": 1842.564605,
+          "eval_count": 110,
+          "prompt_eval_count": 254,
+          "raw_tool_calls": [
+            {
+              "id": "call_f0n11j23",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2071.458819002146,
+          "total_duration_ms": 2070.384731,
+          "load_duration_ms": 160.847895,
+          "prompt_eval_duration_ms": 25.683838,
+          "eval_duration_ms": 1832.234739,
+          "eval_count": 110,
+          "prompt_eval_count": 254,
+          "raw_tool_calls": [
+            {
+              "id": "call_werzdmsl",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 1198.6593339970568,
+          "total_duration_ms": 1197.660872,
+          "load_duration_ms": 158.120233,
+          "prompt_eval_duration_ms": 26.893425,
+          "eval_duration_ms": 982.244723,
+          "eval_count": 59,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 1188.4636010072427,
+          "total_duration_ms": 1187.552086,
+          "load_duration_ms": 155.661614,
+          "prompt_eval_duration_ms": 24.001185,
+          "eval_duration_ms": 975.628857,
+          "eval_count": 59,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 2599.1282992526976,
+        "p50_wall_ms": 1994.8256304996903,
+        "p95_wall_ms": 5494.939387004706,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 59.61522058843536
+      }
+    },
+    {
+      "model": "gpt-oss:20b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 503.5516420030035,
+          "total_duration_ms": 502.615942,
+          "load_duration_ms": 135.262587,
+          "prompt_eval_duration_ms": 25.323064,
+          "eval_duration_ms": 302.812416,
+          "eval_count": 72,
+          "prompt_eval_count": 240,
+          "raw_tool_calls": [
+            {
+              "id": "call_u9tjmkjj",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 488.979774992913,
+          "total_duration_ms": 487.995229,
+          "load_duration_ms": 148.53284,
+          "prompt_eval_duration_ms": 5.986867,
+          "eval_duration_ms": 300.028212,
+          "eval_count": 72,
+          "prompt_eval_count": 240,
+          "raw_tool_calls": [
+            {
+              "id": "call_3ptubp4w",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 761.5897259966005,
+          "total_duration_ms": 760.742458,
+          "load_duration_ms": 124.188758,
+          "prompt_eval_duration_ms": 19.610674,
+          "eval_duration_ms": 562.61376,
+          "eval_count": 135,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": [
+            {
+              "id": "call_u4tt6itr",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2026-05-11",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 749.9418469960801,
+          "total_duration_ms": 749.033575,
+          "load_duration_ms": 129.719489,
+          "prompt_eval_duration_ms": 5.822801,
+          "eval_duration_ms": 560.261002,
+          "eval_count": 135,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": [
+            {
+              "id": "call_dqaekwge",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2026-05-11",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 416.252713999711,
+          "total_duration_ms": 415.288474,
+          "load_duration_ms": 129.512794,
+          "prompt_eval_duration_ms": 14.20099,
+          "eval_duration_ms": 241.34499,
+          "eval_count": 58,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_nqxilj96",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 404.1180099884514,
+          "total_duration_ms": 403.153462,
+          "load_duration_ms": 125.846421,
+          "prompt_eval_duration_ms": 5.75236,
+          "eval_duration_ms": 238.727224,
+          "eval_count": 58,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_fye0soqz",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 309.0117710089544,
+          "total_duration_ms": 308.35752,
+          "load_duration_ms": 125.245611,
+          "prompt_eval_duration_ms": 21.193486,
+          "eval_duration_ms": 144.222083,
+          "eval_count": 35,
+          "prompt_eval_count": 234,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 295.02825801318977,
+          "total_duration_ms": 294.311499,
+          "load_duration_ms": 127.435634,
+          "prompt_eval_duration_ms": 5.616923,
+          "eval_duration_ms": 143.046412,
+          "eval_count": 35,
+          "prompt_eval_count": 234,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 491.05921787486295,
+        "p50_wall_ms": 452.616244496312,
+        "p95_wall_ms": 761.5897259966005,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 241.1613881670527
+      }
+    },
+    {
+      "model": "qwen2.5:7b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 232.09286799828988,
+          "total_duration_ms": 231.266922,
+          "load_duration_ms": 62.927486,
+          "prompt_eval_duration_ms": 25.025253,
+          "eval_duration_ms": 112.478282,
+          "eval_count": 28,
+          "prompt_eval_count": 301,
+          "raw_tool_calls": [
+            {
+              "id": "call_qmpqpamv",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 203.68613800383173,
+          "total_duration_ms": 203.148718,
+          "load_duration_ms": 56.411466,
+          "prompt_eval_duration_ms": 4.297066,
+          "eval_duration_ms": 111.359713,
+          "eval_count": 28,
+          "prompt_eval_count": 301,
+          "raw_tool_calls": [
+            {
+              "id": "call_qkm8w2qh",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 269.6810449997429,
+          "total_duration_ms": 269.30521,
+          "load_duration_ms": 56.378998,
+          "prompt_eval_duration_ms": 10.247985,
+          "eval_duration_ms": 161.353851,
+          "eval_count": 40,
+          "prompt_eval_count": 309,
+          "raw_tool_calls": [
+            {
+              "id": "call_8v1ub5bw",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 267.4105629994301,
+          "total_duration_ms": 266.818785,
+          "load_duration_ms": 59.526846,
+          "prompt_eval_duration_ms": 4.145628,
+          "eval_duration_ms": 161.393858,
+          "eval_count": 40,
+          "prompt_eval_count": 309,
+          "raw_tool_calls": [
+            {
+              "id": "call_cliuwi2c",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 235.84153100091498,
+          "total_duration_ms": 235.250495,
+          "load_duration_ms": 55.867758,
+          "prompt_eval_duration_ms": 22.656927,
+          "eval_duration_ms": 124.599233,
+          "eval_count": 31,
+          "prompt_eval_count": 303,
+          "raw_tool_calls": [
+            {
+              "id": "call_y2yc9g6w",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 216.85978799359873,
+          "total_duration_ms": 216.342863,
+          "load_duration_ms": 56.120476,
+          "prompt_eval_duration_ms": 4.134078,
+          "eval_duration_ms": 123.596011,
+          "eval_count": 31,
+          "prompt_eval_count": 303,
+          "raw_tool_calls": [
+            {
+              "id": "call_ov5itzkd",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 197.2689700050978,
+          "total_duration_ms": 196.780151,
+          "load_duration_ms": 59.689461,
+          "prompt_eval_duration_ms": 8.506032,
+          "eval_duration_ms": 99.84658,
+          "eval_count": 25,
+          "prompt_eval_count": 293,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 208.06865001213737,
+          "total_duration_ms": 207.668618,
+          "load_duration_ms": 55.888348,
+          "prompt_eval_duration_ms": 4.128705,
+          "eval_duration_ms": 115.11489,
+          "eval_count": 29,
+          "prompt_eval_count": 293,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 228.86369412663043,
+        "p50_wall_ms": 224.4763279959443,
+        "p95_wall_ms": 269.6810449997429,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 249.75485566084043
+      }
+    },
+    {
+      "model": "llama3.1:8b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 239.31236698990688,
+          "total_duration_ms": 238.667713,
+          "load_duration_ms": 83.172273,
+          "prompt_eval_duration_ms": 26.570789,
+          "eval_duration_ms": 107.19517,
+          "eval_count": 25,
+          "prompt_eval_count": 309,
+          "raw_tool_calls": [
+            {
+              "id": "call_molc859w",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "unit": "celsius",
+                  "city": "Roma"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 213.589235994732,
+          "total_duration_ms": 213.24716,
+          "load_duration_ms": 81.651664,
+          "prompt_eval_duration_ms": 4.627311,
+          "eval_duration_ms": 105.732281,
+          "eval_count": 25,
+          "prompt_eval_count": 309,
+          "raw_tool_calls": [
+            {
+              "id": "call_bv45dhcv",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 275.47038700140547,
+          "total_duration_ms": 274.900958,
+          "load_duration_ms": 84.531794,
+          "prompt_eval_duration_ms": 10.803751,
+          "eval_duration_ms": 150.757306,
+          "eval_count": 35,
+          "prompt_eval_count": 315,
+          "raw_tool_calls": [
+            {
+              "id": "call_79v8axk0",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "person": "Giulia Rossi",
+                  "date": "domani",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 256.347917005769,
+          "total_duration_ms": 255.781723,
+          "load_duration_ms": 71.151123,
+          "prompt_eval_duration_ms": 4.459023,
+          "eval_duration_ms": 150.263532,
+          "eval_count": 35,
+          "prompt_eval_count": 315,
+          "raw_tool_calls": [
+            {
+              "id": "call_3k0ijzcb",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "time": "15:30",
+                  "person": "Giulia Rossi",
+                  "date": "domani"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 209.71039599680807,
+          "total_duration_ms": 209.216745,
+          "load_duration_ms": 75.57163,
+          "prompt_eval_duration_ms": 9.897472,
+          "eval_duration_ms": 102.665859,
+          "eval_count": 24,
+          "prompt_eval_count": 307,
+          "raw_tool_calls": [
+            {
+              "id": "call_nm5j93bu",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 195.97480598895345,
+          "total_duration_ms": 195.53956,
+          "load_duration_ms": 69.838584,
+          "prompt_eval_duration_ms": 4.478117,
+          "eval_duration_ms": 101.281522,
+          "eval_count": 24,
+          "prompt_eval_count": 307,
+          "raw_tool_calls": [
+            {
+              "id": "call_wkeaifrp",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 420.5456640047487,
+          "total_duration_ms": 420.105799,
+          "load_duration_ms": 74.797503,
+          "prompt_eval_duration_ms": 9.238403,
+          "eval_duration_ms": 288.133079,
+          "eval_count": 66,
+          "prompt_eval_count": 301,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 409.4248249894008,
+          "total_duration_ms": 409.047447,
+          "load_duration_ms": 70.717114,
+          "prompt_eval_duration_ms": 4.43563,
+          "eval_duration_ms": 286.787792,
+          "eval_count": 66,
+          "prompt_eval_count": 301,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 277.54694974646554,
+        "p50_wall_ms": 247.83014199783793,
+        "p95_wall_ms": 420.5456640047487,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 233.08481389910943
+      }
+    },
+    {
+      "model": "gpt-oss:120b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 623.2929909892846,
+          "total_duration_ms": 622.339444,
+          "load_duration_ms": 137.912314,
+          "prompt_eval_duration_ms": 78.828428,
+          "eval_duration_ms": 364.389004,
+          "eval_count": 60,
+          "prompt_eval_count": 240,
+          "raw_tool_calls": [
+            {
+              "id": "call_vr2xfn6b",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 539.9118219938828,
+          "total_duration_ms": 538.98584,
+          "load_duration_ms": 139.616836,
+          "prompt_eval_duration_ms": 8.981594,
+          "eval_duration_ms": 358.403284,
+          "eval_count": 60,
+          "prompt_eval_count": 240,
+          "raw_tool_calls": [
+            {
+              "id": "call_sna9wu01",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1015.6807710009161,
+          "total_duration_ms": 1014.697578,
+          "load_duration_ms": 140.748887,
+          "prompt_eval_duration_ms": 41.092925,
+          "eval_duration_ms": 779.982528,
+          "eval_count": 130,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": [
+            {
+              "id": "call_r8fnvjqp",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2026-05-11",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 981.8171640072251,
+          "total_duration_ms": 980.851577,
+          "load_duration_ms": 137.138481,
+          "prompt_eval_duration_ms": 8.820886,
+          "eval_duration_ms": 778.044825,
+          "eval_count": 130,
+          "prompt_eval_count": 246,
+          "raw_tool_calls": [
+            {
+              "id": "call_x9heertg",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2026-05-11",
+                  "person": "Giulia Rossi",
+                  "time": "15:30"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 537.3039050027728,
+          "total_duration_ms": 536.177485,
+          "load_duration_ms": 136.381028,
+          "prompt_eval_duration_ms": 32.406531,
+          "eval_duration_ms": 340.081107,
+          "eval_count": 57,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_6m9w68lp",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 508.2569469959708,
+          "total_duration_ms": 507.335635,
+          "load_duration_ms": 133.32744,
+          "prompt_eval_duration_ms": 8.226561,
+          "eval_duration_ms": 338.8905,
+          "eval_count": 57,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_1136kwoe",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 486.877329996787,
+          "total_duration_ms": 486.037761,
+          "load_duration_ms": 140.441205,
+          "prompt_eval_duration_ms": 35.308485,
+          "eval_duration_ms": 286.257338,
+          "eval_count": 48,
+          "prompt_eval_count": 234,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 446.2182679999387,
+          "total_duration_ms": 445.393147,
+          "load_duration_ms": 129.11612,
+          "prompt_eval_duration_ms": 8.177052,
+          "eval_duration_ms": 284.595935,
+          "eval_count": 48,
+          "prompt_eval_count": 234,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 642.4198997483472,
+        "p50_wall_ms": 538.6078634983278,
+        "p95_wall_ms": 1015.6807710009161,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 167.2460909156709
+      }
+    },
+    {
+      "model": "mistral-small:latest",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 389.16097801120486,
+          "total_duration_ms": 388.563754,
+          "load_duration_ms": 70.64501,
+          "prompt_eval_duration_ms": 53.215855,
+          "eval_duration_ms": 242.422886,
+          "eval_count": 23,
+          "prompt_eval_count": 235,
+          "raw_tool_calls": [
+            {
+              "id": "call_jx5qie2d",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 346.2237849889789,
+          "total_duration_ms": 345.729224,
+          "load_duration_ms": 70.045804,
+          "prompt_eval_duration_ms": 11.888734,
+          "eval_duration_ms": 241.879137,
+          "eval_count": 23,
+          "prompt_eval_count": 235,
+          "raw_tool_calls": [
+            {
+              "id": "call_eu84cvog",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 554.1064810095122,
+          "total_duration_ms": 553.720224,
+          "load_duration_ms": 69.810852,
+          "prompt_eval_duration_ms": 19.087982,
+          "eval_duration_ms": 429.546479,
+          "eval_count": 40,
+          "prompt_eval_count": 242,
+          "raw_tool_calls": [
+            {
+              "id": "call_re2ap6nq",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2024-06-18",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 545.2654349937802,
+          "total_duration_ms": 544.852779,
+          "load_duration_ms": 69.4874,
+          "prompt_eval_duration_ms": 11.777593,
+          "eval_duration_ms": 428.55463,
+          "eval_count": 40,
+          "prompt_eval_count": 242,
+          "raw_tool_calls": [
+            {
+              "id": "call_06orbdyj",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2024-06-18",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 423.12730601406656,
+          "total_duration_ms": 422.741466,
+          "load_duration_ms": 70.021233,
+          "prompt_eval_duration_ms": 18.659715,
+          "eval_duration_ms": 308.661508,
+          "eval_count": 29,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_e3aqzvoc",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 422.13845301012043,
+          "total_duration_ms": 421.640119,
+          "load_duration_ms": 76.555054,
+          "prompt_eval_duration_ms": 11.798225,
+          "eval_duration_ms": 307.764956,
+          "eval_count": 29,
+          "prompt_eval_count": 239,
+          "raw_tool_calls": [
+            {
+              "id": "call_1u0qi9g9",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 256.1781500116922,
+          "total_duration_ms": 255.70559,
+          "load_duration_ms": 68.800147,
+          "prompt_eval_duration_ms": 17.029622,
+          "eval_duration_ms": 154.215337,
+          "eval_count": 15,
+          "prompt_eval_count": 228,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 249.78444100997876,
+          "total_duration_ms": 249.417874,
+          "load_duration_ms": 69.471129,
+          "prompt_eval_duration_ms": 10.978054,
+          "eval_duration_ms": 153.429277,
+          "eval_count": 15,
+          "prompt_eval_count": 228,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 398.24812863116676,
+        "p50_wall_ms": 405.64971551066265,
+        "p95_wall_ms": 554.1064810095122,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 94.95451457841222
+      }
+    },
+    {
+      "model": "qwen3.6:35b",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 970.983248000266,
+          "total_duration_ms": 970.01447,
+          "load_duration_ms": 112.141762,
+          "prompt_eval_duration_ms": 108.284323,
+          "eval_duration_ms": 701.719551,
+          "eval_count": 98,
+          "prompt_eval_count": 481,
+          "raw_tool_calls": [
+            {
+              "id": "call_3onflrwk",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 962.5109750049887,
+          "total_duration_ms": 961.617434,
+          "load_duration_ms": 108.015306,
+          "prompt_eval_duration_ms": 109.14588,
+          "eval_duration_ms": 697.144006,
+          "eval_count": 98,
+          "prompt_eval_count": 481,
+          "raw_tool_calls": [
+            {
+              "id": "call_5g2j4ar9",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2734.5327280054335,
+          "total_duration_ms": 2733.504627,
+          "load_duration_ms": 123.607693,
+          "prompt_eval_duration_ms": 105.994032,
+          "eval_duration_ms": 2353.771398,
+          "eval_count": 329,
+          "prompt_eval_count": 486,
+          "raw_tool_calls": [
+            {
+              "id": "call_045vt2ht",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2739.85380299564,
+          "total_duration_ms": 2738.885156,
+          "load_duration_ms": 124.09513,
+          "prompt_eval_duration_ms": 105.709367,
+          "eval_duration_ms": 2372.335407,
+          "eval_count": 329,
+          "prompt_eval_count": 486,
+          "raw_tool_calls": [
+            {
+              "id": "call_g2tiimvf",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1038.7571589963045,
+          "total_duration_ms": 1037.750224,
+          "load_duration_ms": 108.737804,
+          "prompt_eval_duration_ms": 105.812495,
+          "eval_duration_ms": 773.997137,
+          "eval_count": 108,
+          "prompt_eval_count": 485,
+          "raw_tool_calls": [
+            {
+              "id": "call_xptviwtt",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1057.627522997791,
+          "total_duration_ms": 1056.581378,
+          "load_duration_ms": 115.788958,
+          "prompt_eval_duration_ms": 104.848491,
+          "eval_duration_ms": 781.115761,
+          "eval_count": 108,
+          "prompt_eval_count": 485,
+          "raw_tool_calls": [
+            {
+              "id": "call_rnfdy4ut",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 3882.9846709995763,
+          "total_duration_ms": 3881.921528,
+          "load_duration_ms": 107.983131,
+          "prompt_eval_duration_ms": 105.78177,
+          "eval_duration_ms": 3470.922222,
+          "eval_count": 484,
+          "prompt_eval_count": 477,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 3870.5225129961036,
+          "total_duration_ms": 3869.436082,
+          "load_duration_ms": 114.228112,
+          "prompt_eval_duration_ms": 105.262638,
+          "eval_duration_ms": 3454.131867,
+          "eval_count": 484,
+          "prompt_eval_count": 477,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 2157.221577499513,
+        "p50_wall_ms": 1896.0801255016122,
+        "p95_wall_ms": 3882.9846709995763,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 139.50668301172095
+      }
+    },
+    {
+      "model": "mistral-medium-3.5:latest",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1397.7452069957508,
+          "total_duration_ms": 1396.698488,
+          "load_duration_ms": 85.467444,
+          "prompt_eval_duration_ms": 307.756537,
+          "eval_duration_ms": 989.559932,
+          "eval_count": 19,
+          "prompt_eval_count": 295,
+          "raw_tool_calls": [
+            {
+              "id": "call_b7t941u5",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1140.1071380096255,
+          "total_duration_ms": 1139.168953,
+          "load_duration_ms": 84.732354,
+          "prompt_eval_duration_ms": 56.139211,
+          "eval_duration_ms": 984.510087,
+          "eval_count": 19,
+          "prompt_eval_count": 295,
+          "raw_tool_calls": [
+            {
+              "id": "call_pzgi6pis",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2273.703547005425,
+          "total_duration_ms": 2272.885013,
+          "load_duration_ms": 82.68692,
+          "prompt_eval_duration_ms": 81.115327,
+          "eval_duration_ms": 2082.388577,
+          "eval_count": 39,
+          "prompt_eval_count": 302,
+          "raw_tool_calls": [
+            {
+              "id": "call_8lkdt3uv",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2023-10-28",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 2242.7916349988664,
+          "total_duration_ms": 2242.05971,
+          "load_duration_ms": 82.555217,
+          "prompt_eval_duration_ms": 55.487811,
+          "eval_duration_ms": 2079.932154,
+          "eval_count": 39,
+          "prompt_eval_count": 302,
+          "raw_tool_calls": [
+            {
+              "id": "call_ywyngwka",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "2023-10-28",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1442.997075006133,
+          "total_duration_ms": 1442.265673,
+          "load_duration_ms": 81.043892,
+          "prompt_eval_duration_ms": 79.757016,
+          "eval_duration_ms": 1265.418066,
+          "eval_count": 24,
+          "prompt_eval_count": 299,
+          "raw_tool_calls": [
+            {
+              "id": "call_srgrqxaq",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 1412.081958987983,
+          "total_duration_ms": 1411.471796,
+          "load_duration_ms": 79.098195,
+          "prompt_eval_duration_ms": 56.079265,
+          "eval_duration_ms": 1260.131363,
+          "eval_count": 24,
+          "prompt_eval_count": 299,
+          "raw_tool_calls": [
+            {
+              "id": "call_8qypyr4t",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 993.414569995366,
+          "total_duration_ms": 992.809298,
+          "load_duration_ms": 81.553653,
+          "prompt_eval_duration_ms": 72.96077,
+          "eval_duration_ms": 824.251507,
+          "eval_count": 16,
+          "prompt_eval_count": 288,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 970.0760010018712,
+          "total_duration_ms": 969.467771,
+          "load_duration_ms": 80.151979,
+          "prompt_eval_duration_ms": 55.644686,
+          "eval_duration_ms": 821.995819,
+          "eval_count": 16,
+          "prompt_eval_count": 288,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 1484.1146415001276,
+        "p50_wall_ms": 1404.9135829918669,
+        "p95_wall_ms": 2273.703547005425,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 19.10832062437285
+      }
+    },
+    {
+      "model": "llama3.2:latest",
+      "runs": [
+        {
+          "task_id": "weather_rome",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 175.07485298847314,
+          "total_duration_ms": 174.262426,
+          "load_duration_ms": 76.62195,
+          "prompt_eval_duration_ms": 16.109691,
+          "eval_duration_ms": 59.822034,
+          "eval_count": 25,
+          "prompt_eval_count": 306,
+          "raw_tool_calls": [
+            {
+              "id": "call_5b26zn2i",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "weather_rome",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 169.16460600623395,
+          "total_duration_ms": 168.436716,
+          "load_duration_ms": 85.299641,
+          "prompt_eval_duration_ms": 2.660723,
+          "eval_duration_ms": 59.040585,
+          "eval_count": 25,
+          "prompt_eval_count": 306,
+          "raw_tool_calls": [
+            {
+              "id": "call_6cxohduv",
+              "function": {
+                "index": 0,
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Roma",
+                  "unit": "celsius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 195.93320098647382,
+          "total_duration_ms": 195.403364,
+          "load_duration_ms": 74.410457,
+          "prompt_eval_duration_ms": 7.700499,
+          "eval_duration_ms": 84.438493,
+          "eval_count": 35,
+          "prompt_eval_count": 312,
+          "raw_tool_calls": [
+            {
+              "id": "call_xomtj1ka",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "meeting_booking",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 189.26681100856513,
+          "total_duration_ms": 188.794402,
+          "load_duration_ms": 74.08842,
+          "prompt_eval_duration_ms": 2.515845,
+          "eval_duration_ms": 83.279678,
+          "eval_count": 35,
+          "prompt_eval_count": 312,
+          "raw_tool_calls": [
+            {
+              "id": "call_xususco9",
+              "function": {
+                "index": 0,
+                "name": "book_meeting",
+                "arguments": {
+                  "date": "domani",
+                  "time": "15:30",
+                  "person": "Giulia Rossi"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 184.36397598998155,
+          "total_duration_ms": 183.887188,
+          "load_duration_ms": 76.415463,
+          "prompt_eval_duration_ms": 29.409914,
+          "eval_duration_ms": 57.806724,
+          "eval_count": 24,
+          "prompt_eval_count": 304,
+          "raw_tool_calls": [
+            {
+              "id": "call_693ce8ui",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "invoice_lookup",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Tool e argomenti validi",
+          "wall_ms": 155.07948299637064,
+          "total_duration_ms": 154.60142,
+          "load_duration_ms": 75.605934,
+          "prompt_eval_duration_ms": 2.518809,
+          "eval_duration_ms": 56.525374,
+          "eval_count": 24,
+          "prompt_eval_count": 304,
+          "raw_tool_calls": [
+            {
+              "id": "call_qr1g9i0n",
+              "function": {
+                "index": 0,
+                "name": "search_invoice",
+                "arguments": {
+                  "invoice_id": "INV-2026-0042"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 1,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 142.89449600619264,
+          "total_duration_ms": 142.45907,
+          "load_duration_ms": 74.899921,
+          "prompt_eval_duration_ms": 6.142042,
+          "eval_duration_ms": 45.21292,
+          "eval_count": 19,
+          "prompt_eval_count": 298,
+          "raw_tool_calls": null
+        },
+        {
+          "task_id": "smalltalk_no_tool",
+          "run": 2,
+          "tool_call_ok": true,
+          "validation_note": "Corretto: nessun tool chiamato",
+          "wall_ms": 141.84117599506862,
+          "total_duration_ms": 141.139668,
+          "load_duration_ms": 75.484296,
+          "prompt_eval_duration_ms": 2.63832,
+          "eval_duration_ms": 45.203455,
+          "eval_count": 19,
+          "prompt_eval_count": 298,
+          "raw_tool_calls": null
+        }
+      ],
+      "metrics": {
+        "avg_wall_ms": 169.20232524716994,
+        "p50_wall_ms": 172.11972949735355,
+        "p95_wall_ms": 195.93320098647382,
+        "tool_call_success_rate": 1.0,
+        "tool_policy_success_rate": 1.0,
+        "avg_tokens_per_sec": 419.5547078027623
+      }
+    }
+  ],
+  "ranking": [
+    {
+      "model": "llama3.2:latest",
+      "score": 1.0,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 169.20232524716994,
+      "avg_tokens_per_sec": 419.5547078027623
+    },
+    {
+      "model": "qwen2.5:7b",
+      "score": 0.9914065369352014,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 228.86369412663043,
+      "avg_tokens_per_sec": 249.75485566084043
+    },
+    {
+      "model": "llama3.1:8b",
+      "score": 0.9843943317696034,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 277.54694974646554,
+      "avg_tokens_per_sec": 233.08481389910943
+    },
+    {
+      "model": "mistral-small:latest",
+      "score": 0.9670088586887065,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 398.24812863116676,
+      "avg_tokens_per_sec": 94.95451457841222
+    },
+    {
+      "model": "gpt-oss:20b",
+      "score": 0.9536405990862352,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 491.05921787486295,
+      "avg_tokens_per_sec": 241.1613881670527
+    },
+    {
+      "model": "gpt-oss:120b",
+      "score": 0.9318390136789265,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 642.4198997483472,
+      "avg_tokens_per_sec": 167.2460909156709
+    },
+    {
+      "model": "mistral-medium-3.5:latest",
+      "score": 0.8106035675111936,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 1484.1146415001276,
+      "avg_tokens_per_sec": 19.10832062437285
+    },
+    {
+      "model": "qwen3.6:35b",
+      "score": 0.7136510553276891,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 2157.221577499513,
+      "avg_tokens_per_sec": 139.50668301172095
+    },
+    {
+      "model": "gemma4:31b",
+      "score": 0.65,
+      "tool_policy_success_rate": 1.0,
+      "avg_wall_ms": 2599.1282992526976,
+      "avg_tokens_per_sec": 59.61522058843536
+    }
+  ]
+}
