@@ -1,0 +1,1015 @@
+{
+  "generated_at_utc": "2026-05-10T10:29:49.349606+00:00",
+  "source_terminal": "/home/user/.cursor/projects/home-user-sophyai-voice-agent/terminals/726964.txt",
+  "note": "Report preliminare costruito dai log parziali del benchmark concorrenza in corso.",
+  "ranking_completed_models": [
+    {
+      "model": "gemma4:31b",
+      "max_stable_level": 12,
+      "best_rps_stable": 0.17,
+      "last_level_seen": 12
+    },
+    {
+      "model": "qwen2.5:7b",
+      "max_stable_level": 7,
+      "best_rps_stable": 22.28,
+      "last_level_seen": 12
+    },
+    {
+      "model": "llama3.1:8b",
+      "max_stable_level": 6,
+      "best_rps_stable": 12.01,
+      "last_level_seen": 12
+    },
+    {
+      "model": "mistral-small:latest",
+      "max_stable_level": 5,
+      "best_rps_stable": 5.05,
+      "last_level_seen": 12
+    },
+    {
+      "model": "gpt-oss:120b",
+      "max_stable_level": 5,
+      "best_rps_stable": 0.76,
+      "last_level_seen": 12
+    },
+    {
+      "model": "gpt-oss:20b",
+      "max_stable_level": 3,
+      "best_rps_stable": 0.9,
+      "last_level_seen": 12
+    }
+  ],
+  "models": [
+    {
+      "model": "gemma4:31b",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 12,
+      "best_rps": 0.17,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 58570,
+        "p95_ms": 76375,
+        "rps": 0.16,
+        "stable": true
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 46942,
+          "p95_ms": 79903,
+          "rps": 0.02,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 54204,
+          "p95_ms": 100160,
+          "rps": 0.04,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 15133,
+          "p95_ms": 18516,
+          "rps": 0.16,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 19560,
+          "p95_ms": 24383,
+          "rps": 0.17,
+          "stable": true
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 24675,
+          "p95_ms": 32947,
+          "rps": 0.16,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 38008,
+          "p95_ms": 48569,
+          "rps": 0.12,
+          "stable": true
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 41644,
+          "p95_ms": 53875,
+          "rps": 0.13,
+          "stable": true
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 47929,
+          "p95_ms": 62124,
+          "rps": 0.13,
+          "stable": true
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 50887,
+          "p95_ms": 66550,
+          "rps": 0.14,
+          "stable": true
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 61596,
+          "p95_ms": 81002,
+          "rps": 0.13,
+          "stable": true
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 68921,
+          "p95_ms": 92323,
+          "rps": 0.12,
+          "stable": true
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 58570,
+          "p95_ms": 76375,
+          "rps": 0.16,
+          "stable": true
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:20b",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 3,
+      "best_rps": 0.9,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 13901,
+        "p95_ms": 19648,
+        "rps": 0.63,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 1223,
+          "p95_ms": 1231,
+          "rps": 0.82,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 1977,
+          "p95_ms": 2308,
+          "rps": 0.89,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 2805,
+          "p95_ms": 3419,
+          "rps": 0.9,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 5017,
+          "p95_ms": 7057,
+          "rps": 0.64,
+          "stable": false
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 4784,
+          "p95_ms": 7405,
+          "rps": 0.77,
+          "stable": false
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 7237,
+          "p95_ms": 18385,
+          "rps": 0.48,
+          "stable": false
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 6960,
+          "p95_ms": 10813,
+          "rps": 0.73,
+          "stable": false
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 14675,
+          "p95_ms": 30215,
+          "rps": 0.4,
+          "stable": false
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 8817,
+          "p95_ms": 15299,
+          "rps": 0.71,
+          "stable": false
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 12991,
+          "p95_ms": 18156,
+          "rps": 0.58,
+          "stable": false
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 15704,
+          "p95_ms": 22171,
+          "rps": 0.56,
+          "stable": false
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 13901,
+          "p95_ms": 19648,
+          "rps": 0.63,
+          "stable": false
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:7b",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 7,
+      "best_rps": 22.28,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 406,
+        "p95_ms": 554,
+        "rps": 23.02,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 120,
+          "p95_ms": 121,
+          "rps": 8.34,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 123,
+          "p95_ms": 166,
+          "rps": 15.08,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 136,
+          "p95_ms": 194,
+          "rps": 19.41,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 164,
+          "p95_ms": 229,
+          "rps": 20.55,
+          "stable": true
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 201,
+          "p95_ms": 291,
+          "rps": 20.94,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 227,
+          "p95_ms": 324,
+          "rps": 21.9,
+          "stable": true
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 256,
+          "p95_ms": 361,
+          "rps": 22.28,
+          "stable": true
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 288,
+          "p95_ms": 406,
+          "rps": 22.59,
+          "stable": false
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 306,
+          "p95_ms": 424,
+          "rps": 23.67,
+          "stable": false
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 363,
+          "p95_ms": 502,
+          "rps": 21.99,
+          "stable": false
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 383,
+          "p95_ms": 516,
+          "rps": 21.54,
+          "stable": false
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 406,
+          "p95_ms": 554,
+          "rps": 23.02,
+          "stable": false
+        }
+      ]
+    },
+    {
+      "model": "llama3.1:8b",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 6,
+      "best_rps": 12.01,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 753,
+        "p95_ms": 1000,
+        "rps": 12.51,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 174,
+          "p95_ms": 188,
+          "rps": 5.75,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 176,
+          "p95_ms": 230,
+          "rps": 10.23,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 231,
+          "p95_ms": 308,
+          "rps": 11.15,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 290,
+          "p95_ms": 387,
+          "rps": 11.53,
+          "stable": true
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 348,
+          "p95_ms": 467,
+          "rps": 11.78,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 405,
+          "p95_ms": 542,
+          "rps": 12.01,
+          "stable": true
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 471,
+          "p95_ms": 637,
+          "rps": 11.97,
+          "stable": false
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 512,
+          "p95_ms": 683,
+          "rps": 12.41,
+          "stable": false
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 568,
+          "p95_ms": 764,
+          "rps": 12.52,
+          "stable": false
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 639,
+          "p95_ms": 862,
+          "rps": 12.38,
+          "stable": false
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 698,
+          "p95_ms": 934,
+          "rps": 12.42,
+          "stable": false
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 753,
+          "p95_ms": 1000,
+          "rps": 12.51,
+          "stable": false
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:120b",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 5,
+      "best_rps": 0.76,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 20145,
+        "p95_ms": 28742,
+        "rps": 0.49,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 3169,
+          "p95_ms": 3288,
+          "rps": 0.32,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 4818,
+          "p95_ms": 6146,
+          "rps": 0.39,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 4651,
+          "p95_ms": 6579,
+          "rps": 0.52,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 6845,
+          "p95_ms": 11037,
+          "rps": 0.44,
+          "stable": false
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 5403,
+          "p95_ms": 7701,
+          "rps": 0.76,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 12207,
+          "p95_ms": 18044,
+          "rps": 0.41,
+          "stable": false
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 12294,
+          "p95_ms": 17833,
+          "rps": 0.47,
+          "stable": false
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 14844,
+          "p95_ms": 20624,
+          "rps": 0.41,
+          "stable": false
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 15105,
+          "p95_ms": 21463,
+          "rps": 0.46,
+          "stable": false
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 18063,
+          "p95_ms": 24200,
+          "rps": 0.45,
+          "stable": false
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 14302,
+          "p95_ms": 19355,
+          "rps": 0.6,
+          "stable": false
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 20145,
+          "p95_ms": 28742,
+          "rps": 0.49,
+          "stable": false
+        }
+      ]
+    },
+    {
+      "model": "mistral-small:latest",
+      "status": "completed",
+      "levels_completed": 12,
+      "max_level_seen": 12,
+      "max_stable_level": 5,
+      "best_rps": 5.05,
+      "last": {
+        "level": 12,
+        "req": 24,
+        "ok": 24,
+        "success_pct": 100.0,
+        "avg_ms": 1753,
+        "p95_ms": 2286,
+        "rps": 5.4,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 279,
+          "p95_ms": 339,
+          "rps": 3.58,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 367,
+          "p95_ms": 428,
+          "rps": 4.79,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 6,
+          "success_pct": 100.0,
+          "avg_ms": 506,
+          "p95_ms": 609,
+          "rps": 4.94,
+          "stable": true
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 8,
+          "success_pct": 100.0,
+          "avg_ms": 659,
+          "p95_ms": 814,
+          "rps": 4.93,
+          "stable": true
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 786,
+          "p95_ms": 1016,
+          "rps": 5.05,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 982,
+          "p95_ms": 1251,
+          "rps": 4.86,
+          "stable": false
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 14,
+          "success_pct": 100.0,
+          "avg_ms": 1127,
+          "p95_ms": 1445,
+          "rps": 4.9,
+          "stable": false
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 1246,
+          "p95_ms": 1622,
+          "rps": 4.99,
+          "stable": false
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 1313,
+          "p95_ms": 1696,
+          "rps": 5.36,
+          "stable": false
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 1599,
+          "p95_ms": 2170,
+          "rps": 4.76,
+          "stable": false
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 22,
+          "success_pct": 100.0,
+          "avg_ms": 1637,
+          "p95_ms": 2138,
+          "rps": 5.32,
+          "stable": false
+        },
+        {
+          "level": 12,
+          "req": 24,
+          "ok": 24,
+          "success_pct": 100.0,
+          "avg_ms": 1753,
+          "p95_ms": 2286,
+          "rps": 5.4,
+          "stable": false
+        }
+      ]
+    },
+    {
+      "model": "qwen3.6:35b",
+      "status": "in_progress",
+      "levels_completed": 11,
+      "max_level_seen": 11,
+      "max_stable_level": 10,
+      "best_rps": 0.14,
+      "last": {
+        "level": 11,
+        "req": 22,
+        "ok": 20,
+        "success_pct": 90.9,
+        "avg_ms": 61337,
+        "p95_ms": 114782,
+        "rps": 0.1,
+        "stable": false
+      },
+      "levels": [
+        {
+          "level": 1,
+          "req": 2,
+          "ok": 2,
+          "success_pct": 100.0,
+          "avg_ms": 81601,
+          "p95_ms": 97029,
+          "rps": 0.01,
+          "stable": true
+        },
+        {
+          "level": 2,
+          "req": 4,
+          "ok": 4,
+          "success_pct": 100.0,
+          "avg_ms": 96996,
+          "p95_ms": 101554,
+          "rps": 0.02,
+          "stable": true
+        },
+        {
+          "level": 3,
+          "req": 6,
+          "ok": 4,
+          "success_pct": 66.7,
+          "avg_ms": 113318,
+          "p95_ms": 118369,
+          "rps": 0.02,
+          "stable": false
+        },
+        {
+          "level": 4,
+          "req": 8,
+          "ok": 6,
+          "success_pct": 75.0,
+          "avg_ms": 47439,
+          "p95_ms": 116402,
+          "rps": 0.04,
+          "stable": false
+        },
+        {
+          "level": 5,
+          "req": 10,
+          "ok": 10,
+          "success_pct": 100.0,
+          "avg_ms": 30278,
+          "p95_ms": 47285,
+          "rps": 0.12,
+          "stable": true
+        },
+        {
+          "level": 6,
+          "req": 12,
+          "ok": 12,
+          "success_pct": 100.0,
+          "avg_ms": 34954,
+          "p95_ms": 50573,
+          "rps": 0.14,
+          "stable": true
+        },
+        {
+          "level": 7,
+          "req": 14,
+          "ok": 12,
+          "success_pct": 85.7,
+          "avg_ms": 40532,
+          "p95_ms": 73456,
+          "rps": 0.07,
+          "stable": false
+        },
+        {
+          "level": 8,
+          "req": 16,
+          "ok": 16,
+          "success_pct": 100.0,
+          "avg_ms": 55070,
+          "p95_ms": 80679,
+          "rps": 0.11,
+          "stable": true
+        },
+        {
+          "level": 9,
+          "req": 18,
+          "ok": 18,
+          "success_pct": 100.0,
+          "avg_ms": 64467,
+          "p95_ms": 89843,
+          "rps": 0.11,
+          "stable": true
+        },
+        {
+          "level": 10,
+          "req": 20,
+          "ok": 20,
+          "success_pct": 100.0,
+          "avg_ms": 66527,
+          "p95_ms": 91935,
+          "rps": 0.12,
+          "stable": true
+        },
+        {
+          "level": 11,
+          "req": 22,
+          "ok": 20,
+          "success_pct": 90.9,
+          "avg_ms": 61337,
+          "p95_ms": 114782,
+          "rps": 0.1,
+          "stable": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "generated_at_utc": "2026-05-10T13:38:23.054566+00:00",
+  "ollama_url": "http://127.0.0.1:11434",
+  "max_workers": 20,
+  "rounds_per_level": 1,
+  "timeout_s": 120,
+  "min_success_rate": 1.0,
+  "degradation_factor": 3.0,
+  "realtime_avg_threshold_ms": 800.0,
+  "realtime_p95_threshold_ms": 1500.0,
+  "stop_on_realtime_degradation": false,
+  "results": [
+    {
+      "model": "qwen3.6:35b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 1,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 11387.563570999191,
+          "p95_wall_ms": 11387.563570999191,
+          "throughput_rps": 0.0878066411444407,
+          "stable": true,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 2,
+          "requests_total": 2,
+          "ok_count": 2,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 18933.741909000673,
+          "p95_wall_ms": 24796.086966001894,
+          "throughput_rps": 0.08065405508456348,
+          "stable": true,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 3,
+          "requests_total": 3,
+          "ok_count": 3,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 20055.093793334283,
+          "p95_wall_ms": 26223.9228010003,
+          "throughput_rps": 0.11439685111418081,
+          "stable": true,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 4,
+          "requests_total": 4,
+          "ok_count": 4,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 22844.483838998713,
+          "p95_wall_ms": 34397.97481599089,
+          "throughput_rps": 0.1162792519235986,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 5,
+          "requests_total": 5,
+          "ok_count": 5,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 20612.680453201756,
+          "p95_wall_ms": 36845.26897300384,
+          "throughput_rps": 0.13569849185809088,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 6,
+          "requests_total": 6,
+          "ok_count": 6,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 30840.781174335763,
+          "p95_wall_ms": 48845.88894399349,
+          "throughput_rps": 0.12282888248457301,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 7,
+          "requests_total": 7,
+          "ok_count": 7,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 25874.912378714984,
+          "p95_wall_ms": 43721.65977899567,
+          "throughput_rps": 0.1600987899592025,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 8,
+          "requests_total": 8,
+          "ok_count": 8,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 42088.44740325185,
+          "p95_wall_ms": 72041.86656000093,
+          "throughput_rps": 0.11104254231501128,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 9,
+          "requests_total": 9,
+          "ok_count": 9,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 41483.527500444325,
+          "p95_wall_ms": 82118.79531100567,
+          "throughput_rps": 0.10959522271483987,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 10,
+          "requests_total": 10,
+          "ok_count": 10,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 44430.85814439837,
+          "p95_wall_ms": 88993.18638299883,
+          "throughput_rps": 0.11236544539572922,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 11,
+          "requests_total": 11,
+          "ok_count": 11,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 43184.61023154404,
+          "p95_wall_ms": 74699.95923800161,
+          "throughput_rps": 0.14725231866699331,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 12,
+          "requests_total": 12,
+          "ok_count": 12,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 61844.154093999045,
+          "p95_wall_ms": 105500.0211539882,
+          "throughput_rps": 0.11373813024786941,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": []
+        },
+        {
+          "level": 13,
+          "requests_total": 13,
+          "ok_count": 9,
+          "error_count": 4,
+          "success_rate": 0.6923076923076923,
+          "avg_wall_ms": 69625.9479809976,
+          "p95_wall_ms": 113889.33586799249,
+          "throughput_rps": 0.07493362154441384,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 14,
+          "requests_total": 14,
+          "ok_count": 12,
+          "error_count": 2,
+          "success_rate": 0.8571428571428571,
+          "avg_wall_ms": 69102.25346241471,
+          "p95_wall_ms": 118342.63957300573,
+          "throughput_rps": 0.09991269995040397,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 15,
+          "requests_total": 15,
+          "ok_count": 7,
+          "error_count": 8,
+          "success_rate": 0.4666666666666667,
+          "avg_wall_ms": 36271.26859814702,
+          "p95_wall_ms": 56602.191647005384,
+          "throughput_rps": 0.05828132656758132,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 16,
+          "requests_total": 16,
+          "ok_count": 0,
+          "error_count": 16,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 17,
+          "requests_total": 17,
+          "ok_count": 13,
+          "error_count": 4,
+          "success_rate": 0.7647058823529411,
+          "avg_wall_ms": 58087.23077361692,
+          "p95_wall_ms": 115221.4687349915,
+          "throughput_rps": 0.10823629646383892,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 18,
+          "requests_total": 18,
+          "ok_count": 10,
+          "error_count": 8,
+          "success_rate": 0.5555555555555556,
+          "avg_wall_ms": 63498.68499929871,
+          "p95_wall_ms": 118240.70400299388,
+          "throughput_rps": 0.08325820638010464,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 19,
+          "requests_total": 19,
+          "ok_count": 12,
+          "error_count": 7,
+          "success_rate": 0.631578947368421,
+          "avg_wall_ms": 58179.097251165025,
+          "p95_wall_ms": 114056.52234799345,
+          "throughput_rps": 0.09990963066836435,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        },
+        {
+          "level": 20,
+          "requests_total": 20,
+          "ok_count": 13,
+          "error_count": 7,
+          "success_rate": 0.65,
+          "avg_wall_ms": 58158.023614077065,
+          "p95_wall_ms": 111978.0605279957,
+          "throughput_rps": 0.10823513813712722,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out",
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 20,
+        "max_stable_concurrency": 3,
+        "recommended_concurrency": 2,
+        "best_stable_throughput_rps": 0.11439685111418081,
+        "baseline_avg_ms": 11387.563570999191,
+        "baseline_p95_ms": 11387.563570999191,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": false,
+        "stopped_early_for_realtime": false,
+        "tested_levels": 20,
+        "stop_reason": "",
+        "stability_notes": [
+          "livello=4: latenza oltre limite (avg 22844>34163 o p95 34398>34163)",
+          "livello=5: latenza oltre limite (avg 20613>34163 o p95 36845>34163)",
+          "livello=6: latenza oltre limite (avg 30841>34163 o p95 48846>34163)",
+          "livello=7: latenza oltre limite (avg 25875>34163 o p95 43722>34163)",
+          "livello=8: latenza oltre limite (avg 42088>34163 o p95 72042>34163)"
+        ]
+      }
+    }
+  ],
+  "ranking": [
+    {
+      "model": "qwen3.6:35b",
+      "max_stable_concurrency": 3,
+      "recommended_concurrency": 2,
+      "best_stable_throughput_rps": 0.11439685111418081,
+      "baseline_avg_ms": 11387.563570999191
+    }
+  ]
+}

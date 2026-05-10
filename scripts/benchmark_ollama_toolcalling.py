@@ -1037,6 +1037,9 @@ def benchmark_concurrency_model(
     timeout_s: int,
     min_success_rate: float,
     degradation_factor: float,
+    realtime_avg_threshold_ms: float,
+    realtime_p95_threshold_ms: float,
+    stop_on_realtime_degradation: bool,
 ) -> dict[str, Any]:
     for _ in range(warmups):
         call_chat(
@@ -1054,6 +1057,8 @@ def benchmark_concurrency_model(
     baseline_p95_ms: float | None = None
     max_stable_concurrency = 0
     stable_reasons: list[str] = []
+    stopped_early_for_realtime = False
+    stop_reason = ""
 
     for level in range(1, max(1, max_workers) + 1):
         started = time.perf_counter()
@@ -1102,6 +1107,12 @@ def benchmark_concurrency_model(
         baseline_p95 = baseline_p95_ms or baseline_avg
         avg_limit = baseline_avg * degradation_factor
         p95_limit = baseline_p95 * degradation_factor
+        realtime_compatible = (
+            avg_latency_ms is not None
+            and p95_latency_ms is not None
+            and avg_latency_ms <= realtime_avg_threshold_ms
+            and p95_latency_ms <= realtime_p95_threshold_ms
+        )
 
         stable = (
             success_rate >= min_success_rate
@@ -1126,7 +1137,7 @@ def benchmark_concurrency_model(
             f"[CONCURRENCY][{model}] level={level} req={requests_total} "
             f"ok={ok_count} success={success_rate:.1%} "
             f"avg={format_ms(avg_latency_ms)} p95={format_ms(p95_latency_ms)} "
-            f"rps={throughput_rps:.2f} stable={stable}"
+            f"rps={throughput_rps:.2f} stable={stable} realtime={realtime_compatible}"
         )
 
         levels.append(
@@ -1140,9 +1151,21 @@ def benchmark_concurrency_model(
                 "p95_wall_ms": p95_latency_ms,
                 "throughput_rps": throughput_rps,
                 "stable": stable,
+                "realtime_compatible": realtime_compatible,
                 "sample_errors": errors[:3],
             }
         )
+
+        if stop_on_realtime_degradation and not realtime_compatible:
+            stopped_early_for_realtime = True
+            stop_reason = (
+                f"livello={level}: fuori soglia realtime "
+                f"(avg {format_ms(avg_latency_ms)} > {realtime_avg_threshold_ms:.0f} ms "
+                f"o p95 {format_ms(p95_latency_ms)} > {realtime_p95_threshold_ms:.0f} ms)"
+            )
+            stable_reasons.append(stop_reason)
+            print(f"[CONCURRENCY][{model}] early-stop: {stop_reason}")
+            break
 
     stable_levels = [x for x in levels if x["stable"]]
     best_throughput = max((x["throughput_rps"] for x in stable_levels), default=0.0)
@@ -1160,6 +1183,12 @@ def benchmark_concurrency_model(
             "baseline_p95_ms": baseline_p95_ms,
             "min_success_rate": min_success_rate,
             "degradation_factor": degradation_factor,
+            "realtime_avg_threshold_ms": realtime_avg_threshold_ms,
+            "realtime_p95_threshold_ms": realtime_p95_threshold_ms,
+            "stop_on_realtime_degradation": stop_on_realtime_degradation,
+            "stopped_early_for_realtime": stopped_early_for_realtime,
+            "tested_levels": len(levels),
+            "stop_reason": stop_reason,
             "stability_notes": stable_reasons[:5],
         },
     }
@@ -1194,6 +1223,9 @@ def write_concurrency_markdown_report(
     max_workers: int,
     min_success_rate: float,
     degradation_factor: float,
+    realtime_avg_threshold_ms: float,
+    realtime_p95_threshold_ms: float,
+    stop_on_realtime_degradation: bool,
     results: list[dict[str, Any]],
     ranking: list[dict[str, Any]],
 ) -> None:
@@ -1206,6 +1238,10 @@ def write_concurrency_markdown_report(
     lines.append(f"- Round per livello: `{rounds_per_level}`")
     lines.append(f"- Soglia successo minima: `{min_success_rate:.1%}`")
     lines.append(f"- Fattore degrado latenza consentito: `{degradation_factor:.1f}x`")
+    lines.append(
+        f"- Soglia realtime avg/p95: `{realtime_avg_threshold_ms:.0f} ms / {realtime_p95_threshold_ms:.0f} ms`"
+    )
+    lines.append(f"- Early-stop su degrado realtime: `{stop_on_realtime_degradation}`")
     lines.append("")
     lines.append("## Ranking concorrenza stabile")
     lines.append("")
@@ -1228,6 +1264,12 @@ def write_concurrency_markdown_report(
         lines.append(
             f"- Baseline latency: **avg {format_ms(m['baseline_avg_ms'])}, p95 {format_ms(m['baseline_p95_ms'])}**"
         )
+        lines.append(f"- Tested levels: **{m.get('tested_levels', len(item.get('levels', [])))}**")
+        lines.append(
+            f"- Early-stop realtime: **{m.get('stopped_early_for_realtime', False)}**"
+        )
+        if m.get("stop_reason"):
+            lines.append(f"- Stop reason: **{m['stop_reason']}**")
         if m.get("stability_notes"):
             lines.append("- Note stabilita:")
             for note in m["stability_notes"]:
@@ -1239,7 +1281,7 @@ def write_concurrency_markdown_report(
                 f"- level={lvl['level']}, req={lvl['requests_total']}, "
                 f"success={lvl['success_rate']:.1%}, avg={format_ms(lvl['avg_wall_ms'])}, "
                 f"p95={format_ms(lvl['p95_wall_ms'])}, rps={lvl['throughput_rps']:.2f}, "
-                f"stable={lvl['stable']}"
+                f"stable={lvl['stable']}, realtime={lvl.get('realtime_compatible')}"
             )
         lines.append("")
 
@@ -1619,6 +1661,28 @@ def parse_args() -> argparse.Namespace:
         help="Moltiplicatore massimo ammesso su avg e p95 rispetto al baseline (livello 1).",
     )
     parser.add_argument(
+        "--concurrency-realtime-avg-ms",
+        type=float,
+        default=REALTIME_AVG_TARGET_MS,
+        help="Soglia massima avg latency per considerare il livello compatibile realtime.",
+    )
+    parser.add_argument(
+        "--concurrency-realtime-p95-ms",
+        type=float,
+        default=REALTIME_P95_TARGET_MS,
+        help="Soglia massima p95 latency per considerare il livello compatibile realtime.",
+    )
+    parser.add_argument(
+        "--concurrency-stop-on-realtime-degradation",
+        action="store_true",
+        help="Forza early-stop quando esce dalle soglie realtime (default attivo).",
+    )
+    parser.add_argument(
+        "--no-concurrency-stop-on-realtime-degradation",
+        action="store_true",
+        help="Non interrompe il test anche se la latenza non e piu realtime.",
+    )
+    parser.add_argument(
         "--out-concurrency-json",
         default="benchmark/ollama_concurrency_results.json",
         help="Path output JSON benchmark concorrenza.",
@@ -1775,6 +1839,12 @@ def main() -> int:
         safe_timeout_s = max(10, args.concurrency_timeout_s)
         safe_min_success = max(0.1, min(1.0, args.concurrency_min_success_rate))
         safe_degradation = max(1.1, args.concurrency_degradation_factor)
+        safe_realtime_avg = max(50.0, args.concurrency_realtime_avg_ms)
+        safe_realtime_p95 = max(100.0, args.concurrency_realtime_p95_ms)
+        safe_stop_realtime = (
+            args.concurrency_stop_on_realtime_degradation
+            or not args.no_concurrency_stop_on_realtime_degradation
+        )
 
         for model in models:
             print(f"[INFO] Concurrency benchmark modello: {model}")
@@ -1788,6 +1858,9 @@ def main() -> int:
                 timeout_s=safe_timeout_s,
                 min_success_rate=safe_min_success,
                 degradation_factor=safe_degradation,
+                realtime_avg_threshold_ms=safe_realtime_avg,
+                realtime_p95_threshold_ms=safe_realtime_p95,
+                stop_on_realtime_degradation=safe_stop_realtime,
             )
             concurrency_results.append(model_result)
 
@@ -1804,6 +1877,9 @@ def main() -> int:
             "timeout_s": safe_timeout_s,
             "min_success_rate": safe_min_success,
             "degradation_factor": safe_degradation,
+            "realtime_avg_threshold_ms": safe_realtime_avg,
+            "realtime_p95_threshold_ms": safe_realtime_p95,
+            "stop_on_realtime_degradation": safe_stop_realtime,
             "results": concurrency_results,
             "ranking": concurrency_ranking,
         }
@@ -1818,6 +1894,9 @@ def main() -> int:
             max_workers=safe_max_workers,
             min_success_rate=safe_min_success,
             degradation_factor=safe_degradation,
+            realtime_avg_threshold_ms=safe_realtime_avg,
+            realtime_p95_threshold_ms=safe_realtime_p95,
+            stop_on_realtime_degradation=safe_stop_realtime,
             results=concurrency_results,
             ranking=concurrency_ranking,
         )

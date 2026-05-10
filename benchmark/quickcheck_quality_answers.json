@@ -1,0 +1,3256 @@
+{
+  "generated_at_utc": "2026-05-10T08:31:57.731446+00:00",
+  "ollama_url": "http://127.0.0.1:11434",
+  "judge_model": "llama3.2:latest",
+  "quality_repeats": 1,
+  "questions_file": "benchmark/receptionist_questions_50.json",
+  "questions_count": 50,
+  "system_prompt": "Sei Receptionist assistente vocale ultra veloce.\nPriorita assoluta velocita e sintesi.\n\nRegole fondamentali\nRisposte ultra brevi massimo due frasi e mai oltre trenta parole.\nVai dritto al punto senza preamboli saluti inutili o ripetizioni.\nRispondi nella stessa lingua dell utente.\n\nStile\nRispondi come receptionist professionale diretto chiaro utile.\nSe non sai qualcosa dillo chiaramente e proponi il prossimo passo.\nPreferisci risposte secche e precise.\n\nFormato tts\nNon usare simboli speciali.\nNon usare emoji.\nNon usare elenchi puntati scrivi in modo discorsivo.",
+  "questions": [
+    {
+      "id": "q01_checkin_time",
+      "question": "A che ora posso fare il check-in oggi?",
+      "intent": "checkin_info",
+      "required_points": [
+        "check in",
+        "orario"
+      ],
+      "forbidden_points": [
+        "garantito"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q02_checkout_time",
+      "question": "Qual e l orario massimo per il check-out?",
+      "intent": "checkout_info",
+      "required_points": [
+        "check out",
+        "orario"
+      ],
+      "forbidden_points": [
+        "mai"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q03_room_availability_tonight",
+      "question": "Avete una camera libera per stasera?",
+      "intent": "availability",
+      "required_points": [
+        "disponibil",
+        "data"
+      ],
+      "forbidden_points": [
+        "sempre disponibile"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q04_double_room_price",
+      "question": "Quanto costa una matrimoniale per una notte?",
+      "intent": "pricing",
+      "required_points": [
+        "tariff",
+        "dipende",
+        "date"
+      ],
+      "forbidden_points": [
+        "prezzo fisso sempre"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q05_breakfast_included",
+      "question": "La colazione e inclusa nella tariffa?",
+      "intent": "service_info",
+      "required_points": [
+        "colazione",
+        "inclus"
+      ],
+      "forbidden_points": [
+        "sempre inclusa"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q06_parking_available",
+      "question": "Avete parcheggio privato?",
+      "intent": "service_info",
+      "required_points": [
+        "parcheggio",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "illimitato"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q07_late_checkin",
+      "question": "Arrivo molto tardi, posso fare check-in dopo mezzanotte?",
+      "intent": "exception_checkin",
+      "required_points": [
+        "check in",
+        "tardi",
+        "confermare"
+      ],
+      "forbidden_points": [
+        "nessun problema sicuro"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q08_cancel_reservation",
+      "question": "Come posso cancellare la mia prenotazione?",
+      "intent": "cancellation",
+      "required_points": [
+        "cancell",
+        "prenotazione",
+        "policy"
+      ],
+      "forbidden_points": [
+        "nessuna penale mai"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q09_modify_booking_dates",
+      "question": "Posso spostare la prenotazione di due giorni?",
+      "intent": "modify_booking",
+      "required_points": [
+        "modifica",
+        "date",
+        "verifica"
+      ],
+      "forbidden_points": [
+        "sempre possibile"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q10_invoice_request",
+      "question": "Mi potete fare fattura intestata alla mia azienda?",
+      "intent": "billing",
+      "required_points": [
+        "fattura",
+        "dati fiscali"
+      ],
+      "forbidden_points": [
+        "non serve alcun dato"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q11_pet_policy",
+      "question": "Posso portare il mio cane in camera?",
+      "intent": "pet_policy",
+      "required_points": [
+        "animali",
+        "policy"
+      ],
+      "forbidden_points": [
+        "tutti gli animali gratis sempre"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q12_extra_bed",
+      "question": "E possibile aggiungere un letto extra?",
+      "intent": "room_setup",
+      "required_points": [
+        "letto extra",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "sempre disponibile"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q13_baby_cot",
+      "question": "Avete culla per neonato?",
+      "intent": "family_service",
+      "required_points": [
+        "culla",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "infinite culle"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q14_accessible_room",
+      "question": "Ci sono camere accessibili per sedia a rotelle?",
+      "intent": "accessibility",
+      "required_points": [
+        "accessibil",
+        "camera",
+        "verifica"
+      ],
+      "forbidden_points": [
+        "tutte le camere sono accessibili"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q15_wifi_info",
+      "question": "Il wifi e gratuito?",
+      "intent": "service_info",
+      "required_points": [
+        "wifi",
+        "gratuit"
+      ],
+      "forbidden_points": [
+        "internet perfetto garantito"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "q16_airport_transfer",
+      "question": "Organizzate transfer da e per aeroporto?",
+      "intent": "transport_service",
+      "required_points": [
+        "transfer",
+        "aeroporto",
+        "prenot"
+      ],
+      "forbidden_points": [
+        "sempre incluso"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q17_early_checkin",
+      "question": "Posso fare check-in alle dieci del mattino?",
+      "intent": "exception_checkin",
+      "required_points": [
+        "early check in",
+        "disponibil",
+        "confermare"
+      ],
+      "forbidden_points": [
+        "sempre possibile"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q18_late_checkout",
+      "question": "Mi servirebbe late check-out, e possibile?",
+      "intent": "exception_checkout",
+      "required_points": [
+        "late check out",
+        "disponibil",
+        "supplemento"
+      ],
+      "forbidden_points": [
+        "gratuito sempre"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q19_city_tax",
+      "question": "La tassa di soggiorno e inclusa?",
+      "intent": "pricing_policy",
+      "required_points": [
+        "tassa di soggiorno",
+        "inclus"
+      ],
+      "forbidden_points": [
+        "mai prevista"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q20_payment_methods",
+      "question": "Quali metodi di pagamento accettate?",
+      "intent": "payment",
+      "required_points": [
+        "pagamento",
+        "carta",
+        "contanti"
+      ],
+      "forbidden_points": [
+        "solo bitcoin"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q21_deposit_required",
+      "question": "Serve una caparra per confermare?",
+      "intent": "payment_policy",
+      "required_points": [
+        "caparra",
+        "conferma",
+        "policy"
+      ],
+      "forbidden_points": [
+        "mai richiesta"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q22_group_booking",
+      "question": "Siamo un gruppo di dodici persone, avete soluzioni?",
+      "intent": "group_booking",
+      "required_points": [
+        "gruppo",
+        "disponibil",
+        "preventivo"
+      ],
+      "forbidden_points": [
+        "nessun limite camere"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q23_quiet_room_request",
+      "question": "Potrei avere una camera silenziosa?",
+      "intent": "special_request",
+      "required_points": [
+        "richiesta",
+        "camera silenziosa",
+        "preferenza"
+      ],
+      "forbidden_points": [
+        "garantita al cento per cento"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q24_high_floor_request",
+      "question": "Vorrei un piano alto, si puo richiedere?",
+      "intent": "special_request",
+      "required_points": [
+        "richiesta",
+        "piano alto",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "sempre garantito"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "q25_non_smoking_room",
+      "question": "Avete camere non fumatori?",
+      "intent": "room_policy",
+      "required_points": [
+        "non fumatori",
+        "camera"
+      ],
+      "forbidden_points": [
+        "si puo fumare ovunque"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q26_connecting_rooms",
+      "question": "Ci sono camere comunicanti per famiglia?",
+      "intent": "family_room",
+      "required_points": [
+        "camere comunicanti",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "sempre disponibili"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q27_child_discount",
+      "question": "Fate sconti per bambini?",
+      "intent": "pricing_policy",
+      "required_points": [
+        "scont",
+        "bambin",
+        "policy"
+      ],
+      "forbidden_points": [
+        "sconto garantito"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q28_weekly_stay_discount",
+      "question": "Per una settimana c e una tariffa migliore?",
+      "intent": "pricing_negotiation",
+      "required_points": [
+        "soggiorno",
+        "tariffa",
+        "offerta"
+      ],
+      "forbidden_points": [
+        "prezzo bloccato senza verifica"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q29_business_trip_receipt",
+      "question": "Sono in trasferta lavoro, come ricevo ricevuta e fattura?",
+      "intent": "billing",
+      "required_points": [
+        "ricevuta",
+        "fattura",
+        "dati"
+      ],
+      "forbidden_points": [
+        "automatico senza dati"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q30_checkin_documents",
+      "question": "Che documenti devo portare al check-in?",
+      "intent": "checkin_requirements",
+      "required_points": [
+        "documento",
+        "check in"
+      ],
+      "forbidden_points": [
+        "nessun documento"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q31_booking_for_other_person",
+      "question": "Posso prenotare a nome di un altra persona?",
+      "intent": "booking_policy",
+      "required_points": [
+        "prenotazione",
+        "nome",
+        "dati"
+      ],
+      "forbidden_points": [
+        "non servono dati ospite"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q32_arrival_delay",
+      "question": "Il treno e in ritardo, arrivo verso le ventitre. Va bene?",
+      "intent": "arrival_update",
+      "required_points": [
+        "arrivo",
+        "ritardo",
+        "avvisare"
+      ],
+      "forbidden_points": [
+        "non importa mai l orario"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q33_cancel_free_window",
+      "question": "Entro quando posso cancellare senza penali?",
+      "intent": "cancellation",
+      "required_points": [
+        "cancellazione",
+        "penali",
+        "policy"
+      ],
+      "forbidden_points": [
+        "sempre gratis"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q34_no_show_policy",
+      "question": "Cosa succede se non mi presento?",
+      "intent": "cancellation",
+      "required_points": [
+        "no show",
+        "addebito",
+        "policy"
+      ],
+      "forbidden_points": [
+        "nessuna conseguenza"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q35_breakfast_time",
+      "question": "A che ora viene servita la colazione?",
+      "intent": "service_schedule",
+      "required_points": [
+        "colazione",
+        "orario"
+      ],
+      "forbidden_points": [
+        "ventiquattro ore su ventiquattro"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "q36_gluten_free_breakfast",
+      "question": "Avete opzioni senza glutine a colazione?",
+      "intent": "dietary_request",
+      "required_points": [
+        "senza glutine",
+        "colazione",
+        "richiesta"
+      ],
+      "forbidden_points": [
+        "sempre disponibile sicuro"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q37_luggage_storage",
+      "question": "Potete tenere le valigie dopo il check-out?",
+      "intent": "service_info",
+      "required_points": [
+        "bagagli",
+        "check out",
+        "deposito"
+      ],
+      "forbidden_points": [
+        "responsabilita zero assoluta"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q38_before_checkin_luggage",
+      "question": "Arrivo prima del check-in, posso lasciare le valigie?",
+      "intent": "service_info",
+      "required_points": [
+        "bagagli",
+        "prima del check in",
+        "deposito"
+      ],
+      "forbidden_points": [
+        "sempre garantito"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q39_noise_complaint",
+      "question": "La stanza accanto fa molto rumore, potete aiutarmi?",
+      "intent": "guest_support",
+      "required_points": [
+        "dispiace",
+        "intervenire",
+        "assistenza"
+      ],
+      "forbidden_points": [
+        "non possiamo fare nulla"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q40_room_too_cold",
+      "question": "La camera e troppo fredda, come risolviamo?",
+      "intent": "maintenance_support",
+      "required_points": [
+        "assistenza",
+        "camera",
+        "intervento"
+      ],
+      "forbidden_points": [
+        "arrangiati"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "q41_lost_item",
+      "question": "Ho dimenticato un caricatore in camera, come posso recuperarlo?",
+      "intent": "lost_found",
+      "required_points": [
+        "oggetto smarrito",
+        "verifica",
+        "contatto"
+      ],
+      "forbidden_points": [
+        "impossibile sempre"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q42_two_separate_beds",
+      "question": "Avrei bisogno di due letti separati, e fattibile?",
+      "intent": "room_setup",
+      "required_points": [
+        "letti separati",
+        "richiesta",
+        "disponibil"
+      ],
+      "forbidden_points": [
+        "sempre disponibili"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q43_honeymoon_note",
+      "question": "E il nostro anniversario, potete preparare qualcosa in camera?",
+      "intent": "special_request",
+      "required_points": [
+        "richiesta speciale",
+        "camera",
+        "confermare"
+      ],
+      "forbidden_points": [
+        "servizio gratuito garantito"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q44_restaurant_recommendation",
+      "question": "Mi consigliate un ristorante vicino?",
+      "intent": "local_info",
+      "required_points": [
+        "ristorante",
+        "vicino",
+        "preferenze"
+      ],
+      "forbidden_points": [
+        "invenzione indirizzi"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "q45_taxi_booking",
+      "question": "Potete chiamarmi un taxi per domani mattina?",
+      "intent": "transport_service",
+      "required_points": [
+        "taxi",
+        "orario",
+        "conferma"
+      ],
+      "forbidden_points": [
+        "prenotato senza dati"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q46_shuttle_station",
+      "question": "C e navetta per la stazione?",
+      "intent": "transport_service",
+      "required_points": [
+        "navetta",
+        "stazione",
+        "orari"
+      ],
+      "forbidden_points": [
+        "servizio continuo garantito"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q47_smoking_area",
+      "question": "Dove posso fumare senza problemi?",
+      "intent": "property_policy",
+      "required_points": [
+        "area fumatori",
+        "regole"
+      ],
+      "forbidden_points": [
+        "fuma ovunque"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "q48_pool_access",
+      "question": "La piscina e accessibile anche la sera?",
+      "intent": "facility_schedule",
+      "required_points": [
+        "piscina",
+        "orari",
+        "accesso"
+      ],
+      "forbidden_points": [
+        "sempre aperta"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q49_booking_channel",
+      "question": "Conviene prenotare dal sito o direttamente con voi?",
+      "intent": "booking_channel",
+      "required_points": [
+        "prenotazione diretta",
+        "tariffe",
+        "verifica"
+      ],
+      "forbidden_points": [
+        "prezzo migliore garantito sempre"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "q50_human_operator",
+      "question": "Vorrei parlare con una persona, mi puoi passare un operatore?",
+      "intent": "escalation",
+      "required_points": [
+        "operatore",
+        "contatto",
+        "assistenza"
+      ],
+      "forbidden_points": [
+        "rifiuto totale"
+      ],
+      "priority": "high"
+    }
+  ],
+  "results": [
+    {
+      "model": "llama3.2:latest",
+      "runs": [
+        {
+          "question_id": "q01_checkin_time",
+          "question": "A che ora posso fare il check-in oggi?",
+          "intent": "checkin_info",
+          "priority": "high",
+          "run": 1,
+          "answer": "Il check-in è disponibile dalle 8:00 alle 18:00. Per favore, procedi al bancone per effettuare la tua registrazione.",
+          "wall_ms": 259.2702760011889,
+          "ttft_ms": 83.16175699292216,
+          "stream_total_ms": 259.2702760011889,
+          "total_duration_ms": 258.861607,
+          "load_duration_ms": 74.048778,
+          "prompt_eval_duration_ms": 5.626689,
+          "eval_duration_ms": 155.101731,
+          "eval_count": 36,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 90.0,
+            "judge_latency_ms": 414.0350939997006,
+            "judge_raw": {
+              "score": 9,
+              "clarity": 10,
+              "usefulness": 10,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 51.0,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q02_checkout_time",
+          "question": "Qual e l orario massimo per il check-out?",
+          "intent": "checkout_info",
+          "priority": "high",
+          "run": 1,
+          "answer": "L'orario di check-out è fino alle 10:00 del giorno successivo, ma consiglio di prenotare con anticipo per assicurarti un posto disponibile.",
+          "wall_ms": 290.27693800162524,
+          "ttft_ms": 93.61845000239555,
+          "stream_total_ms": 290.27693800162524,
+          "total_duration_ms": 289.839885,
+          "load_duration_ms": 73.708211,
+          "prompt_eval_duration_ms": 16.371941,
+          "eval_duration_ms": 172.621383,
+          "eval_count": 41,
+          "prompt_eval_count": 205,
+          "rule_eval": {
+            "rule_score": 65.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "orario"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 412.65658699558116,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 70.25,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q03_room_availability_tonight",
+          "question": "Avete una camera libera per stasera?",
+          "intent": "availability",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, abbiamo una camera libera per stasera. Vorresti prenotarla?",
+          "wall_ms": 204.4805070036091,
+          "ttft_ms": 101.22291400330141,
+          "stream_total_ms": 204.4805070036091,
+          "total_duration_ms": 204.049207,
+          "load_duration_ms": 81.004493,
+          "prompt_eval_duration_ms": 16.209361,
+          "eval_duration_ms": 90.976776,
+          "eval_count": 22,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 588.0987800046569,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, abbiamo una camera libera per stasera."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, abbiamo una camera libera per stasera.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q04_double_room_price",
+          "question": "Quanto costa una matrimoniale per una notte?",
+          "intent": "pricing",
+          "priority": "high",
+          "run": 1,
+          "answer": "Il prezzo di una matrimonale per una notte varia a seconda del luogo e della durata dell'esperienza, ma generalmente può variare da 500 a 5.000 euro.",
+          "wall_ms": 310.0625709921587,
+          "ttft_ms": 91.92401799373329,
+          "stream_total_ms": 310.0625709921587,
+          "total_duration_ms": 309.641168,
+          "load_duration_ms": 72.634585,
+          "prompt_eval_duration_ms": 15.723864,
+          "eval_duration_ms": 189.24344,
+          "eval_count": 45,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 60.0,
+            "judge_latency_ms": 417.6130079868017,
+            "judge_raw": {
+              "score": 6,
+              "clarity": 8,
+              "usefulness": 7,
+              "tone": 9,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.2
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.2
+          },
+          "final_quality_score": 40.5,
+          "hallucination_risk": 0.08000000000000002
+        },
+        {
+          "question_id": "q05_breakfast_included",
+          "question": "La colazione e inclusa nella tariffa?",
+          "intent": "service_info",
+          "priority": "medium",
+          "run": 1,
+          "answer": "No, la colazione non è inclusa nella tariffa.",
+          "wall_ms": 159.71523500047624,
+          "ttft_ms": 93.04537400021218,
+          "stream_total_ms": 159.71523500047624,
+          "total_duration_ms": 159.299466,
+          "load_duration_ms": 72.572926,
+          "prompt_eval_duration_ms": 17.012559,
+          "eval_duration_ms": 58.598843,
+          "eval_count": 14,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 90.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "colazione",
+              "inclus"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 530.3878459963016,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0,
+              "notes": "Risposta troppo breve, potrebbe essere utile aggiungere una precisazione"
+            },
+            "judge_notes": "Risposta troppo breve, potrebbe essere utile aggiungere una precisazione",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 86.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q06_parking_available",
+          "question": "Avete parcheggio privato?",
+          "intent": "service_info",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, abbiamo un parcheggio privato all'interno del complesso. È disponibile per i clienti che lo richiedono.",
+          "wall_ms": 246.7512230068678,
+          "ttft_ms": 89.2577810009243,
+          "stream_total_ms": 246.7512230068678,
+          "total_duration_ms": 246.383283,
+          "load_duration_ms": 71.36632,
+          "prompt_eval_duration_ms": 13.845655,
+          "eval_duration_ms": 137.662837,
+          "eval_count": 33,
+          "prompt_eval_count": 201,
+          "rule_eval": {
+            "rule_score": 100.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "parcheggio",
+              "disponibil"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 517.4355999915861,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata abbreviata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata abbreviata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 93.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q07_late_checkin",
+          "question": "Arrivo molto tardi, posso fare check-in dopo mezzanotte?",
+          "intent": "exception_checkin",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, puoi effettuare il check-in anche dopo mezzanotte, ma ti preghiamo di notificare con anticipo per eventuali adattamenti.",
+          "wall_ms": 281.4704259944847,
+          "ttft_ms": 99.97370900237001,
+          "stream_total_ms": 281.4704259944847,
+          "total_duration_ms": 281.090052,
+          "load_duration_ms": 78.546006,
+          "prompt_eval_duration_ms": 17.540899,
+          "eval_duration_ms": 156.985017,
+          "eval_count": 39,
+          "prompt_eval_count": 210,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 544.036965991836,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q08_cancel_reservation",
+          "question": "Come posso cancellare la mia prenotazione?",
+          "intent": "cancellation",
+          "priority": "high",
+          "run": 1,
+          "answer": "Per cancellare una prenotazione, ti consiglio di contattare direttamente il servizio clienti o l'organizzazione che hai prenotato con.",
+          "wall_ms": 269.17625399073586,
+          "ttft_ms": 93.1627599929925,
+          "stream_total_ms": 269.17625399073586,
+          "total_duration_ms": 268.780174,
+          "load_duration_ms": 73.205616,
+          "prompt_eval_duration_ms": 16.341874,
+          "eval_duration_ms": 154.035377,
+          "eval_count": 37,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "cancell",
+              "prenotazione"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 572.8832689928822,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo generica, potrebbe essere più utile fornire informazioni specifiche sulla politica di cancellazione."
+            },
+            "judge_notes": "Risposta troppo generica, potrebbe essere più utile fornire informazioni specifiche sulla politica di cancellazione.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q09_modify_booking_dates",
+          "question": "Posso spostare la prenotazione di due giorni?",
+          "intent": "modify_booking",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, posso aiutarti a modificare la tua prenotazione. Per favore, fornisci il codice della prenotazione e la data di spostamento che desideri effettuare.",
+          "wall_ms": 317.11835200258065,
+          "ttft_ms": 93.38383299473207,
+          "stream_total_ms": 317.11835200258065,
+          "total_duration_ms": 316.699278,
+          "load_duration_ms": 72.876601,
+          "prompt_eval_duration_ms": 16.411814,
+          "eval_duration_ms": 193.855008,
+          "eval_count": 47,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "modifica"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 740.0683619925985,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Sì, posso aiutarti a modificare la tua prenotazione. Per favore, fornisci il codice della prenotazione e la data di spostamento che desideri effettuare.'"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Sì, posso aiutarti a modificare la tua prenotazione. Per favore, fornisci il codice della prenotazione e la data di spostamento che desideri effettuare.'",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q10_invoice_request",
+          "question": "Mi potete fare fattura intestata alla mia azienda?",
+          "intent": "billing",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Posso aiutarti a generare una fattura intestata per la tua azienda, ma ti consiglio di fornirmi maggiori dettagli come data dell'invio e quantità degli articoli venduti. Posso poi aiutarti a creare una fattura personalizzata?",
+          "wall_ms": 420.9535450063413,
+          "ttft_ms": 101.23060199839529,
+          "stream_total_ms": 420.9535450063413,
+          "total_duration_ms": 420.493035,
+          "load_duration_ms": 81.020248,
+          "prompt_eval_duration_ms": 16.368137,
+          "eval_duration_ms": 279.994855,
+          "eval_count": 66,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 65.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "fattura"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 600.0784169882536,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire di fornire maggiori dettagli per creare una fattura personalizzata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire di fornire maggiori dettagli per creare una fattura personalizzata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 70.25,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q11_pet_policy",
+          "question": "Posso portare il mio cane in camera?",
+          "intent": "pet_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "No, non è consentito portare il tuo cane in camera. La politica aziendale prevede di avere solo persone umane presenti.",
+          "wall_ms": 244.8129480035277,
+          "ttft_ms": 91.69825099525042,
+          "stream_total_ms": 244.8129480035277,
+          "total_duration_ms": 244.321118,
+          "load_duration_ms": 72.213163,
+          "prompt_eval_duration_ms": 15.610267,
+          "eval_duration_ms": 134.618848,
+          "eval_count": 32,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 583.2219909934793,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0,
+              "notes": "Risposta breve e chiara, ma potrebbe essere più utile fornire una spiegazione dettagliata della politica aziendale."
+            },
+            "judge_notes": "Risposta breve e chiara, ma potrebbe essere più utile fornire una spiegazione dettagliata della politica aziendale.",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q12_extra_bed",
+          "question": "E possibile aggiungere un letto extra?",
+          "intent": "room_setup",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, è possibile aggiungere un letto extra. Vorresti sapere quanto costa o come procedere?",
+          "wall_ms": 212.93428700300865,
+          "ttft_ms": 98.51338699809276,
+          "stream_total_ms": 212.93428700300865,
+          "total_duration_ms": 212.390668,
+          "load_duration_ms": 77.372662,
+          "prompt_eval_duration_ms": 16.559579,
+          "eval_duration_ms": 99.284592,
+          "eval_count": 25,
+          "prompt_eval_count": 202,
+          "rule_eval": {
+            "rule_score": 55.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "letto extra"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 588.2439499982866,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, è possibile aggiungere un letto extra?"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, è possibile aggiungere un letto extra?",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 63.75,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q13_baby_cot",
+          "question": "Avete culla per neonato?",
+          "intent": "family_service",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, abbiamo una culla per neonati disponibile. Posso portarla nella stanza del bambino quando lo desideri.",
+          "wall_ms": 239.0415169938933,
+          "ttft_ms": 100.17073099152185,
+          "stream_total_ms": 239.0415169938933,
+          "total_duration_ms": 238.613418,
+          "load_duration_ms": 79.819557,
+          "prompt_eval_duration_ms": 16.295829,
+          "eval_duration_ms": 121.384774,
+          "eval_count": 30,
+          "prompt_eval_count": 201,
+          "rule_eval": {
+            "rule_score": 100.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "culla",
+              "disponibil"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 407.6383460051147,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 1,
+              "correctness": 9,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 93.0,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q14_accessible_room",
+          "question": "Ci sono camere accessibili per sedia a rotelle?",
+          "intent": "accessibility",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, le nostre camere hanno una disponibilità di camere con accesso facile per sedia a rotelle. Posso confermare la disponibilità e prenotare una camera per te.",
+          "wall_ms": 302.8039339988027,
+          "ttft_ms": 90.72046799701639,
+          "stream_total_ms": 302.8039339988027,
+          "total_duration_ms": 302.358653,
+          "load_duration_ms": 71.930229,
+          "prompt_eval_duration_ms": 15.067444,
+          "eval_duration_ms": 185.242766,
+          "eval_count": 45,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "camera"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 404.52365500095766,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q15_wifi_info",
+          "question": "Il wifi e gratuito?",
+          "intent": "service_info",
+          "priority": "low",
+          "run": 1,
+          "answer": "Sì, il Wi-Fi è gratuito in tutto l'edificio.",
+          "wall_ms": 168.01029699854553,
+          "ttft_ms": 92.29631299967878,
+          "stream_total_ms": 168.01029699854553,
+          "total_duration_ms": 167.501282,
+          "load_duration_ms": 73.099439,
+          "prompt_eval_duration_ms": 15.317143,
+          "eval_duration_ms": 65.077287,
+          "eval_count": 16,
+          "prompt_eval_count": 198,
+          "rule_eval": {
+            "rule_score": 55.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "gratuit"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 406.6023040068103,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 7,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 63.75,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q16_airport_transfer",
+          "question": "Organizzate transfer da e per aeroporto?",
+          "intent": "transport_service",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Posso aiutarti con l'organizzazione di un trasferimento da/aeroporto. Per favore, fornisci i dettagli richiesti: \n\n* Aeroporto di partenza\n* Aeroporto di arrivo\n* Orari di partenza e arrivo\n* Tipo di veicolo desiderato",
+          "wall_ms": 416.72936199756805,
+          "ttft_ms": 92.00309599691536,
+          "stream_total_ms": 416.72936199756805,
+          "total_duration_ms": 416.288219,
+          "load_duration_ms": 72.965234,
+          "prompt_eval_duration_ms": 15.080378,
+          "eval_duration_ms": 283.091697,
+          "eval_count": 69,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 43.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "aeroporto"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": false,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 783.9082560094539,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 7,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Posso aiutarti con l'organizzazione di un trasferimento da/aeroporto. Per favore, fornisci i dettagli richiesti: aeroporto di partenza, aeroporto di arrivo e orari di partenza e arrivo.'"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Posso aiutarti con l'organizzazione di un trasferimento da/aeroporto. Per favore, fornisci i dettagli richiesti: aeroporto di partenza, aeroporto di arrivo e orari di partenza e arrivo.'",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 56.166666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q17_early_checkin",
+          "question": "Posso fare check-in alle dieci del mattino?",
+          "intent": "exception_checkin",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, puoi fare check-in alle dieci del mattino. Vorresti prenotare un appuntamento o hai bisogno di assistenza per il check-in?",
+          "wall_ms": 282.53549701184966,
+          "ttft_ms": 97.7109939994989,
+          "stream_total_ms": 282.53549701184966,
+          "total_duration_ms": 281.971666,
+          "load_duration_ms": 78.337204,
+          "prompt_eval_duration_ms": 15.06886,
+          "eval_duration_ms": 159.916645,
+          "eval_count": 39,
+          "prompt_eval_count": 205,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 551.0236260015517,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata meglio una risposta più breve e diretta."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata meglio una risposta più breve e diretta.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q18_late_checkout",
+          "question": "Mi servirebbe late check-out, e possibile?",
+          "intent": "exception_checkout",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, posso aiutarti con il check-out. Per favore confermi la tua stanza e il numero di persone che ti accompagnerà.",
+          "wall_ms": 257.94075599696953,
+          "ttft_ms": 95.08412600553129,
+          "stream_total_ms": 257.94075599696953,
+          "total_duration_ms": 257.459884,
+          "load_duration_ms": 73.497328,
+          "prompt_eval_duration_ms": 17.463703,
+          "eval_duration_ms": 140.76307,
+          "eval_count": 34,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 569.5202029892243,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Posso aiutarti con il check-out'?"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire 'Posso aiutarti con il check-out'?",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q19_city_tax",
+          "question": "La tassa di soggiorno e inclusa?",
+          "intent": "pricing_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "No, la tassa di soggiorno non è inclusa nel prezzo della camera. Posso fornirti maggiori informazioni sulle opzioni disponibili per pagare la tassa di soggiorno?",
+          "wall_ms": 318.83605000621174,
+          "ttft_ms": 92.458973012981,
+          "stream_total_ms": 318.83605000621174,
+          "total_duration_ms": 318.524621,
+          "load_duration_ms": 71.782393,
+          "prompt_eval_duration_ms": 16.521515,
+          "eval_duration_ms": 197.112078,
+          "eval_count": 47,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 100.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "tassa di soggiorno",
+              "inclus"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 515.5037609947613,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata abbreviata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata abbreviata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 93.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q20_payment_methods",
+          "question": "Quali metodi di pagamento accettate?",
+          "intent": "payment",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Accetto pagamenti con carta di credito, PayPal e contanti.",
+          "wall_ms": 176.13471699587535,
+          "ttft_ms": 99.93651899276301,
+          "stream_total_ms": 176.13471699587535,
+          "total_duration_ms": 175.849818,
+          "load_duration_ms": 82.069256,
+          "prompt_eval_duration_ms": 13.94022,
+          "eval_duration_ms": 67.031013,
+          "eval_count": 16,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "carta",
+              "contanti"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 402.3484950012062,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q21_deposit_required",
+          "question": "Serve una caparra per confermare?",
+          "intent": "payment_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "No, non serve una caparra per confermare la prenotazione. Procederemo con il pagamento secondo le condizioni specificate nella tua richiesta.",
+          "wall_ms": 251.63579000218306,
+          "ttft_ms": 93.43208900827449,
+          "stream_total_ms": 251.63579000218306,
+          "total_duration_ms": 251.283823,
+          "load_duration_ms": 73.786821,
+          "prompt_eval_duration_ms": 16.107206,
+          "eval_duration_ms": 138.377058,
+          "eval_count": 34,
+          "prompt_eval_count": 201,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "caparra",
+              "conferma"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 406.5927870105952,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q22_group_booking",
+          "question": "Siamo un gruppo di dodici persone, avete soluzioni?",
+          "intent": "group_booking",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, possiamo gestire fino a 12 utenti contemporaneamente.",
+          "wall_ms": 170.45140800473746,
+          "ttft_ms": 89.52952999970876,
+          "stream_total_ms": 170.45140800473746,
+          "total_duration_ms": 170.085427,
+          "load_duration_ms": 72.129903,
+          "prompt_eval_duration_ms": 14.064121,
+          "eval_duration_ms": 70.517497,
+          "eval_count": 18,
+          "prompt_eval_count": 209,
+          "rule_eval": {
+            "rule_score": 19.999999999999996,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 499.0444499999285,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo generica, dovrebbe essere più specifica"
+            },
+            "judge_notes": "Risposta troppo generica, dovrebbe essere più specifica",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 41.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q23_quiet_room_request",
+          "question": "Potrei avere una camera silenziosa?",
+          "intent": "special_request",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, abbiamo una stanza tranquilla disponibile per te. È sulla seconda piano terra, a pochi passi dalla reception. Posso darti le istruzioni per raggiungerla?",
+          "wall_ms": 325.54673799313605,
+          "ttft_ms": 111.13828999805264,
+          "stream_total_ms": 325.54673799313605,
+          "total_duration_ms": 325.025241,
+          "load_duration_ms": 92.860228,
+          "prompt_eval_duration_ms": 13.994734,
+          "eval_duration_ms": 186.70523,
+          "eval_count": 44,
+          "prompt_eval_count": 202,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 3,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 409.09802399983164,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q24_high_floor_request",
+          "question": "Vorrei un piano alto, si puo richiedere?",
+          "intent": "special_request",
+          "priority": "low",
+          "run": 1,
+          "answer": "Sì, posso aiutarti a pianificare. Per favore, forniscimi più informazioni sul tuo obiettivo e sul tipo di piano che cerchi. Qual è il contesto e cosa vuoi raggiungere?",
+          "wall_ms": 351.3404129917035,
+          "ttft_ms": 95.53462499752641,
+          "stream_total_ms": 351.3404129917035,
+          "total_duration_ms": 351.042279,
+          "load_duration_ms": 73.668536,
+          "prompt_eval_duration_ms": 17.698678,
+          "eval_duration_ms": 223.726885,
+          "eval_count": 53,
+          "prompt_eval_count": 207,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 3,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 675.8903699956136,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 9,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, posso aiutarti a pianificare. Per favore, forniscimi più informazioni sul tuo obiettivo."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, posso aiutarti a pianificare. Per favore, forniscimi più informazioni sul tuo obiettivo.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q25_non_smoking_room",
+          "question": "Avete camere non fumatori?",
+          "intent": "room_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, abbiamo camere non fumatori disponibili. Vuoi sapere di più sulle nostre opzioni?",
+          "wall_ms": 216.82347200112417,
+          "ttft_ms": 90.82527500868309,
+          "stream_total_ms": 216.82347200112417,
+          "total_duration_ms": 216.364064,
+          "load_duration_ms": 73.458179,
+          "prompt_eval_duration_ms": 13.916343,
+          "eval_duration_ms": 110.38178,
+          "eval_count": 27,
+          "prompt_eval_count": 202,
+          "rule_eval": {
+            "rule_score": 55.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "non fumatori"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 60.0,
+            "judge_latency_ms": 549.6595020085806,
+            "judge_raw": {
+              "score": 6,
+              "clarity": 8,
+              "usefulness": 9,
+              "tone": 7,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.2,
+              "notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve e diretta."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve e diretta.",
+            "judge_hallucination_risk": 0.2
+          },
+          "final_quality_score": 56.75,
+          "hallucination_risk": 0.08000000000000002
+        },
+        {
+          "question_id": "q26_connecting_rooms",
+          "question": "Ci sono camere comunicanti per famiglia?",
+          "intent": "family_room",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, ci sono camere comunicanti per famiglia disponibili nel nostro hotel. Posso offrirti una descrizione dettagliata e prenotare la stanza per te?",
+          "wall_ms": 290.5666709993966,
+          "ttft_ms": 99.06271900399588,
+          "stream_total_ms": 290.5666709993966,
+          "total_duration_ms": 290.203051,
+          "load_duration_ms": 78.318391,
+          "prompt_eval_duration_ms": 16.273639,
+          "eval_duration_ms": 167.600816,
+          "eval_count": 41,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 100.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "camere comunicanti",
+              "disponibil"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 591.1742000025697,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve e direttamente offertasi la prenotazione"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve e direttamente offertasi la prenotazione",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 93.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q27_child_discount",
+          "question": "Fate sconti per bambini?",
+          "intent": "pricing_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, offriamo sconti per i bambini durante le vacanze scolastiche e a Natale. Per maggiori informazioni contattaci.",
+          "wall_ms": 271.23167100944556,
+          "ttft_ms": 89.94484299910255,
+          "stream_total_ms": 271.23167100944556,
+          "total_duration_ms": 270.842455,
+          "load_duration_ms": 71.822264,
+          "prompt_eval_duration_ms": 14.079537,
+          "eval_duration_ms": 158.154086,
+          "eval_count": 38,
+          "prompt_eval_count": 201,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "scont",
+              "bambin"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 520.2990459947614,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 9,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata abbreviata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata abbreviata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q28_weekly_stay_discount",
+          "question": "Per una settimana c e una tariffa migliore?",
+          "intent": "pricing_negotiation",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, per una settimana la tariffa è più bassa.",
+          "wall_ms": 171.97605299588758,
+          "ttft_ms": 92.46678400086239,
+          "stream_total_ms": 171.97605299588758,
+          "total_duration_ms": 171.582373,
+          "load_duration_ms": 73.348923,
+          "prompt_eval_duration_ms": 15.597509,
+          "eval_duration_ms": 68.512871,
+          "eval_count": 17,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "tariffa"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 402.6275079959305,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q29_business_trip_receipt",
+          "question": "Sono in trasferta lavoro, come ricevo ricevuta e fattura?",
+          "intent": "billing",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Puoi ricevere la ricevuta e la fattura tramite email o via posta elettronica, oppure puoi richiedere il download diretto dal portale aziendale.",
+          "wall_ms": 295.61929499323014,
+          "ttft_ms": 92.89722799439915,
+          "stream_total_ms": 295.61929499323014,
+          "total_duration_ms": 295.062642,
+          "load_duration_ms": 73.193126,
+          "prompt_eval_duration_ms": 16.220929,
+          "eval_duration_ms": 176.347824,
+          "eval_count": 42,
+          "prompt_eval_count": 211,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "ricevuta",
+              "fattura"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 411.41272500681225,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.2
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.2
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.08000000000000002
+        },
+        {
+          "question_id": "q30_checkin_documents",
+          "question": "Che documenti devo portare al check-in?",
+          "intent": "checkin_requirements",
+          "priority": "high",
+          "run": 1,
+          "answer": "Per il check-in, ti consiglio di portare la tua carta d'identità e il biglietto di viaggio.",
+          "wall_ms": 235.59897000086494,
+          "ttft_ms": 101.40184000192676,
+          "stream_total_ms": 235.59897000086494,
+          "total_duration_ms": 235.280962,
+          "load_duration_ms": 80.23764,
+          "prompt_eval_duration_ms": 17.173299,
+          "eval_duration_ms": 117.289762,
+          "eval_count": 29,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 399.59377200284507,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q31_booking_for_other_person",
+          "question": "Posso prenotare a nome di un altra persona?",
+          "intent": "booking_policy",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, puoi prenotare per un'altra persona, ma è necessario fornire il tuo numero di telefono e la tua firma digitale per confermare l'identità dell'utente.",
+          "wall_ms": 298.017199995229,
+          "ttft_ms": 91.46627399604768,
+          "stream_total_ms": 298.017199995229,
+          "total_duration_ms": 297.625549,
+          "load_duration_ms": 72.203871,
+          "prompt_eval_duration_ms": 15.88683,
+          "eval_duration_ms": 180.506264,
+          "eval_count": 44,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 549.0289570007008,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 9,
+              "correctness": 8,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q32_arrival_delay",
+          "question": "Il treno e in ritardo, arrivo verso le ventitre. Va bene?",
+          "intent": "arrival_update",
+          "priority": "high",
+          "run": 1,
+          "answer": "Sì, il treno è previsto per arrivare alle ventidue e trenta minuti.",
+          "wall_ms": 201.3695649948204,
+          "ttft_ms": 95.08529900631402,
+          "stream_total_ms": 201.3695649948204,
+          "total_duration_ms": 200.902355,
+          "load_duration_ms": 74.079494,
+          "prompt_eval_duration_ms": 17.028127,
+          "eval_duration_ms": 92.804409,
+          "eval_count": 23,
+          "prompt_eval_count": 211,
+          "rule_eval": {
+            "rule_score": 19.999999999999996,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 567.0335890026763,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo dettagliata, potrebbe essere meglio dire semplicemente che il treno è in ritardo"
+            },
+            "judge_notes": "Risposta troppo dettagliata, potrebbe essere meglio dire semplicemente che il treno è in ritardo",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 41.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q33_cancel_free_window",
+          "question": "Entro quando posso cancellare senza penali?",
+          "intent": "cancellation",
+          "priority": "high",
+          "run": 1,
+          "answer": "Per cancellare senza penalità, è necessario contattare il servizio clienti entro 30 giorni dalla data di acquisto.",
+          "wall_ms": 234.94514700723812,
+          "ttft_ms": 97.15817800315563,
+          "stream_total_ms": 234.94514700723812,
+          "total_duration_ms": 234.518358,
+          "load_duration_ms": 76.873781,
+          "prompt_eval_duration_ms": 16.309224,
+          "eval_duration_ms": 119.909599,
+          "eval_count": 30,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "penali"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 612.9357509926194,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire che è necessario contattare il servizio clienti entro 30 giorni dalla data di acquisto."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire che è necessario contattare il servizio clienti entro 30 giorni dalla data di acquisto.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q34_no_show_policy",
+          "question": "Cosa succede se non mi presento?",
+          "intent": "cancellation",
+          "priority": "high",
+          "run": 1,
+          "answer": "Se non ti presenti, potresti essere bloccato o rifiutato l'accesso a un luogo o servizio.",
+          "wall_ms": 238.83007500262465,
+          "ttft_ms": 93.66922700428404,
+          "stream_total_ms": 238.83007500262465,
+          "total_duration_ms": 238.573292,
+          "load_duration_ms": 74.750974,
+          "prompt_eval_duration_ms": 13.756538,
+          "eval_duration_ms": 126.80622,
+          "eval_count": 31,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 19.999999999999996,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 557.8949159971671,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 9,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo generica, potrebbe essere più utile specificare le conseguenze precise."
+            },
+            "judge_notes": "Risposta troppo generica, potrebbe essere più utile specificare le conseguenze precise.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 41.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q35_breakfast_time",
+          "question": "A che ora viene servita la colazione?",
+          "intent": "service_schedule",
+          "priority": "low",
+          "run": 1,
+          "answer": "La colazione viene servita dalle 7:30 alle 8:30. Se hai bisogno di una spiegazione più dettagliata, posso fornirti il menu e le informazioni sulla disponibilità dei prodotti.",
+          "wall_ms": 343.3750929980306,
+          "ttft_ms": 95.47794499667361,
+          "stream_total_ms": 343.3750929980306,
+          "total_duration_ms": 342.835529,
+          "load_duration_ms": 73.427732,
+          "prompt_eval_duration_ms": 17.768492,
+          "eval_duration_ms": 214.979161,
+          "eval_count": 53,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 65.0,
+            "required_match_ratio": 0.5,
+            "required_matches": [
+              "colazione"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 90.0,
+            "judge_latency_ms": 401.8724769994151,
+            "judge_raw": {
+              "score": 9,
+              "clarity": 10,
+              "usefulness": 8,
+              "tone": 9,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 73.75,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q36_gluten_free_breakfast",
+          "question": "Avete opzioni senza glutine a colazione?",
+          "intent": "dietary_request",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, abbiamo una varietà di opzioni senza glutine disponibili per la colazione, come ad esempio frutta fresca, yogurt senza glutine e pane integrale. Posso informarti sulle nostre opzioni specifiche?",
+          "wall_ms": 354.91316301340703,
+          "ttft_ms": 95.53887900256086,
+          "stream_total_ms": 354.91316301340703,
+          "total_duration_ms": 354.464218,
+          "load_duration_ms": 78.376216,
+          "prompt_eval_duration_ms": 13.525125,
+          "eval_duration_ms": 225.487166,
+          "eval_count": 54,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "senza glutine",
+              "colazione"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 407.3429279960692,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q37_luggage_storage",
+          "question": "Potete tenere le valigie dopo il check-out?",
+          "intent": "service_info",
+          "priority": "medium",
+          "run": 1,
+          "answer": "No, non è possibile tenere le valigie dopo il check-out. Per la loro restituzione, si prega di contattare il personale del ristorante.",
+          "wall_ms": 280.8549059991492,
+          "ttft_ms": 95.46936699189246,
+          "stream_total_ms": 280.8549059991492,
+          "total_duration_ms": 280.482589,
+          "load_duration_ms": 75.294971,
+          "prompt_eval_duration_ms": 16.672954,
+          "eval_duration_ms": 160.165611,
+          "eval_count": 39,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 539.6122170059243,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0,
+              "notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata migliorata con una sintesi più veloce.",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q38_before_checkin_luggage",
+          "question": "Arrivo prima del check-in, posso lasciare le valigie?",
+          "intent": "service_info",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, puoi lasciare le valigie all'arrivo, saranno conservate fino al momento del check-in.",
+          "wall_ms": 227.1428280073451,
+          "ttft_ms": 94.11880299740005,
+          "stream_total_ms": 227.1428280073451,
+          "total_duration_ms": 226.8069,
+          "load_duration_ms": 73.199776,
+          "prompt_eval_duration_ms": 17.176794,
+          "eval_duration_ms": 115.340381,
+          "eval_count": 28,
+          "prompt_eval_count": 209,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 597.099727994646,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, puoi lasciare le valigie all'arrivo."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, puoi lasciare le valigie all'arrivo.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q39_noise_complaint",
+          "question": "La stanza accanto fa molto rumore, potete aiutarmi?",
+          "intent": "guest_support",
+          "priority": "high",
+          "run": 1,
+          "answer": "Posso controllare se c'è qualcuno che può aiutarti. Se il problema persiste, posso parlare con la persona vicina e chiederle di ridurre il volume.",
+          "wall_ms": 303.7911349965725,
+          "ttft_ms": 100.73809999448713,
+          "stream_total_ms": 303.7911349965725,
+          "total_duration_ms": 303.359991,
+          "load_duration_ms": 80.707238,
+          "prompt_eval_duration_ms": 15.774474,
+          "eval_duration_ms": 176.997393,
+          "eval_count": 44,
+          "prompt_eval_count": 209,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 500.11509099567775,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere migliorata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere migliorata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q40_room_too_cold",
+          "question": "La camera e troppo fredda, come risolviamo?",
+          "intent": "maintenance_support",
+          "priority": "high",
+          "run": 1,
+          "answer": "Puoi aumentare la temperatura della stanza impostando il condizionatore a una temperatura più alta o utilizzare un riscaldino portatile per coprire l'area.",
+          "wall_ms": 270.5870219942881,
+          "ttft_ms": 92.28855799301527,
+          "stream_total_ms": 270.5870219942881,
+          "total_duration_ms": 270.172493,
+          "load_duration_ms": 72.352823,
+          "prompt_eval_duration_ms": 16.264667,
+          "eval_duration_ms": 153.795998,
+          "eval_count": 38,
+          "prompt_eval_count": 206,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 571.2394790025428,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 9,
+              "correctness": 8,
+              "hallucination_risk": 0.2,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire che il cliente deve contattare la manutenzione"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire che il cliente deve contattare la manutenzione",
+            "judge_hallucination_risk": 0.2
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.08000000000000002
+        },
+        {
+          "question_id": "q41_lost_item",
+          "question": "Ho dimenticato un caricatore in camera, come posso recuperarlo?",
+          "intent": "lost_found",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Puoi contattare l'assistenza clienti del tuo fornitore per chiedere indicazioni su come recuperare il caricatore.",
+          "wall_ms": 252.18951299029868,
+          "ttft_ms": 102.10152699437458,
+          "stream_total_ms": 252.18951299029868,
+          "total_duration_ms": 251.747315,
+          "load_duration_ms": 73.487183,
+          "prompt_eval_duration_ms": 18.90428,
+          "eval_duration_ms": 130.010408,
+          "eval_count": 31,
+          "prompt_eval_count": 210,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 572.205001997645,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire che il cliente contatta l'assistenza del fornitore"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire che il cliente contatta l'assistenza del fornitore",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q42_two_separate_beds",
+          "question": "Avrei bisogno di due letti separati, e fattibile?",
+          "intent": "room_setup",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, disponibilità dei due letti separati è garantita. Posso confermare che entrambi sono disponibili per la tua prenotazione.",
+          "wall_ms": 263.40696700208355,
+          "ttft_ms": 98.11646000889596,
+          "stream_total_ms": 263.40696700208355,
+          "total_duration_ms": 262.888055,
+          "load_duration_ms": 77.690236,
+          "prompt_eval_duration_ms": 16.394389,
+          "eval_duration_ms": 142.962125,
+          "eval_count": 35,
+          "prompt_eval_count": 209,
+          "rule_eval": {
+            "rule_score": 76.66666666666666,
+            "required_match_ratio": 0.6666666666666666,
+            "required_matches": [
+              "letti separati",
+              "disponibil"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 407.36288399784826,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 77.83333333333333,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q43_honeymoon_note",
+          "question": "E il nostro anniversario, potete preparare qualcosa in camera?",
+          "intent": "special_request",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, posso preparare una piccola festa per l'anniversario. Posso acquistare un dolce e un bicchiere di vino se lo desideri.",
+          "wall_ms": 296.7831950081745,
+          "ttft_ms": 99.69457700208295,
+          "stream_total_ms": 296.7831950081745,
+          "total_duration_ms": 296.500319,
+          "load_duration_ms": 79.248157,
+          "prompt_eval_duration_ms": 16.305589,
+          "eval_duration_ms": 172.186475,
+          "eval_count": 42,
+          "prompt_eval_count": 209,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 614.8759979987517,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, posso preparare una piccola festa per l'anniversario."
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere meglio dire semplicemente: Sì, posso preparare una piccola festa per l'anniversario.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q44_restaurant_recommendation",
+          "question": "Mi consigliate un ristorante vicino?",
+          "intent": "local_info",
+          "priority": "low",
+          "run": 1,
+          "answer": "Ci sono due ristoranti a pochi passi da qui, il \"Ristorante La Bella Vita\" e il \"Trattoria Italiana\". Sono entrambi molto apprezzati dalla gente del posto. Posso darti le loro indirizzazioni se vuoi?",
+          "wall_ms": 386.7567600100301,
+          "ttft_ms": 92.87690100609325,
+          "stream_total_ms": 386.7567600100301,
+          "total_duration_ms": 386.46733,
+          "load_duration_ms": 72.391147,
+          "prompt_eval_duration_ms": 16.224845,
+          "eval_duration_ms": 253.915048,
+          "eval_count": 61,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "ristorante"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 3,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 415.51223999704234,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q45_taxi_booking",
+          "question": "Potete chiamarmi un taxi per domani mattina?",
+          "intent": "transport_service",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Posso prenotare un taxi per domani mattina, quanto tempo ti serve?",
+          "wall_ms": 177.72547400090843,
+          "ttft_ms": 90.70323599735275,
+          "stream_total_ms": 177.72547400090843,
+          "total_duration_ms": 177.31109,
+          "load_duration_ms": 73.007863,
+          "prompt_eval_duration_ms": 13.450764,
+          "eval_duration_ms": 76.166787,
+          "eval_count": 19,
+          "prompt_eval_count": 207,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "taxi"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 539.5848229964031,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo aperta, potrebbe essere utile specificare l'orario esatto."
+            },
+            "judge_notes": "Risposta troppo aperta, potrebbe essere utile specificare l'orario esatto.",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q46_shuttle_station",
+          "question": "C e navetta per la stazione?",
+          "intent": "transport_service",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, la navetta per la stazione è disponibile ogni 15 minuti. Puoi trovare l'orario sulla nostra pagina web o chiedere informazioni al personale dell'ufficio.",
+          "wall_ms": 311.13050400745124,
+          "ttft_ms": 96.86615399550647,
+          "stream_total_ms": 311.13050400745124,
+          "total_duration_ms": 310.78617,
+          "load_duration_ms": 79.212116,
+          "prompt_eval_duration_ms": 13.631386,
+          "eval_duration_ms": 185.818199,
+          "eval_count": 45,
+          "prompt_eval_count": 202,
+          "rule_eval": {
+            "rule_score": 100.0,
+            "required_match_ratio": 1.0,
+            "required_matches": [
+              "navetta",
+              "stazione",
+              "orari"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 513.2205740083009,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 8,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata abbreviata"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata abbreviata",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 93.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q47_smoking_area",
+          "question": "Dove posso fumare senza problemi?",
+          "intent": "property_policy",
+          "priority": "low",
+          "run": 1,
+          "answer": "Puoi fumare all'aperto in aree designate come parchi, piazze o lungofiumi, ma non è consentito in locali aperti al pubblico come bar, ristoranti o cinema.",
+          "wall_ms": 330.2582359901862,
+          "ttft_ms": 93.18204199371394,
+          "stream_total_ms": 330.2582359901862,
+          "total_duration_ms": 329.790574,
+          "load_duration_ms": 72.063017,
+          "prompt_eval_duration_ms": 16.947376,
+          "eval_duration_ms": 206.064873,
+          "eval_count": 49,
+          "prompt_eval_count": 204,
+          "rule_eval": {
+            "rule_score": 19.999999999999996,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 66.66666666666666,
+            "is_italian": false,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 520.1769880077336,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 0,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata più concisa"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata più concisa",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 41.0,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q48_pool_access",
+          "question": "La piscina e accessibile anche la sera?",
+          "intent": "facility_schedule",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Sì, la piscina è aperta fino alle 20:00 di martedì a sabato, ma solo con prenotazione previa.",
+          "wall_ms": 246.56129798677284,
+          "ttft_ms": 91.70519399049226,
+          "stream_total_ms": 246.56129798677284,
+          "total_duration_ms": 246.224048,
+          "load_duration_ms": 72.204408,
+          "prompt_eval_duration_ms": 15.480212,
+          "eval_duration_ms": 133.27595,
+          "eval_count": 33,
+          "prompt_eval_count": 203,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "piscina"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 737.0017590001225,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve come 'La piscina è aperta fino alle 20:00 di martedì a sabato' o 'Piscina chiusa, ma solo prenotazione previa per la sera'"
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve come 'La piscina è aperta fino alle 20:00 di martedì a sabato' o 'Piscina chiusa, ma solo prenotazione previa per la sera'",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        },
+        {
+          "question_id": "q49_booking_channel",
+          "question": "Conviene prenotare dal sito o direttamente con voi?",
+          "intent": "booking_channel",
+          "priority": "medium",
+          "run": 1,
+          "answer": "Prenotiamo direttamente con te, risparmierai tempo e potrai avere maggior flessibilità nelle scelte di orario.",
+          "wall_ms": 256.768117993488,
+          "ttft_ms": 96.03618500113953,
+          "stream_total_ms": 256.768117993488,
+          "total_duration_ms": 256.456613,
+          "load_duration_ms": 78.246467,
+          "prompt_eval_duration_ms": 13.582077,
+          "eval_duration_ms": 140.519491,
+          "eval_count": 34,
+          "prompt_eval_count": 208,
+          "rule_eval": {
+            "rule_score": 30.0,
+            "required_match_ratio": 0.0,
+            "required_matches": [],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 1,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 407.33828001248185,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 9,
+              "tone": 10,
+              "safety": 10,
+              "correctness": 10,
+              "hallucination_risk": 0
+            },
+            "judge_notes": "",
+            "judge_hallucination_risk": 0.0
+          },
+          "final_quality_score": 47.5,
+          "hallucination_risk": 0.0
+        },
+        {
+          "question_id": "q50_human_operator",
+          "question": "Vorrei parlare con una persona, mi puoi passare un operatore?",
+          "intent": "escalation",
+          "priority": "high",
+          "run": 1,
+          "answer": "Posso collegarti direttamente con l'operatore disponibile. Per favore attendi un momento.",
+          "wall_ms": 206.12598699517548,
+          "ttft_ms": 93.33134899497963,
+          "stream_total_ms": 206.12598699517548,
+          "total_duration_ms": 205.832553,
+          "load_duration_ms": 72.25213,
+          "prompt_eval_duration_ms": 17.036455,
+          "eval_duration_ms": 96.886793,
+          "eval_count": 24,
+          "prompt_eval_count": 211,
+          "rule_eval": {
+            "rule_score": 53.33333333333333,
+            "required_match_ratio": 0.3333333333333333,
+            "required_matches": [
+              "operatore"
+            ],
+            "forbidden_matches": [],
+            "policy_score": 100.0,
+            "is_italian": true,
+            "sentence_count": 2,
+            "short_enough": true,
+            "no_markdown_bullets": true,
+            "hallucination_risk": 0.0,
+            "hallucination_hits": []
+          },
+          "judge_eval": {
+            "judge_score_0_100": 80.0,
+            "judge_latency_ms": 617.1629559976282,
+            "judge_raw": {
+              "score": 8,
+              "clarity": 9,
+              "usefulness": 7,
+              "tone": 6,
+              "safety": 10,
+              "correctness": 9,
+              "hallucination_risk": 0.1,
+              "notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve come \"Posso collegarti direttamente con l'operatore disponibile\""
+            },
+            "judge_notes": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve come \"Posso collegarti direttamente con l'operatore disponibile\"",
+            "judge_hallucination_risk": 0.1
+          },
+          "final_quality_score": 62.666666666666664,
+          "hallucination_risk": 0.04000000000000001
+        }
+      ],
+      "examples": [
+        {
+          "question_id": "q06_parking_available",
+          "question": "Avete parcheggio privato?",
+          "answer": "Sì, abbiamo un parcheggio privato all'interno del complesso. È disponibile per i clienti che lo richiedono.",
+          "final_quality_score": 93.0,
+          "rule_score": 100.0,
+          "judge_score": 80.0,
+          "note": "Risposta troppo lunga, potrebbe essere stata abbreviata"
+        },
+        {
+          "question_id": "q13_baby_cot",
+          "question": "Avete culla per neonato?",
+          "answer": "Sì, abbiamo una culla per neonati disponibile. Posso portarla nella stanza del bambino quando lo desideri.",
+          "final_quality_score": 93.0,
+          "rule_score": 100.0,
+          "judge_score": 80.0,
+          "note": "Nessuna nota"
+        },
+        {
+          "question_id": "q50_human_operator",
+          "question": "Vorrei parlare con una persona, mi puoi passare un operatore?",
+          "answer": "Posso collegarti direttamente con l'operatore disponibile. Per favore attendi un momento.",
+          "final_quality_score": 62.666666666666664,
+          "rule_score": 53.33333333333333,
+          "judge_score": 80.0,
+          "note": "Risposta troppo lunga, potrebbe essere stata meglio con una risposta più breve come \"Posso collegarti direttamente con l'operatore disponibile\""
+        },
+        {
+          "question_id": "q47_smoking_area",
+          "question": "Dove posso fumare senza problemi?",
+          "answer": "Puoi fumare all'aperto in aree designate come parchi, piazze o lungofiumi, ma non è consentito in locali aperti al pubblico come bar, ristoranti o cinema.",
+          "final_quality_score": 41.0,
+          "rule_score": 19.999999999999996,
+          "judge_score": 80.0,
+          "note": "Risposta troppo lunga, potrebbe essere stata più concisa"
+        },
+        {
+          "question_id": "q04_double_room_price",
+          "question": "Quanto costa una matrimoniale per una notte?",
+          "answer": "Il prezzo di una matrimonale per una notte varia a seconda del luogo e della durata dell'esperienza, ma generalmente può variare da 500 a 5.000 euro.",
+          "final_quality_score": 40.5,
+          "rule_score": 30.0,
+          "judge_score": 60.0,
+          "note": "Nessuna nota"
+        }
+      ],
+      "metrics": {
+        "quality_avg": 61.35666666666667,
+        "quality_p50": 62.666666666666664,
+        "quality_p95": 93.0,
+        "policy_compliance_rate": 0.82,
+        "hallucination_risk_rate": 0.0,
+        "avg_wall_ms": 268.82754717982607,
+        "p50_wall_ms": 266.2916104964097,
+        "p95_wall_ms": 400.2444309044222,
+        "avg_ttft_ms": 95.04863067908445,
+        "p50_ttft_ms": 93.6438385033398,
+        "p95_ttft_ms": 101.71669914852828,
+        "avg_stream_total_ms": 268.82754717982607,
+        "avg_tokens_per_sec": 243.02561019792373,
+        "realtime_profile": "realtime_ready",
+        "compatible_low_latency": true,
+        "realtime_reason": "Tempo prima risposta e latenza totale entro target realtime."
+      }
+    }
+  ],
+  "ranking_quality": [
+    {
+      "model": "llama3.2:latest",
+      "quality_avg": 61.35666666666667,
+      "policy_compliance_rate": 0.82,
+      "hallucination_risk_rate": 0.0,
+      "avg_wall_ms": 268.82754717982607,
+      "avg_ttft_ms": 95.04863067908445,
+      "avg_tokens_per_sec": 243.02561019792373
+    }
+  ],
+  "ranking_quality_latency": [
+    {
+      "model": "llama3.2:latest",
+      "combined_score": 0.7294966666666667,
+      "quality_avg": 61.35666666666667,
+      "avg_wall_ms": 268.82754717982607,
+      "avg_ttft_ms": 95.04863067908445,
+      "policy_compliance_rate": 0.82
+    }
+  ],
+  "optimized_prompts_by_model": [
+    {
+      "model": "llama3.2:latest",
+      "realtime_profile": "realtime_ready",
+      "compatible_low_latency": true,
+      "avg_wall_ms": 268.82754717982607,
+      "p95_wall_ms": 400.2444309044222,
+      "avg_ttft_ms": 95.04863067908445,
+      "p95_ttft_ms": 101.71669914852828,
+      "notes": [
+        "Profilo veloce: ottimizzazione leggera senza perdere qualità."
+      ],
+      "optimized_prompt": "Sei Receptionist assistente vocale ultra veloce.\nPriorita assoluta velocita e sintesi.\n\nRegole fondamentali\nRisposte ultra brevi massimo due frasi e mai oltre trenta parole.\nVai dritto al punto senza preamboli saluti inutili o ripetizioni.\nRispondi nella stessa lingua dell utente.\n\nStile\nRispondi come receptionist professionale diretto chiaro utile.\nSe non sai qualcosa dillo chiaramente e proponi il prossimo passo.\nPreferisci risposte secche e precise.\n\nFormato tts\nNon usare simboli speciali.\nNon usare emoji.\nNon usare elenchi puntati scrivi in modo discorsivo.\n\nOttimizzazione latenza per benchmark\nRispondi in una frase quando possibile.\nMassimo venti parole salvo richiesta esplicita.\nEvita dettagli opzionali non richiesti."
+    }
+  ]
+}

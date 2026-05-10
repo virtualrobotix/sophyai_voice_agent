@@ -1,0 +1,436 @@
+{
+  "generated_at_utc": "2026-05-10T12:12:15.266553+00:00",
+  "ollama_url": "http://127.0.0.1:11434",
+  "max_workers": 12,
+  "rounds_per_level": 1,
+  "timeout_s": 120,
+  "min_success_rate": 1.0,
+  "degradation_factor": 3.0,
+  "realtime_avg_threshold_ms": 800.0,
+  "realtime_p95_threshold_ms": 1500.0,
+  "stop_on_realtime_degradation": true,
+  "results": [
+    {
+      "model": "gemma4:31b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "gpt-oss:20b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "qwen2.5:7b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "llama3.1:8b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "gpt-oss:120b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "mistral-small:latest",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "qwen3.6:35b",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 1,
+          "error_count": 0,
+          "success_rate": 1.0,
+          "avg_wall_ms": 11735.922448991914,
+          "p95_wall_ms": 11735.922448991914,
+          "throughput_rps": 0.08520492218838727,
+          "stable": true,
+          "realtime_compatible": false,
+          "sample_errors": []
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 1,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.08520492218838727,
+        "baseline_avg_ms": 11735.922448991914,
+        "baseline_p95_ms": 11735.922448991914,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg 11736 ms > 800 ms o p95 11736 ms > 1500 ms)",
+        "stability_notes": [
+          "livello=1: fuori soglia realtime (avg 11736 ms > 800 ms o p95 11736 ms > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "mistral-medium-3.5:latest",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    },
+    {
+      "model": "llama3.2:latest",
+      "levels": [
+        {
+          "level": 1,
+          "requests_total": 1,
+          "ok_count": 0,
+          "error_count": 1,
+          "success_rate": 0.0,
+          "avg_wall_ms": null,
+          "p95_wall_ms": null,
+          "throughput_rps": 0.0,
+          "stable": false,
+          "realtime_compatible": false,
+          "sample_errors": [
+            "Errore chiamata http://127.0.0.1:11434/api/chat: timed out"
+          ]
+        }
+      ],
+      "metrics": {
+        "max_tested_concurrency": 12,
+        "max_stable_concurrency": 0,
+        "recommended_concurrency": 1,
+        "best_stable_throughput_rps": 0.0,
+        "baseline_avg_ms": 1.0,
+        "baseline_p95_ms": 1.0,
+        "min_success_rate": 1.0,
+        "degradation_factor": 3.0,
+        "realtime_avg_threshold_ms": 800.0,
+        "realtime_p95_threshold_ms": 1500.0,
+        "stop_on_realtime_degradation": true,
+        "stopped_early_for_realtime": true,
+        "tested_levels": 1,
+        "stop_reason": "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)",
+        "stability_notes": [
+          "livello=1: success_rate 0.0% sotto soglia 100.0%",
+          "livello=1: fuori soglia realtime (avg n/d > 800 ms o p95 n/d > 1500 ms)"
+        ]
+      }
+    }
+  ],
+  "ranking": [
+    {
+      "model": "qwen3.6:35b",
+      "max_stable_concurrency": 1,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.08520492218838727,
+      "baseline_avg_ms": 11735.922448991914
+    },
+    {
+      "model": "gemma4:31b",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "gpt-oss:20b",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "qwen2.5:7b",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "llama3.1:8b",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "gpt-oss:120b",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "mistral-small:latest",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "mistral-medium-3.5:latest",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    },
+    {
+      "model": "llama3.2:latest",
+      "max_stable_concurrency": 0,
+      "recommended_concurrency": 1,
+      "best_stable_throughput_rps": 0.0,
+      "baseline_avg_ms": 1.0
+    }
+  ]
+}
